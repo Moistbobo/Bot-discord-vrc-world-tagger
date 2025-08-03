@@ -2,6 +2,8 @@ import { Client, Events, GatewayIntentBits } from 'discord.js';
 import Config from './config';
 import messageCreate from './events/messageCreate';
 import logger from './utils/logger';
+import './utils/vrchat';
+import { vrchat } from './utils/vrchat';
 
 const token = Config.TOKEN;
 
@@ -20,6 +22,10 @@ client.once(Events.ClientReady, (readyClient) => {
   logger.info(`Client ready: ${readyClient}`);
 });
 
-client.login(token).then(() => {
+client.login(token).then(async () => {
   logger.info(`Bot Logged in`);
+
+  // authenticate vrchat api
+  // const { data: user } = await vrchat.getCurrentUser({ throwOnError: true });
+  // logger.info(`authenticated with VRC API: ${user}`);
 });
