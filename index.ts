@@ -1,3 +1,1 @@
-console.log('hello world');
-
-console.log('im bob ');
+import './src/bot';
