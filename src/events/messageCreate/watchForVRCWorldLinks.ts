@@ -78,7 +78,7 @@ const watchForVRCWorldLinks = async (message: Message) => {
                 `${platformEmojiMap[platform]}: ${packageSizes[idx].toFixed(2)}MB`
             )
             .join('\n'),
-          inline: false
+          inline: true
         }
       )
       // disabled, don't want to make this competitive
@@ -98,8 +98,7 @@ const watchForVRCWorldLinks = async (message: Message) => {
           `[${tag}] Forwarding ${getWorldNameId(data)} to ${channelMention(forwardingChannel.id)}`
         );
         await addItemToList(kvKeys.PROCESSED_WORLDS, data.id, true);
-        await message.react('⤴️');
-        forwardingChannel.send({ embeds: [embed] });
+        await forwardingChannel.send({ embeds: [embed] });
       }
     };
 
