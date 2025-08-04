@@ -1,4 +1,4 @@
-import { UnityPackage } from 'vrchat';
+import { UnityPackage, World } from 'vrchat';
 
 export const getSupportedPlatforms = (
   unityPackages: Array<UnityPackage>
@@ -17,4 +17,8 @@ export const getSupportedPlatforms = (
 
 export const hasAndroidSupport = (supportedPlatforms: string[]): boolean => {
   return supportedPlatforms.includes('android');
+};
+
+export const getWorldNameId = (data: World) => {
+  return `${data.name}-${data.id}`;
 };

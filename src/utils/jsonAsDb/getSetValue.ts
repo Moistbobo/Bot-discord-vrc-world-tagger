@@ -10,6 +10,13 @@ const setListForKey = (key: kvKeys, toSave: string[]) => {
   return kv.set(key, toSave);
 };
 
+export const replaceListWithItem = async (
+  key: kvKeys,
+  itemIdToSave: string
+): Promise<void> => {
+  return setListForKey(key, [itemIdToSave]);
+};
+
 export const addItemToList = async (
   key: kvKeys,
   itemIdToSave: string
@@ -35,4 +42,13 @@ export const isItemInList = async (
 ): Promise<boolean> => {
   const currentWatchedItems = (await getListForKey(key)) as string[];
   return currentWatchedItems.includes(itemId);
+};
+
+export const getFirstItemInList = async (key: kvKeys) => {
+  const items = (await getListForKey(key)) as string[];
+  return items[0];
+};
+
+export const wipeValuesForKey = async (key: kvKeys) => {
+  return kv.delete(key);
 };
