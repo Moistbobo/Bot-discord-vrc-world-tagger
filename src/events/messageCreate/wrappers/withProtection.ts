@@ -9,7 +9,7 @@ const withProtection = (fn) => {
 
       if (!Config.ADMIN_ID.includes(authorId)) {
         logger.info(
-          `User ${message.author.username} attempted to access protected command with content: ${message.content}`
+          `User attempted to access protected command with content: ${message.content}`
         );
 
         return;
