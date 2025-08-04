@@ -1,11 +1,5 @@
 import { UnityPackage } from 'vrchat';
 
-export enum Platforms {
-  PC = 'PC',
-  PC_ANDROID = 'PC_ANDROID',
-  UNKNOWN = 'UNKNOWN'
-}
-
 export const getSupportedPlatforms = (
   unityPackages: Array<UnityPackage>
 ): string[] => {

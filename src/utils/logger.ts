@@ -1,4 +1,11 @@
 import { Logger } from 'tslog';
+import { createStream } from 'rotating-file-stream';
+
+const stream = createStream('tslog.log', {
+  size: '10M', // rotate every 10 MegaBytes written
+  interval: '1d', // rotate daily
+  compress: 'gzip' // compress rotated files
+});
 
 const logger = new Logger({
   prettyLogTemplate:
@@ -30,6 +37,10 @@ const logger = new Logger({
     errorName: ['bold', 'bgRedBright', 'whiteBright'],
     fileName: ['yellow']
   }
+});
+
+logger.attachTransport((logObj) => {
+  stream.write(JSON.stringify(logObj) + '\n');
 });
 
 export default logger;

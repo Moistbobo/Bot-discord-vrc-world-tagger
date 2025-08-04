@@ -13,5 +13,5 @@ export const extractWorldId = (message: string) => {
 export const removeVRChatLink = (message: string) => {
   const regex =
     /https:\/\/vrchat\.com\/home\/world\/wrld_[a-f0-9-]{36}(\/\S*)?/;
-  return message.replace(regex, '').trim();
+  return `${message.replace(regex, '').trim()} `;
 };
