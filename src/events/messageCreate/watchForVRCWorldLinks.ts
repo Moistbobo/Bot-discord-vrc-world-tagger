@@ -8,13 +8,15 @@ import {
   getWorldNameId,
   hasAndroidSupport
 } from '../../utils/helpers';
-import { isChannelOnWatchList } from '../../utils/jsonAsDb/watchedChannels';
-import { getFirstItemInList } from '../../utils/jsonAsDb/getSetValue';
+import {
+  getFirstItemInList,
+  isItemInList
+} from '../../utils/jsonAsDb/getSetValue';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 import getWorldLinkFromTwitterLink from '../../utils/externalApi/vxtwitter';
 
 const watchForVRCWorldLinks = async (message: Message) => {
-  if (!(await isChannelOnWatchList(message.channelId))) {
+  if (!(await isItemInList(kvKeys.WATCHED_CHANNELS, message.channelId))) {
     return;
   }
 
