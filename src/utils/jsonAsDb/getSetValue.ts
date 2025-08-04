@@ -19,9 +19,15 @@ export const replaceListWithItem = async (
 
 export const addItemToList = async (
   key: kvKeys,
-  itemIdToSave: string
+  itemIdToSave: string,
+  checkDuplicates = false
 ): Promise<void> => {
   const currentWatchedItems = (await getListForKey(key)) as string[];
+  if (checkDuplicates) {
+    if (currentWatchedItems.includes(itemIdToSave)) {
+      return;
+    }
+  }
   return setListForKey(key, [...currentWatchedItems, itemIdToSave]);
 };
 

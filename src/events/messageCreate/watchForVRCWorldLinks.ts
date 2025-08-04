@@ -9,6 +9,7 @@ import {
   hasAndroidSupport
 } from '../../utils/helpers';
 import {
+  addItemToList,
   getFirstItemInList,
   isItemInList
 } from '../../utils/jsonAsDb/getSetValue';
@@ -78,6 +79,7 @@ const watchForVRCWorldLinks = async (message: Message) => {
         logger.info(
           `[${tag}] Forwarding ${getWorldNameId(data)} to ${channelMention(forwardingChannel.id)}`
         );
+        await addItemToList(kvKeys.PROCESSED_WORLDS, data.id, true);
         await message.react('⤴️');
         forwardingChannel.send({ embeds: [embed] });
       }
@@ -105,6 +107,7 @@ const watchForVRCWorldLinks = async (message: Message) => {
 
     if (!forwarded && message.channel.isSendable()) {
       await message.react('✅');
+      await addItemToList(kvKeys.PROCESSED_WORLDS, data.id, true);
       return message.channel.send({ embeds: [embed] });
     }
   } catch (error) {
