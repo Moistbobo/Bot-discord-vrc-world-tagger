@@ -1,10 +1,4 @@
-import {
-  channelMention,
-  EmbedBuilder,
-  GuildBasedChannel,
-  Message,
-  PartialGroupDMChannel
-} from 'discord.js';
+import { channelMention, EmbedBuilder, Message } from 'discord.js';
 import {
   extractWorldId,
   extractWorldLink,
