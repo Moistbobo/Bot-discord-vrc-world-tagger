@@ -15,7 +15,6 @@ const withProtection = (fn) => {
         return;
       }
 
-      console.log('asd');
       // Call the original function
       await fn(message);
     } catch (error) {

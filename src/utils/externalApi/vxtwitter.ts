@@ -6,8 +6,12 @@ const getWorldLinkFromTwitterLink = async (twitterLink: string) => {
 
   const cleanedTwitterLink = removeTwitterLink(twitterLink);
 
+  logger.info('cleaned link', cleanedTwitterLink);
+
   if (cleanedTwitterLink) {
     try {
+      logger.info('parsing vxtwitter', `${BASE_URL}/${cleanedTwitterLink}`);
+
       const response = await fetch(`${BASE_URL}/${cleanedTwitterLink}`);
 
       const responseJson = await response.json();

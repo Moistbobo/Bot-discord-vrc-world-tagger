@@ -21,12 +21,15 @@ export const removeVRChatLink = (message: string) => {
 
 export const getLinkFromMessage = (message: string) => {
   if (!message) return null;
-  const match = message.match(/https?:\/\/[^\s]+/);
+  const match = message.match(/https?:\/\/\S+/);
   return match ? match[0] : null;
 };
 
 export const removeTwitterLink = (link: string) => {
   if (!link) return null;
-  const match = link.match(/(?:x\.com|fixupx\.com|vxtwitter\.com)\/(.*)/);
-  return match ? match[0] : null;
+  const match = link.match(
+    /(?:https?:\/\/)?(?:x\.com|fixupx\.com|vxtwitter\.com)\/([^?\s]+)/
+  );
+
+  return match ? match[1] : null;
 };
