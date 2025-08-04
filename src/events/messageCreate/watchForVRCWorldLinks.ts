@@ -90,7 +90,7 @@ const watchForVRCWorldLinks = async (message: Message) => {
       kvKeys.ANDROID_FORWARDING_CHANNEL
     );
     if (androidForwardingChannel && hasAndroidSupport(supportedPlatform)) {
-      forwarded = true;
+      // forwarded = true;
       await forwardToChannel(androidForwardingChannel, 'Android Support');
     }
 
@@ -100,15 +100,18 @@ const watchForVRCWorldLinks = async (message: Message) => {
     );
 
     if (playerCountForwardingChannel && data.capacity >= 60) {
-      forwarded = true;
+      // forwarded = true;
       await forwardToChannel(playerCountForwardingChannel, 'Player Cap >= 60');
     }
     //#endregion
 
-    if (!forwarded && message.channel.isSendable()) {
+    if (message.channel.isSendable()) {
       await message.react('✅');
       await addItemToList(kvKeys.PROCESSED_WORLDS, data.id, true);
-      return message.channel.send({ embeds: [embed] });
+      return message.reply({
+        allowedMentions: { repliedUser: false },
+        embeds: [embed]
+      });
     }
   } catch (error) {
     logger.error(error);
