@@ -20,8 +20,8 @@ client.on(Events.MessageCreate, async (message) => {
   return messageCreate(message);
 });
 
-client.once(Events.ClientReady, async() => {
-  logger.info(`Client ready with config: ${JSON.stringify(Config)}`);
+client.once(Events.ClientReady, async () => {
+  logger.info(`Client ready with config`);
 
   // authenticate vrchat api
   const { data: user } = await vrchat.getCurrentUser({ throwOnError: true });
