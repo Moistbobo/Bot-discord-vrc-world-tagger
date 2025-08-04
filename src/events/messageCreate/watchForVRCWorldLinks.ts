@@ -64,10 +64,10 @@ const watchForVRCWorldLinks = async (message: Message) => {
           inline: true
         },
         {
-          name: 'Additional Platforms',
-          value: hasAndroidSupport(supportedPlatform)
-            ? '✅ Quest/Android supported'
-            : '🖥️ PC Only',
+          name: 'Platforms',
+          value: supportedPlatform
+            .map((platform) => `${platformEmojiMap[platform]}`)
+            .join(' '),
           inline: true
         },
         {
