@@ -98,7 +98,12 @@ const watchForVRCWorldLinks = async (message: Message) => {
           `[${tag}] Forwarding ${getWorldNameId(data)} to ${channelMention(forwardingChannel.id)}`
         );
         await addItemToList(kvKeys.PROCESSED_WORLDS, data.id, true);
-        await forwardingChannel.send({ embeds: [embed] });
+        const forwardedMessage = await message.forward(forwardingChannel.id);
+        if (forwardedMessage.channel.isSendable()) {
+          forwardedMessage.channel.send({ embeds: [embed] });
+        }
+        // honestly this is the same as the above, but the method above is a little more robust
+        // await forwardingChannel.send({ embeds: [embed] });
       }
     };
 
