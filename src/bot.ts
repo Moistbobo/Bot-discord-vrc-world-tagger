@@ -3,6 +3,7 @@ import Config from './config';
 import messageCreate from './events/messageCreate';
 import logger from './utils/logger';
 import './utils/vrchat';
+import { vrchat } from './utils/vrchat';
 
 const token = Config.TOKEN;
 
@@ -21,12 +22,12 @@ client.on(Events.MessageCreate, async (message) => {
 
 client.once(Events.ClientReady, () => {
   logger.info(`Client ready with config: ${JSON.stringify(Config)}`);
+
+  // authenticate vrchat api
+  const { data: user } = await vrchat.getCurrentUser({ throwOnError: true });
+  logger.info(`authenticated with VRC API: ${user}`);
 });
 
 client.login(token).then(async () => {
   logger.info(`Bot Logged in`);
-
-  // authenticate vrchat api
-  // const { data: user } = await vrchat.getCurrentUser({ throwOnError: true });
-  // logger.info(`authenticated with VRC API: ${user}`);
 });
