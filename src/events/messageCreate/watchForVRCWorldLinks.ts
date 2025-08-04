@@ -15,6 +15,8 @@ import {
 } from '../../utils/jsonAsDb/getSetValue';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 import getWorldLinkFromTwitterLink from '../../utils/externalApi/vxtwitter';
+import { getFileSizeForPlatform } from './utils';
+import { platformEmojiMap } from '../../assets/icons';
 
 const watchForVRCWorldLinks = async (message: Message) => {
   if (!(await isItemInList(kvKeys.WATCHED_CHANNELS, message.channelId))) {
@@ -44,6 +46,12 @@ const watchForVRCWorldLinks = async (message: Message) => {
 
     const supportedPlatform = getSupportedPlatforms(data.unityPackages);
 
+    const promises = supportedPlatform.map(async (platform) => {
+      return await getFileSizeForPlatform(data, platform as never);
+    });
+
+    const packageSizes = await Promise.all(promises);
+
     const embed = new EmbedBuilder()
       .setTitle(`${data.name} by ${data.authorName}`)
       .setURL(buildWorldUrl(worldId))
@@ -61,16 +69,26 @@ const watchForVRCWorldLinks = async (message: Message) => {
             ? '✅ Quest/Android supported'
             : '🖥️ PC Only',
           inline: true
+        },
+        {
+          name: 'Download Size',
+          value: supportedPlatform
+            .map(
+              (platform, idx) =>
+                `${platformEmojiMap[platform]}: ${packageSizes[idx].toFixed(2)}MB`
+            )
+            .join('\n'),
+          inline: false
         }
       )
-      .setFooter({
-        iconURL: message.author.avatarURL(),
-        text: `Submitted by ${message.author.displayName}`
-      })
+      // disabled, don't want to make this competitive
+      // .setFooter({
+      //   iconURL: message.author.avatarURL(),
+      //   text: `Submitted by ${message.author.displayName}`
+      // })
       .setTimestamp();
 
     //#region Link forwarding
-    let forwarded = false;
     const forwardToChannel = async (channelId: string, tag: string) => {
       // Check if channel exists
       const forwardingChannel = message.guild.channels.cache.get(channelId);
@@ -90,7 +108,6 @@ const watchForVRCWorldLinks = async (message: Message) => {
       kvKeys.ANDROID_FORWARDING_CHANNEL
     );
     if (androidForwardingChannel && hasAndroidSupport(supportedPlatform)) {
-      // forwarded = true;
       await forwardToChannel(androidForwardingChannel, 'Android Support');
     }
 
@@ -100,7 +117,6 @@ const watchForVRCWorldLinks = async (message: Message) => {
     );
 
     if (playerCountForwardingChannel && data.capacity >= 60) {
-      // forwarded = true;
       await forwardToChannel(playerCountForwardingChannel, 'Player Cap >= 60');
     }
     //#endregion

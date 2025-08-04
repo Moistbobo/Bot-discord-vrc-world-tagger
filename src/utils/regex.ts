@@ -33,3 +33,11 @@ export const removeTwitterLink = (link: string) => {
 
   return match ? match[1] : null;
 };
+
+export const getFileIdFromAssetUrl = (assetUrl: string) => {
+  if (!assetUrl) return null;
+  const regex = /file_([a-f0-9-]+)/;
+  const match = assetUrl.match(regex);
+
+  return match ? match[1] : null;
+};
