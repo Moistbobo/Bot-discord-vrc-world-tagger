@@ -1,4 +1,5 @@
-import { kv, kvKeys } from './index';
+import { kv } from './index';
+import { kvKeys } from './types';
 
 const getWatchedChannels = async () => {
   const watchedChannels = await kv.get(kvKeys.WATCHED_CHANNELS);
@@ -12,8 +13,7 @@ const setWatchedChannels = (toSave) => {
 export const addNewChannelToWatch = async (
   channelIdToSave: string
 ): Promise<void> => {
-  // @ts-expect-error this is fine
-  const currentWatchedChannels: string[] = await getWatchedChannels();
+  const currentWatchedChannels = (await getWatchedChannels()) as string[];
 
   return setWatchedChannels([...currentWatchedChannels, channelIdToSave]);
 };
@@ -21,8 +21,7 @@ export const addNewChannelToWatch = async (
 export const removeChannelFromWatch = async (
   channelIdToRemove: string
 ): Promise<void> => {
-  // @ts-expect-error this is fine
-  const currentWatchedChannels: string[] = await getWatchedChannels();
+  const currentWatchedChannels = (await getWatchedChannels()) as string[];
 
   return setWatchedChannels(
     currentWatchedChannels.filter(

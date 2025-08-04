@@ -8,8 +8,4 @@ class Kv extends KeyvFile {
   }
 }
 
-export enum kvKeys {
-  WATCHED_CHANNELS = 'WATCHED_CHANNELS'
-}
-
 export const kv = new Kv();
