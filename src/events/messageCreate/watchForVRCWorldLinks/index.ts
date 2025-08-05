@@ -13,6 +13,7 @@ import {
   sendResponse,
   checkAndHandleDuplicate
 } from './util';
+import Config from '../../../assets/config';
 
 /**
  * Main function to watch for VRC world links and process them
@@ -37,9 +38,11 @@ const watchForVRCWorldLinks = async (message: Message): Promise<void> => {
     logger.info(`Processing VRC World link: ${worldId}`);
 
     // Check if world is a duplicate and handle accordingly
-    const isDuplicate = await checkAndHandleDuplicate(message, worldId);
-    if (isDuplicate) {
-      return;
+    if (!Config.DEV_MODE) {
+      const isDuplicate = await checkAndHandleDuplicate(message, worldId);
+      if (isDuplicate) {
+        return;
+      }
     }
 
     // Fetch world data
