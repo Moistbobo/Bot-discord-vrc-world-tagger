@@ -1,23 +1,57 @@
 import { removeTwitterLink } from '../regex';
 import logger from '../logger';
 
-const getWorldLinkFromTwitterLink = async (twitterLink: string) => {
-  const BASE_URL = 'https://api.vxtwitter.com';
+interface VxTwitterResponse {
+  text: string;
+  // Add other potential fields if needed
+}
+
+const VX_TWITTER_BASE_URL = 'https://api.vxtwitter.com';
+
+/**
+ * Fetches the text content from a Twitter/X link using the VxTwitter API
+ * @param twitterLink - The Twitter/X link to process
+ * @returns The text content from the tweet, or null if processing fails
+ */
+const getWorldLinkFromTwitterLink = async (twitterLink: string): Promise<string | null> => {
+  if (!twitterLink) {
+    logger.warn('getWorldLinkFromTwitterLink called with empty twitterLink');
+    return null;
+  }
 
   const cleanedTwitterLink = removeTwitterLink(twitterLink);
 
-  if (cleanedTwitterLink) {
-    try {
-      logger.info('parsing vxtwitter', `${BASE_URL}/${cleanedTwitterLink}`);
+  if (!cleanedTwitterLink) {
+    logger.warn('Failed to extract Twitter link from:', twitterLink);
+    return null;
+  }
 
-      const response = await fetch(`${BASE_URL}/${cleanedTwitterLink}`);
+  try {
+    const apiUrl = `${VX_TWITTER_BASE_URL}/${cleanedTwitterLink}`;
+    logger.info('Fetching from VxTwitter API:', apiUrl);
 
-      const responseJson = await response.json();
+    const response = await fetch(apiUrl);
 
-      return responseJson.text;
-    } catch (error) {
-      logger.error(error);
+    if (!response.ok) {
+      logger.error('VxTwitter API request failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: apiUrl
+      });
+      return null;
     }
+
+    const responseData: VxTwitterResponse = await response.json();
+
+    if (!responseData.text) {
+      logger.warn('VxTwitter API response missing text field:', responseData);
+      return null;
+    }
+
+    return responseData.text;
+  } catch (error) {
+    logger.error('Error fetching from VxTwitter API:', error);
+    return null;
   }
 };
 
