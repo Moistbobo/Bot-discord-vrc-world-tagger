@@ -18,6 +18,7 @@ import { kvKeys } from '../../../utils/jsonAsDb/types';
 import getWorldLinkFromTwitterLink from '../../../utils/externalApi/vxtwitter';
 import { emojiMap } from '../../../assets/icons';
 import { World } from 'vrchat';
+import Config from '../../../assets/config';
 
 // Constants
 export const PLAYER_CAPACITY_THRESHOLD = 60;
@@ -147,7 +148,7 @@ export const createWorldEmbed = (
   packageSizes: number[],
   originalContent: string
 ): EmbedBuilder => {
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setTitle(`${data.name} by ${data.authorName}`)
     .setURL(buildWorldUrl(worldId))
     .setThumbnail(data.imageUrl)
@@ -177,6 +178,13 @@ export const createWorldEmbed = (
       }
     )
     .setTimestamp();
+
+  if (Config.DEV_MODE) {
+    embed.setFooter({
+      text: 'Dev mode on. Duplicate checks have been disabled.'
+    });
+  }
+  return embed;
 };
 
 /**
