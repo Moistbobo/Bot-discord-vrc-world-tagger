@@ -1,4 +1,4 @@
-import { Client, Events, GatewayIntentBits } from 'discord.js';
+import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
 import Config from './assets/config';
 import messageCreate from './events/messageCreate';
 import logger from './utils/logger';
@@ -13,7 +13,10 @@ const client = new Client({
   ]
 });
 
-client.on(Events.MessageCreate, messageCreate);
+client.on(Events.MessageCreate, (message: Message) => {
+  if (message.author.bot || message.author.id === client.user.id) return;
+  return messageCreate(message);
+});
 
 client.once(Events.ClientReady, async () => {
   logger.info('Client ready with config');
