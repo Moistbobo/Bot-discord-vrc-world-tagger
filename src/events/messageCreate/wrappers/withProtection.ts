@@ -2,10 +2,10 @@ import { Message } from 'discord.js';
 import Config from '../../../config';
 import logger from '../../../utils/logger';
 
-type MessageHandler = (message: Message) => Promise<void> | void;
+type MessageHandler = (message: Message) => Promise<void | Message>;
 
 const withProtection = (fn: MessageHandler): MessageHandler => {
-  return async (message: Message): Promise<void> => {
+  return async (message: Message): Promise<void | Message> => {
     try {
       const authorId = message.author.id;
 
@@ -16,7 +16,7 @@ const withProtection = (fn: MessageHandler): MessageHandler => {
         return;
       }
 
-      await fn(message);
+      return await fn(message);
     } catch (error) {
       logger.error('Error in protected command:', error);
     }
