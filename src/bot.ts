@@ -9,8 +9,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions,
-  ],
+    GatewayIntentBits.GuildMessageReactions
+  ]
 });
 
 client.on(Events.MessageCreate, messageCreate);
@@ -20,12 +20,15 @@ client.once(Events.ClientReady, async () => {
 
   try {
     const { data: user } = await vrchat.getCurrentUser({ throwOnError: true });
-    logger.info(`Authenticated with VRC API: ${user.displayName || user.username || 'Unknown User'}`);
+    logger.info(
+      `Authenticated with VRC API: ${user.displayName || user.username || 'Unknown User'}`
+    );
   } catch (error) {
     logger.error('Failed to authenticate with VRC API:', error);
   }
 });
 
-client.login(Config.TOKEN)
+client
+  .login(Config.TOKEN)
   .then(() => logger.info('Bot logged in'))
   .catch((err) => logger.error('Failed to login:', err));
