@@ -3,16 +3,15 @@ import logger from '../../../utils/logger';
 import { getSupportedPlatforms, getWorldNameId } from '../../../utils/helpers';
 import { isItemInList } from '../../../utils/jsonAsDb';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
+import { extractWorldIdFromMessage } from './worldExtraction';
+import { fetchWorldData, calculatePackageSizes } from './worldData';
+import { createWorldEmbed } from './embedBuilder';
 import {
-  extractWorldIdFromMessage,
-  fetchWorldData,
-  calculatePackageSizes,
-  createWorldEmbed,
   getForwardingChannels,
   forwardToChannel,
-  sendResponse,
-  checkAndHandleDuplicate
-} from './util';
+  sendResponse
+} from './forwarding';
+import { checkAndHandleDuplicate } from './duplicateHandler';
 import Config from '../../../assets/config';
 
 /**
