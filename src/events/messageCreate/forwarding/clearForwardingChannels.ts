@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import { wipeValuesForKey } from '../../../utils/jsonAsDb/getSetValue';
+import { wipeValuesForKey } from '../../../utils/jsonAsDb';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import logger from '../../../utils/logger';
 

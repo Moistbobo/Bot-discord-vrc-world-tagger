@@ -1,9 +1,6 @@
 import { channelMention, Message } from 'discord.js';
 import logger from '../../utils/logger';
-import {
-  isItemInList,
-  removeItemFromList
-} from '../../utils/jsonAsDb/getSetValue';
+import { isItemInList, removeItemFromList } from '../../utils/jsonAsDb';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 
 export const unWatchChannel = async (message: Message) => {

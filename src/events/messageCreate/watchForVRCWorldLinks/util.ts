@@ -6,7 +6,10 @@ import {
   getLinkFromMessage
 } from '../../../utils/regex';
 import logger from '../../../utils/logger';
-import { searchByWorldAndAuthorName, vrchat } from '../../../utils/vrchat';
+import {
+  searchByWorldAndAuthorName,
+  vrchat
+} from '../../../utils/externalApi/vrchat';
 import {
   buildWorldUrl,
   getSupportedPlatforms,
@@ -18,7 +21,7 @@ import {
   getFirstItemInList,
   getKvp,
   saveKvp
-} from '../../../utils/jsonAsDb/getSetValue';
+} from '../../../utils/jsonAsDb';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import getTweetContent from '../../../utils/externalApi/vxtwitter';
 import { emojiMap } from '../../../assets/icons';

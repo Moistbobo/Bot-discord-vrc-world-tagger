@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
 import logger from '../../../utils/logger';
 import { getSupportedPlatforms, getWorldNameId } from '../../../utils/helpers';
-import { isItemInList } from '../../../utils/jsonAsDb/getSetValue';
+import { isItemInList } from '../../../utils/jsonAsDb';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import {
   extractWorldIdFromMessage,

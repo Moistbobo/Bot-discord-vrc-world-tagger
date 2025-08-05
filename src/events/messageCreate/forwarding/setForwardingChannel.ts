@@ -1,6 +1,6 @@
 import { channelMention, Message } from 'discord.js';
 import logger from '../../../utils/logger';
-import { replaceListWithItem } from '../../../utils/jsonAsDb/getSetValue';
+import { replaceListWithItem } from '../../../utils/jsonAsDb';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 
 type ForwardingChannelType = 'android' | 'playerCount';

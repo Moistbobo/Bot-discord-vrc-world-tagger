@@ -1,6 +1,6 @@
 import { channelMention, Message } from 'discord.js';
 import logger from '../../utils/logger';
-import { addItemToList, isItemInList } from '../../utils/jsonAsDb/getSetValue';
+import { addItemToList, isItemInList } from '../../utils/jsonAsDb';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 
 export const watchChannel = async (message: Message) => {

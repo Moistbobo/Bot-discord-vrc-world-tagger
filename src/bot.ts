@@ -2,7 +2,7 @@ import { Client, Events, GatewayIntentBits, Message } from 'discord.js';
 import Config from './assets/config';
 import messageCreate from './events/messageCreate';
 import logger from './utils/logger';
-import { vrchat } from './utils/vrchat';
+import { vrchat } from './utils/externalApi/vrchat';
 
 const client = new Client({
   intents: [
