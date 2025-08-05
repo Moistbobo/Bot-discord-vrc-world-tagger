@@ -33,4 +33,4 @@ const messageCreate = async (message: Message) => {
   }
 };
 
-export default messageCreate; 
+export default messageCreate;

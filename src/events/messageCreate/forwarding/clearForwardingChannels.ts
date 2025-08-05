@@ -10,8 +10,8 @@ const clearForwardingChannels = async (message: Message) => {
       wipeValuesForKey(kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL)
     ]);
 
-    const allSuccessful = results.every(result => result.success);
-    
+    const allSuccessful = results.every((result) => result.success);
+
     if (message.channel.isSendable()) {
       if (allSuccessful) {
         logger.info(
@@ -20,13 +20,17 @@ const clearForwardingChannels = async (message: Message) => {
         message.channel.send('Cleared all forwarding channels.');
       } else {
         logger.error('Failed to clear some forwarding channels:', results);
-        message.channel.send('Failed to clear some forwarding channels. Please try again.');
+        message.channel.send(
+          'Failed to clear some forwarding channels. Please try again.'
+        );
       }
     }
   } catch (err) {
     logger.error('Unexpected error clearing forwarding channels:', err);
     if (message.channel.isSendable()) {
-      message.channel.send('An unexpected error occurred while clearing forwarding channels.');
+      message.channel.send(
+        'An unexpected error occurred while clearing forwarding channels.'
+      );
     }
   }
 };

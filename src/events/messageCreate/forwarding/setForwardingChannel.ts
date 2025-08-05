@@ -18,7 +18,10 @@ const forwardingChannelConfig = {
   }
 } as const;
 
-const setForwardingChannel = async (message: Message, channelType: ForwardingChannelType) => {
+const setForwardingChannel = async (
+  message: Message,
+  channelType: ForwardingChannelType
+) => {
   const firstMentionedChannel = message.mentions.channels.first();
 
   if (!firstMentionedChannel) {
@@ -32,16 +35,19 @@ const setForwardingChannel = async (message: Message, channelType: ForwardingCha
   const config = forwardingChannelConfig[channelType];
 
   logger.info(`Saving ${channelId} as ${config.key}`);
-  
+
   const result = await replaceListWithItem(config.key, channelId);
-  
+
   if (message.channel.isSendable()) {
     if (result.success) {
       message.channel.send(
         `Saving ${channelMention(channelId)} as ${config.displayName}`
       );
     } else {
-      logger.error(`Failed to save ${config.logPrefix} forwarding channel ${channelId}:`, result.error);
+      logger.error(
+        `Failed to save ${config.logPrefix} forwarding channel ${channelId}:`,
+        result.error
+      );
       message.channel.send(
         `Failed to save ${channelMention(channelId)} as ${config.displayName}. Please try again.`
       );
@@ -50,4 +56,4 @@ const setForwardingChannel = async (message: Message, channelType: ForwardingCha
 };
 
 export default setForwardingChannel;
-export type { ForwardingChannelType }; 
+export type { ForwardingChannelType };

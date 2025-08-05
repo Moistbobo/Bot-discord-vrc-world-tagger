@@ -1,8 +1,11 @@
-const VRCHAT_WORLD_LINK_REGEX = /https:\/\/vrchat\.com\/home\/world\/wrld_[a-f0-9-]{36}/;
+const VRCHAT_WORLD_LINK_REGEX =
+  /https:\/\/vrchat\.com\/home\/world\/wrld_[a-f0-9-]{36}/;
 const VRCHAT_WORLD_ID_REGEX = /wrld_[a-f0-9-]{36}/;
-const VRCHAT_LINK_REMOVE_REGEX = /https:\/\/vrchat\.com\/home\/world\/wrld_[a-f0-9-]{36}(\/\S*)?/;
+const VRCHAT_LINK_REMOVE_REGEX =
+  /https:\/\/vrchat\.com\/home\/world\/wrld_[a-f0-9-]{36}(\/\S*)?/;
 const GENERIC_LINK_REGEX = /https?:\/\/\S+/;
-const TWITTER_LINK_REGEX = /(?:https?:\/\/)?(?:x\.com|fixupx\.com|vxtwitter\.com)\/([^?\s]+)/;
+const TWITTER_LINK_REGEX =
+  /(?:https?:\/\/)?(?:x\.com|fixupx\.com|vxtwitter\.com)\/([^?\s]+)/;
 const FILE_ID_REGEX = /file_([a-f0-9-]+)/;
 
 export function extractWorldLink(message: string): string | null {
