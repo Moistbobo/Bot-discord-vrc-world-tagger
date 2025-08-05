@@ -1,5 +1,5 @@
 import { VRChat } from 'vrchat';
-import Config from '../config';
+import Config from '../assets/config';
 import KeyvFile from 'keyv-file';
 
 export const vrchat = new VRChat({

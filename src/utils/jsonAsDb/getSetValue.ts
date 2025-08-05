@@ -17,7 +17,10 @@ const getListForKey = async (key: kvKeys): Promise<string[]> => {
  * @param toSave - The list to save
  * @returns Promise resolving to operation success
  */
-const setListForKey = async (key: kvKeys, toSave: string[]): Promise<boolean> => {
+const setListForKey = async (
+  key: kvKeys,
+  toSave: string[]
+): Promise<boolean> => {
   return await kv.safeSet(key, toSave);
 };
 
@@ -35,9 +38,9 @@ export const replaceListWithItem = async (
     const success = await setListForKey(key, [itemIdToSave]);
     return { success };
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 };
@@ -56,17 +59,17 @@ export const addItemToList = async (
 ): Promise<DbOperationResult> => {
   try {
     const currentItems = await getListForKey(key);
-    
+
     if (checkDuplicates && currentItems.includes(itemIdToSave)) {
       return { success: true }; // Item already exists, consider this a success
     }
-    
+
     const success = await setListForKey(key, [...currentItems, itemIdToSave]);
     return { success };
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 };
@@ -83,14 +86,16 @@ export const removeItemFromList = async (
 ): Promise<DbOperationResult> => {
   try {
     const currentItems = await getListForKey(key);
-    const filteredItems = currentItems.filter((itemId) => itemId !== itemIdToRemove);
-    
+    const filteredItems = currentItems.filter(
+      (itemId) => itemId !== itemIdToRemove
+    );
+
     const success = await setListForKey(key, filteredItems);
     return { success };
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 };
@@ -109,7 +114,10 @@ export const isItemInList = async (
     const currentItems = await getListForKey(key);
     return currentItems.includes(itemId);
   } catch (error) {
-    console.error(`Error checking if item "${itemId}" exists in key "${key}":`, error);
+    console.error(
+      `Error checking if item "${itemId}" exists in key "${key}":`,
+      error
+    );
     return false;
   }
 };
@@ -119,7 +127,9 @@ export const isItemInList = async (
  * @param key - The database key
  * @returns Promise resolving to the first item or undefined if list is empty
  */
-export const getFirstItemInList = async (key: kvKeys): Promise<string | undefined> => {
+export const getFirstItemInList = async (
+  key: kvKeys
+): Promise<string | undefined> => {
   try {
     const items = await getListForKey(key);
     return items[0];
@@ -134,14 +144,16 @@ export const getFirstItemInList = async (key: kvKeys): Promise<string | undefine
  * @param key - The database key to wipe
  * @returns Promise resolving to operation result
  */
-export const wipeValuesForKey = async (key: kvKeys): Promise<DbOperationResult> => {
+export const wipeValuesForKey = async (
+  key: kvKeys
+): Promise<DbOperationResult> => {
   try {
     const success = await kv.safeDelete(key);
     return { success };
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 };
@@ -158,4 +170,35 @@ export const getAllItemsFromList = async (key: kvKeys): Promise<string[]> => {
     console.error(`Error getting all items from key "${key}":`, error);
     return [];
   }
+};
+
+const getKvpForKey = async (
+  key: kvKeys
+): Promise<Record<string, string> | undefined> => {
+  return await kv.safeGet<Record<string, string>>(key);
+};
+
+const saveKvpForKey = async (
+  key: kvKeys,
+  kvp: Record<string, string>
+): Promise<boolean> => {
+  return await kv.safeSet(key, kvp);
+};
+
+export const getKvp = async (
+  key: kvKeys,
+  keyToGet: string
+): Promise<string | undefined> => {
+  const kvp = await getKvpForKey(key);
+  return kvp?.[keyToGet];
+};
+
+export const saveKvp = async (
+  key: kvKeys,
+  keyToSave: string,
+  valueToSave: string
+): Promise<boolean> => {
+  const kvp = await getKvpForKey(key);
+  const newKvp = { ...kvp, [keyToSave]: valueToSave };
+  return await saveKvpForKey(key, newKvp);
 };

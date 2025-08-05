@@ -5,7 +5,6 @@ import { vrchat } from '../../../utils/vrchat';
 import {
   buildWorldUrl,
   getSupportedPlatforms,
-  getWorldNameId,
   hasAndroidSupport,
   getFileSizeForPlatform
 } from '../../../utils/helpers';
@@ -15,7 +14,7 @@ import {
 } from '../../../utils/jsonAsDb/getSetValue';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import getWorldLinkFromTwitterLink from '../../../utils/externalApi/vxtwitter';
-import { platformEmojiMap } from '../../../assets/icons';
+import { emojiMap } from '../../../assets/icons';
 import { World } from 'vrchat';
 
 // Constants
@@ -30,7 +29,9 @@ export interface ForwardingChannel {
 /**
  * Extracts world ID from message content or Twitter links
  */
-export const extractWorldIdFromMessage = async (content: string): Promise<string | null> => {
+export const extractWorldIdFromMessage = async (
+  content: string
+): Promise<string | null> => {
   const directWorldId = extractWorldId(content);
   if (directWorldId) {
     return directWorldId;
@@ -52,7 +53,7 @@ export const fetchWorldData = async (worldId: string): Promise<World> => {
     client: vrchat.client,
     path: { worldId }
   });
-  
+
   return data;
 };
 
@@ -61,9 +62,12 @@ export const fetchWorldData = async (worldId: string): Promise<World> => {
  */
 export const calculatePackageSizes = async (data: World): Promise<number[]> => {
   const supportedPlatforms = getSupportedPlatforms(data.unityPackages);
-  
+
   const sizePromises = supportedPlatforms.map(async (platform) => {
-    return await getFileSizeForPlatform(data, platform as 'standalonewindows' | 'android');
+    return await getFileSizeForPlatform(
+      data,
+      platform as 'standalonewindows' | 'android'
+    );
   });
 
   return await Promise.all(sizePromises);
@@ -93,7 +97,7 @@ export const createWorldEmbed = (
       {
         name: 'Platforms',
         value: supportedPlatforms
-          .map((platform) => `${platformEmojiMap[platform]}`)
+          .map((platform) => `${emojiMap[platform]}`)
           .join(' '),
         inline: true
       },
@@ -102,7 +106,7 @@ export const createWorldEmbed = (
         value: supportedPlatforms
           .map(
             (platform, idx) =>
-              `${platformEmojiMap[platform]}: ${packageSizes[idx].toFixed(2)}MB`
+              `${emojiMap[platform]}: ${packageSizes[idx].toFixed(2)}MB`
           )
           .join('\n'),
         inline: true
@@ -117,7 +121,10 @@ export const createWorldEmbed = (
 export const markWorldAsProcessed = async (worldId: string): Promise<void> => {
   const result = await addItemToList(kvKeys.PROCESSED_WORLDS, worldId, true);
   if (!result.success) {
-    logger.error(`Failed to add world ${worldId} to processed worlds:`, result.error);
+    logger.error(
+      `Failed to add world ${worldId} to processed worlds:`,
+      result.error
+    );
   }
 };
 
@@ -139,12 +146,10 @@ export const forwardToChannel = async (
   }
 
   try {
-    logger.info(
-      `[${tag}] Forwarding ${worldId} to ${forwardingChannel.id}`
-    );
-    
+    logger.info(`[${tag}] Forwarding ${worldId} to ${forwardingChannel.id}`);
+
     await markWorldAsProcessed(worldId);
-    
+
     const forwardedMessage = await message.forward(forwardingChannel.id);
     if (forwardedMessage.channel.isSendable()) {
       await forwardedMessage.channel.send({ embeds: [embed] });
@@ -164,13 +169,17 @@ export const getForwardingChannels = async (
   const channels: ForwardingChannel[] = [];
 
   // Check Android support
-  const androidChannel = await getFirstItemInList(kvKeys.ANDROID_FORWARDING_CHANNEL);
+  const androidChannel = await getFirstItemInList(
+    kvKeys.ANDROID_FORWARDING_CHANNEL
+  );
   if (androidChannel && hasAndroidSupport(supportedPlatforms)) {
     channels.push({ id: androidChannel, tag: 'Android Support' });
   }
 
   // Check player capacity threshold
-  const playerCountChannel = await getFirstItemInList(kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL);
+  const playerCountChannel = await getFirstItemInList(
+    kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL
+  );
   if (playerCountChannel && data.capacity >= PLAYER_CAPACITY_THRESHOLD) {
     channels.push({ id: playerCountChannel, tag: 'Player Cap >= 60' });
   }
@@ -193,7 +202,7 @@ export const sendResponse = async (
   try {
     await message.react('✅');
     await markWorldAsProcessed(worldId);
-    
+
     await message.reply({
       allowedMentions: { repliedUser: false },
       embeds: [embed]
@@ -201,4 +210,4 @@ export const sendResponse = async (
   } catch (error) {
     logger.error('Failed to send response to original message:', error);
   }
-}; 
+};

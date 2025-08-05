@@ -9,7 +9,9 @@ export enum kvKeys {
   /** Channel for forwarding Android support messages */
   ANDROID_FORWARDING_CHANNEL = 'ANDROID_FORWARDING_CHANNEL',
   /** Worlds that have been processed to avoid duplicates */
-  PROCESSED_WORLDS = 'PROCESSED_WORLDS'
+  PROCESSED_WORLDS = 'PROCESSED_WORLDS',
+  /** Worlds that have been processed to avoid duplicates, with original message ID */
+  PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID = 'PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID'
 }
 
 /**

@@ -13,7 +13,9 @@ const VX_TWITTER_BASE_URL = 'https://api.vxtwitter.com';
  * @param twitterLink - The Twitter/X link to process
  * @returns The text content from the tweet, or null if processing fails
  */
-const getWorldLinkFromTwitterLink = async (twitterLink: string): Promise<string | null> => {
+const getWorldLinkFromTwitterLink = async (
+  twitterLink: string
+): Promise<string | null> => {
   if (!twitterLink) {
     logger.warn('getWorldLinkFromTwitterLink called with empty twitterLink');
     return null;
