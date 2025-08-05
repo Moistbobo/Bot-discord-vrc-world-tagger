@@ -16,12 +16,21 @@ const androidSupport = async (message: Message) => {
   const channelId = firstMentionedChannel.id;
 
   logger.info(`Saving ${channelId} as ${kvKeys.ANDROID_FORWARDING_CHANNEL}`);
+  
+  const result = await replaceListWithItem(kvKeys.ANDROID_FORWARDING_CHANNEL, channelId);
+  
   if (message.channel.isSendable()) {
-    message.channel.send(
-      `Saving ${channelMention(channelId)} as ${kvKeys.ANDROID_FORWARDING_CHANNEL}`
-    );
+    if (result.success) {
+      message.channel.send(
+        `Saving ${channelMention(channelId)} as ${kvKeys.ANDROID_FORWARDING_CHANNEL}`
+      );
+    } else {
+      logger.error(`Failed to save Android forwarding channel ${channelId}:`, result.error);
+      message.channel.send(
+        `Failed to save ${channelMention(channelId)} as Android forwarding channel. Please try again.`
+      );
+    }
   }
-  await replaceListWithItem(kvKeys.ANDROID_FORWARDING_CHANNEL, channelId);
 };
 
 export default androidSupport;

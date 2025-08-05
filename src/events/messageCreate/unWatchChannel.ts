@@ -18,7 +18,9 @@ export const unWatchChannel = async (message: Message) => {
 
   const channelId = firstMentionedChannel.id;
 
-  if (!(await isItemInList(kvKeys.WATCHED_CHANNELS, channelId))) {
+  const isWatched = await isItemInList(kvKeys.WATCHED_CHANNELS, channelId);
+  
+  if (!isWatched) {
     logger.error(`${channelId} is not being watched.`);
     if (message.channel.isSendable()) {
       message.channel.send(
@@ -26,11 +28,19 @@ export const unWatchChannel = async (message: Message) => {
       );
     }
   } else {
-    await removeItemFromList(kvKeys.WATCHED_CHANNELS, channelId);
+    const result = await removeItemFromList(kvKeys.WATCHED_CHANNELS, channelId);
+    
     if (message.channel.isSendable()) {
-      message.channel.send(
-        `Removed ${channelMention(channelId)} from watch list.`
-      );
+      if (result.success) {
+        message.channel.send(
+          `Removed ${channelMention(channelId)} from watch list.`
+        );
+      } else {
+        logger.error(`Failed to remove channel ${channelId} from watch list:`, result.error);
+        message.channel.send(
+          `Failed to remove ${channelMention(channelId)} from watch list. Please try again.`
+        );
+      }
     }
   }
 };

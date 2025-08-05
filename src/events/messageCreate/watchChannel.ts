@@ -15,7 +15,9 @@ export const watchChannel = async (message: Message) => {
 
   const channelId = firstMentionedChannel.id;
 
-  if (await isItemInList(kvKeys.WATCHED_CHANNELS, channelId)) {
+  const isAlreadyWatched = await isItemInList(kvKeys.WATCHED_CHANNELS, channelId);
+  
+  if (isAlreadyWatched) {
     logger.error(`Channel ID ${channelId} is already being watched.`);
     if (message.channel.isSendable()) {
       message.channel.send(
@@ -23,11 +25,19 @@ export const watchChannel = async (message: Message) => {
       );
     }
   } else {
-    await addItemToList(kvKeys.WATCHED_CHANNELS, channelId);
+    const result = await addItemToList(kvKeys.WATCHED_CHANNELS, channelId);
+    
     if (message.channel.isSendable()) {
-      message.channel.send(
-        `Now watching ${channelMention(channelId)} for world links.`
-      );
+      if (result.success) {
+        message.channel.send(
+          `Now watching ${channelMention(channelId)} for world links.`
+        );
+      } else {
+        logger.error(`Failed to add channel ${channelId} to watch list:`, result.error);
+        message.channel.send(
+          `Failed to start watching ${channelMention(channelId)}. Please try again.`
+        );
+      }
     }
   }
 };

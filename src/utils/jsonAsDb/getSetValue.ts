@@ -1,60 +1,161 @@
 import { kv } from './index';
-import { kvKeys } from './types';
+import { kvKeys, DbOperationResult } from './types';
 
-const getListForKey = async (key: kvKeys) => {
-  const watchedItems = await kv.get(key);
-  return watchedItems || [];
+/**
+ * Helper function to get a list from the database
+ * @param key - The database key to retrieve
+ * @returns Promise resolving to the list or empty array if not found
+ */
+const getListForKey = async (key: kvKeys): Promise<string[]> => {
+  const result = await kv.safeGet<string[]>(key);
+  return result || [];
 };
 
-const setListForKey = (key: kvKeys, toSave: string[]) => {
-  return kv.set(key, toSave);
+/**
+ * Helper function to set a list in the database
+ * @param key - The database key to set
+ * @param toSave - The list to save
+ * @returns Promise resolving to operation success
+ */
+const setListForKey = async (key: kvKeys, toSave: string[]): Promise<boolean> => {
+  return await kv.safeSet(key, toSave);
 };
 
+/**
+ * Replaces the entire list for a key with a single item
+ * @param key - The database key
+ * @param itemIdToSave - The item to save as the only item in the list
+ * @returns Promise resolving to operation result
+ */
 export const replaceListWithItem = async (
   key: kvKeys,
   itemIdToSave: string
-): Promise<void> => {
-  return setListForKey(key, [itemIdToSave]);
+): Promise<DbOperationResult> => {
+  try {
+    const success = await setListForKey(key, [itemIdToSave]);
+    return { success };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
 };
 
+/**
+ * Adds an item to a list, optionally checking for duplicates
+ * @param key - The database key
+ * @param itemIdToSave - The item to add
+ * @param checkDuplicates - Whether to check for duplicates before adding
+ * @returns Promise resolving to operation result
+ */
 export const addItemToList = async (
   key: kvKeys,
   itemIdToSave: string,
   checkDuplicates = false
-): Promise<void> => {
-  const currentWatchedItems = (await getListForKey(key)) as string[];
-  if (checkDuplicates) {
-    if (currentWatchedItems.includes(itemIdToSave)) {
-      return;
+): Promise<DbOperationResult> => {
+  try {
+    const currentItems = await getListForKey(key);
+    
+    if (checkDuplicates && currentItems.includes(itemIdToSave)) {
+      return { success: true }; // Item already exists, consider this a success
     }
+    
+    const success = await setListForKey(key, [...currentItems, itemIdToSave]);
+    return { success };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
   }
-  return setListForKey(key, [...currentWatchedItems, itemIdToSave]);
 };
 
+/**
+ * Removes an item from a list
+ * @param key - The database key
+ * @param itemIdToRemove - The item to remove
+ * @returns Promise resolving to operation result
+ */
 export const removeItemFromList = async (
   key: kvKeys,
   itemIdToRemove: string
-): Promise<void> => {
-  const currentWatchedItems = (await getListForKey(key)) as string[];
-  return setListForKey(
-    key,
-    currentWatchedItems.filter((itemId) => itemId !== itemIdToRemove)
-  );
+): Promise<DbOperationResult> => {
+  try {
+    const currentItems = await getListForKey(key);
+    const filteredItems = currentItems.filter((itemId) => itemId !== itemIdToRemove);
+    
+    const success = await setListForKey(key, filteredItems);
+    return { success };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
 };
 
+/**
+ * Checks if an item exists in a list
+ * @param key - The database key
+ * @param itemId - The item to check for
+ * @returns Promise resolving to whether the item exists
+ */
 export const isItemInList = async (
   key: kvKeys,
   itemId: string
 ): Promise<boolean> => {
-  const currentWatchedItems = (await getListForKey(key)) as string[];
-  return currentWatchedItems.includes(itemId);
+  try {
+    const currentItems = await getListForKey(key);
+    return currentItems.includes(itemId);
+  } catch (error) {
+    console.error(`Error checking if item "${itemId}" exists in key "${key}":`, error);
+    return false;
+  }
 };
 
-export const getFirstItemInList = async (key: kvKeys) => {
-  const items = (await getListForKey(key)) as string[];
-  return items[0];
+/**
+ * Gets the first item from a list
+ * @param key - The database key
+ * @returns Promise resolving to the first item or undefined if list is empty
+ */
+export const getFirstItemInList = async (key: kvKeys): Promise<string | undefined> => {
+  try {
+    const items = await getListForKey(key);
+    return items[0];
+  } catch (error) {
+    console.error(`Error getting first item from key "${key}":`, error);
+    return undefined;
+  }
 };
 
-export const wipeValuesForKey = async (key: kvKeys) => {
-  return kv.delete(key);
+/**
+ * Completely removes all data for a key
+ * @param key - The database key to wipe
+ * @returns Promise resolving to operation result
+ */
+export const wipeValuesForKey = async (key: kvKeys): Promise<DbOperationResult> => {
+  try {
+    const success = await kv.safeDelete(key);
+    return { success };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+};
+
+/**
+ * Gets all items from a list
+ * @param key - The database key
+ * @returns Promise resolving to the list of items
+ */
+export const getAllItemsFromList = async (key: kvKeys): Promise<string[]> => {
+  try {
+    return await getListForKey(key);
+  } catch (error) {
+    console.error(`Error getting all items from key "${key}":`, error);
+    return [];
+  }
 };

@@ -18,12 +18,21 @@ const maxSlots = async (message: Message) => {
   logger.info(
     `Saving ${channelId} as ${kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL}`
   );
+  
+  const result = await replaceListWithItem(kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL, channelId);
+  
   if (message.channel.isSendable()) {
-    message.channel.send(
-      `Saving ${channelMention(channelId)} as ${kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL}`
-    );
+    if (result.success) {
+      message.channel.send(
+        `Saving ${channelMention(channelId)} as ${kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL}`
+      );
+    } else {
+      logger.error(`Failed to save forwarding channel ${channelId}:`, result.error);
+      message.channel.send(
+        `Failed to save ${channelMention(channelId)} as forwarding channel. Please try again.`
+      );
+    }
   }
-  await replaceListWithItem(kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL, channelId);
 };
 
 export default maxSlots;

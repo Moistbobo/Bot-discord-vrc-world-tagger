@@ -19,7 +19,8 @@ import { getFileSizeForPlatform } from './utils';
 import { platformEmojiMap } from '../../assets/icons';
 
 const watchForVRCWorldLinks = async (message: Message) => {
-  if (!(await isItemInList(kvKeys.WATCHED_CHANNELS, message.channelId))) {
+  const isWatched = await isItemInList(kvKeys.WATCHED_CHANNELS, message.channelId);
+  if (!isWatched) {
     return;
   }
 
@@ -97,7 +98,10 @@ const watchForVRCWorldLinks = async (message: Message) => {
         logger.info(
           `[${tag}] Forwarding ${getWorldNameId(data)} to ${channelMention(forwardingChannel.id)}`
         );
-        await addItemToList(kvKeys.PROCESSED_WORLDS, data.id, true);
+        const result = await addItemToList(kvKeys.PROCESSED_WORLDS, data.id, true);
+        if (!result.success) {
+          logger.error(`Failed to add world ${data.id} to processed worlds:`, result.error);
+        }
         const forwardedMessage = await message.forward(forwardingChannel.id);
         if (forwardedMessage.channel.isSendable()) {
           forwardedMessage.channel.send({ embeds: [embed] });
@@ -127,7 +131,10 @@ const watchForVRCWorldLinks = async (message: Message) => {
 
     if (message.channel.isSendable()) {
       await message.react('✅');
-      await addItemToList(kvKeys.PROCESSED_WORLDS, data.id, true);
+      const result = await addItemToList(kvKeys.PROCESSED_WORLDS, data.id, true);
+      if (!result.success) {
+        logger.error(`Failed to add world ${data.id} to processed worlds:`, result.error);
+      }
       return message.reply({
         allowedMentions: { repliedUser: false },
         embeds: [embed]
