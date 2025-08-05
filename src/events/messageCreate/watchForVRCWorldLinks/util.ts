@@ -6,7 +6,8 @@ import {
   buildWorldUrl,
   getSupportedPlatforms,
   getWorldNameId,
-  hasAndroidSupport
+  hasAndroidSupport,
+  getFileSizeForPlatform
 } from '../../../utils/helpers';
 import {
   addItemToList,
@@ -14,7 +15,6 @@ import {
 } from '../../../utils/jsonAsDb/getSetValue';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import getWorldLinkFromTwitterLink from '../../../utils/externalApi/vxtwitter';
-import { getFileSizeForPlatform } from '../utils';
 import { platformEmojiMap } from '../../../assets/icons';
 import { World } from 'vrchat';
 

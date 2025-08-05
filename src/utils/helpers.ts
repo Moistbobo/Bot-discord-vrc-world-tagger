@@ -1,4 +1,6 @@
 import { FileVersion, UnityPackage, World } from 'vrchat';
+import { getFileIdFromAssetUrl } from './regex';
+import { vrchat } from './vrchat';
 
 export const getSupportedPlatforms = (
   unityPackages: Array<UnityPackage>
@@ -57,4 +59,25 @@ export const getRecentFileVersion = (versions: Array<FileVersion>) => {
 
 export const bytesToMegabytes = (bytes: number) => {
   return bytes / 1048576; // 1 MB = 1048576 bytes
+};
+
+export const getFileSizeForPlatform = async (
+  data: World,
+  platform: 'standalonewindows' | 'android'
+) => {
+  const recentPackageForPlatform = getMostRecentUnityPackageForPlatform(
+    data,
+    platform
+  );
+
+  const fileId = getFileIdFromAssetUrl(recentPackageForPlatform.assetUrl);
+
+  const file = await vrchat.getFile({
+    client: vrchat.client,
+    path: { fileId: `file_${fileId}` }
+  });
+
+  const mostRecentVersion = getRecentFileVersion(file.data.versions);
+
+  return bytesToMegabytes(mostRecentVersion.file.sizeInBytes);
 };
