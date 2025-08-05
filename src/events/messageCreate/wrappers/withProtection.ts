@@ -1,5 +1,5 @@
 import { Message } from 'discord.js';
-import Config from '../../../config';
+import Config from '../../../assets/config';
 import logger from '../../../utils/logger';
 
 type MessageHandler = (message: Message) => Promise<void | Message>;

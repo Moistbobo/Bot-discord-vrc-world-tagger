@@ -1,5 +1,5 @@
 import { Client, Events, GatewayIntentBits } from 'discord.js';
-import Config from './config';
+import Config from './assets/config';
 import messageCreate from './events/messageCreate';
 import logger from './utils/logger';
 import { vrchat } from './utils/vrchat';

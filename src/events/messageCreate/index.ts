@@ -1,13 +1,13 @@
 import { Message } from 'discord.js';
 
-import watchForVRCWorldLinks from './messageCreate/watchForVRCWorldLinks';
-import { watchChannel } from './messageCreate/watchChannel';
-import { unWatchChannel } from './messageCreate/unWatchChannel';
-import androidSupport from './messageCreate/forwarding/androidSupport';
-import maxSlots from './messageCreate/forwarding/maxSlots';
-import clearForwardingChannels from './messageCreate/forwarding/clearForwardingChannels';
-import withProtection from './messageCreate/wrappers/withProtection';
-import die from './messageCreate/die';
+import watchForVRCWorldLinks from './watchForVRCWorldLinks';
+import { watchChannel } from './watchChannel';
+import { unWatchChannel } from './unWatchChannel';
+import androidSupport from './forwarding/androidSupport';
+import maxSlots from './forwarding/maxSlots';
+import clearForwardingChannels from './forwarding/clearForwardingChannels';
+import withProtection from './wrappers/withProtection';
+import die from './die';
 
 const messageCreate = async (message: Message) => {
   if (message.content.startsWith('.watch')) {
@@ -33,4 +33,4 @@ const messageCreate = async (message: Message) => {
   }
 };
 
-export default messageCreate;
+export default messageCreate; 

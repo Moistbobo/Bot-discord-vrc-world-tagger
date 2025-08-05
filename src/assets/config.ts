@@ -10,4 +10,4 @@ const Config = {
   VRC_TOTP_KEY: process.env.VRC_TOTP_KEY
 };
 
-export default Config;
+export default Config; 
