@@ -1,24 +1,24 @@
-import logger from '../../../utils/logger';
 import { Message } from 'discord.js';
 import Config from '../../../config';
+import logger from '../../../utils/logger';
 
-const withProtection = (fn) => {
-  return async (message: Message) => {
+type MessageHandler = (message: Message) => Promise<void> | void;
+
+const withProtection = (fn: MessageHandler): MessageHandler => {
+  return async (message: Message): Promise<void> => {
     try {
       const authorId = message.author.id;
 
       if (!Config.ADMIN_ID.includes(authorId)) {
         logger.info(
-          `User attempted to access protected command with content: ${message.content}`
+          `User ${authorId} attempted to access protected command: ${message.content}`
         );
-
         return;
       }
 
-      // Call the original function
       await fn(message);
     } catch (error) {
-      logger.error(`An error occurred: ${error.message}`);
+      logger.error('Error in protected command:', error);
     }
   };
 };
