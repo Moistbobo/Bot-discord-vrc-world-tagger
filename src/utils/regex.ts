@@ -1,3 +1,5 @@
+import Config from '../assets/config';
+
 const VRCHAT_WORLD_LINK_REGEX =
   /https:\/\/vrchat\.com\/home\/world\/wrld_[a-f0-9-]{36}/;
 const VRCHAT_WORLD_ID_REGEX = /wrld_[a-f0-9-]{36}/;
@@ -7,6 +9,33 @@ const GENERIC_LINK_REGEX = /https?:\/\/\S+/;
 const TWITTER_LINK_REGEX =
   /(?:https?:\/\/)?(?:x\.com|fixupx\.com|vxtwitter\.com)\/([^?\s]+)/;
 const FILE_ID_REGEX = /file_([a-f0-9-]+)/;
+
+// Configurable terms for world name extraction
+// const WORLD_TERMS = [
+//   'World',
+//   'ワルード', // Japanese
+//   '世界', // Japanese
+//   'World Name',
+//   'World Name:',
+//   'World:',
+//   '📸✨🌏World:'
+// ];
+
+const WORLD_TERMS = Config.WORLD_NAME_MATCHERS;
+
+// Configurable terms for author name extraction
+// const AUTHOR_TERMS = [
+//   'Author',
+//   '作者', // Japanese
+//   '作成者', // Japanese
+//   'Author Name',
+//   'Author Name:',
+//   'Author:',
+//   'By:',
+//   'By :',
+//   '👤Author:'
+// ];
+const AUTHOR_TERMS = Config.AUTHOR_NAME_MATCHERS;
 
 export function extractWorldLink(message: string): string | null {
   if (!message) return null;
@@ -41,4 +70,60 @@ export function getFileIdFromAssetUrl(assetUrl: string): string | null {
   if (!assetUrl) return null;
   const match = assetUrl.match(FILE_ID_REGEX);
   return match?.[1] ?? null;
+}
+
+/**
+ * Extracts world name from message content using configurable terms
+ * @param message - The message content to search
+ * @param customTerms - Optional array of additional terms to match
+ * @returns The world name if found, null otherwise
+ */
+export function extractWorldName(
+  message: string,
+  customTerms: string[] = []
+): string | null {
+  if (!message) return null;
+
+  const allTerms = [...WORLD_TERMS, ...customTerms];
+  const termsPattern = allTerms
+    .map(
+      (term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex special characters
+    )
+    .join('|');
+
+  const worldNameRegex = new RegExp(
+    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r]+?)(?=\\s*(?:${AUTHOR_TERMS.join('|')})|$)`,
+    'i'
+  );
+
+  const match = message.match(worldNameRegex);
+  return match?.[1]?.trim() ?? null;
+}
+
+/**
+ * Extracts author name from message content using configurable terms
+ * @param message - The message content to search
+ * @param customTerms - Optional array of additional terms to match
+ * @returns The author name if found, null otherwise
+ */
+export function extractAuthorName(
+  message: string,
+  customTerms: string[] = []
+): string | null {
+  if (!message) return null;
+
+  const allTerms = [...AUTHOR_TERMS, ...customTerms];
+  const termsPattern = allTerms
+    .map(
+      (term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex special characters
+    )
+    .join('|');
+
+  const authorNameRegex = new RegExp(
+    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r]+?)(?=\\s*$|\\s*#|\\s*\\n)`,
+    'i'
+  );
+
+  const match = message.match(authorNameRegex);
+  return match?.[1]?.trim() ?? null;
 }

@@ -1,7 +1,12 @@
 import { EmbedBuilder, Message } from 'discord.js';
-import { extractWorldId, getLinkFromMessage } from '../../../utils/regex';
+import {
+  extractAuthorName,
+  extractWorldId,
+  extractWorldName,
+  getLinkFromMessage
+} from '../../../utils/regex';
 import logger from '../../../utils/logger';
-import { vrchat } from '../../../utils/vrchat';
+import { searchByWorldAndAuthorName, vrchat } from '../../../utils/vrchat';
 import {
   buildWorldUrl,
   getSupportedPlatforms,
@@ -15,10 +20,11 @@ import {
   saveKvp
 } from '../../../utils/jsonAsDb/getSetValue';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
-import getWorldLinkFromTwitterLink from '../../../utils/externalApi/vxtwitter';
+import getTweetContent from '../../../utils/externalApi/vxtwitter';
 import { emojiMap } from '../../../assets/icons';
-import { World } from 'vrchat';
+import { LimitedWorld, World } from 'vrchat';
 import Config from '../../../assets/config';
+import { closest } from 'fastest-levenshtein';
 
 // Constants
 export const PLAYER_CAPACITY_THRESHOLD = 60;
@@ -104,10 +110,30 @@ export const extractWorldIdFromMessage = async (
 
   const twitterLink = getLinkFromMessage(content);
   if (twitterLink) {
-    return extractWorldId(await getWorldLinkFromTwitterLink(twitterLink));
-  }
+    const tweetContent = await getTweetContent(twitterLink);
+    const worldIdFromTwitterLink = extractWorldId(tweetContent);
 
+    if (worldIdFromTwitterLink) return worldIdFromTwitterLink;
+
+    // Try to parse the world data from the tweet content
+    return parseWorldInfoFromPlainText(tweetContent);
+  }
   return null;
+};
+
+export const parseWorldInfoFromPlainText = async (tweetContent: string) => {
+  const worldName = extractWorldName(tweetContent).trim();
+  const authorName = extractAuthorName(tweetContent).trim();
+
+  console.log('worldName', worldName, 'authorName', authorName);
+  const limitedWorldData = await searchByWorldAndAuthorName(
+    worldName,
+    authorName
+  );
+
+  const world = filterWorldsWithAuthorName(limitedWorldData, authorName);
+
+  return world.id;
 };
 
 /**
@@ -282,4 +308,21 @@ export const sendResponse = async (
   } catch (error) {
     logger.error('Failed to send response to original message:', error);
   }
+};
+
+/**
+ * Retrieve a world from an array by comparing the author names
+ * @param data
+ * @param authorName
+ */
+export const filterWorldsWithAuthorName = (
+  data: LimitedWorld[],
+  authorName: string
+) => {
+  // levenshtein compare author names of search result
+  const authorNames = data.map((x) => x.authorName);
+  const closestName = closest(authorName, authorNames);
+  const indexOfClosestName = authorNames.indexOf(closestName);
+
+  return data[indexOfClosestName];
 };
