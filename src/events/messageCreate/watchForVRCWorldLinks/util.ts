@@ -41,7 +41,7 @@ export const checkAndHandleDuplicate = async (
   // Check if world has already been processed and generate original message link if so
   const originalMessageId = await getKvp(
     kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
-    worldId
+    `${worldId}-${message.guildId}`
   );
 
   if (originalMessageId) {
@@ -78,12 +78,12 @@ export const checkAndHandleDuplicate = async (
     // Save the original message ID for this world
     await saveKvp(
       kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
-      worldId,
+      `${worldId}-${message.guildId}`,
       message.id
     );
 
     logger.info(
-      `Saving original message ID for world ${worldId}: ${message.id}`
+      `Saving original message ID for world ${worldId}-${message.guildId}: ${message.id}`
     );
   }
 

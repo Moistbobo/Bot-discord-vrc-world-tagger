@@ -50,6 +50,8 @@ const getWorldLinkFromTwitterLink = async (
       return null;
     }
 
+    logger.info('Fetched from VxTwitter API:', responseData.text);
+
     return responseData.text;
   } catch (error) {
     logger.error('Error fetching from VxTwitter API:', error);
