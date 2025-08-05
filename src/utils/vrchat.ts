@@ -1,11 +1,12 @@
 import { VRChat } from 'vrchat';
 import Config from '../assets/config';
 import KeyvFile from 'keyv-file';
+import packageJson from '../../package.json';
 
 export const vrchat = new VRChat({
   application: {
     name: 'VrcWorldTagger',
-    version: '0.0.1',
+    version: packageJson.version,
     contact: 'vrcworldtagger@gmail.com'
   },
   authentication: {
