@@ -34,7 +34,7 @@ export const checkAndHandleDuplicate = async (
 
       // React to the original message with a recycle emoji
       try {
-        await message.react('♻️');
+        await message.react(emojiMap.recycle);
       } catch (err) {
         logger.warn(`Failed to react with recycle emoji: ${err}`);
       }

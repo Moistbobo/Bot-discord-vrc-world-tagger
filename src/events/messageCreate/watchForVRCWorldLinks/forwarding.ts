@@ -4,6 +4,7 @@ import logger from '../../../utils/logger';
 import { addItemToList, getFirstItemInList } from '../../../utils/jsonAsDb';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import { hasAndroidSupport } from '../../../utils/helpers';
+import { emojiMap } from '../../../assets/icons';
 
 // Constants
 export const PLAYER_CAPACITY_THRESHOLD = 60;
@@ -99,7 +100,7 @@ export const sendResponse = async (
   }
 
   try {
-    await message.react('✅');
+    await message.react(emojiMap.checkmark);
     await markWorldAsProcessed(worldId);
 
     await message.reply({

@@ -39,7 +39,6 @@ export const parseWorldInfoFromPlainText = async (tweetContent: string) => {
   const worldName = extractWorldName(tweetContent).trim();
   const authorName = extractAuthorName(tweetContent).trim();
 
-  logger.info(`World and Author Name extracted: ${worldName} - ${authorName}`);
   const limitedWorldData = await searchByWorldAndAuthorName(
     worldName,
     authorName
