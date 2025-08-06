@@ -8,6 +8,7 @@ import { searchByWorldAndAuthorName } from '../../../utils/externalApi/vrchat';
 import getTweetContent from '../../../utils/externalApi/vxtwitter';
 import { LimitedWorld } from 'vrchat';
 import { closest } from 'fastest-levenshtein';
+import logger from '../../../utils/logger';
 
 /**
  * Extracts world ID from message content or Twitter links
@@ -34,9 +35,11 @@ export const extractWorldIdFromMessage = async (
 };
 
 export const parseWorldInfoFromPlainText = async (tweetContent: string) => {
+  logger.info('Attempting to extract World and Author Name');
   const worldName = extractWorldName(tweetContent).trim();
   const authorName = extractAuthorName(tweetContent).trim();
 
+  logger.info(`World and Author Name extracted: ${worldName} - ${authorName}`);
   const limitedWorldData = await searchByWorldAndAuthorName(
     worldName,
     authorName
@@ -44,7 +47,7 @@ export const parseWorldInfoFromPlainText = async (tweetContent: string) => {
 
   const world = filterWorldsWithAuthorName(limitedWorldData, authorName);
 
-  return world.id;
+  return world?.id;
 };
 
 /**
