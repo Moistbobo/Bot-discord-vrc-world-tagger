@@ -9,9 +9,12 @@ export const getSupportedPlatforms = (
     unityPackages.map((pkg) => pkg.platform || '')
   );
 
+  // Adding a platform here will result in additional data being displayed under the
+  // Supported platforms and Download sizes sections
   const support: Record<string, number> = {
     standalonewindows: platforms.has('standalonewindows') ? 1 : 0,
-    android: platforms.has('android') ? 1 : 0
+    android: platforms.has('android') ? 1 : 0,
+    ios: platforms.has('ios') ? 1 : 0
   };
 
   return Object.keys(support).filter((key) => support[key] > 0);
@@ -30,7 +33,7 @@ export const buildWorldUrl = (worldId: string) =>
 
 export const getMostRecentUnityPackageForPlatform = (
   data: World,
-  platform: 'standalonewindows' | 'android'
+  platform: string
 ) => {
   const filteredPackages = data.unityPackages.filter(
     (pkg) => pkg.platform === platform
@@ -61,10 +64,7 @@ export const bytesToMegabytes = (bytes: number) => {
   return bytes / 1048576; // 1 MB = 1048576 bytes
 };
 
-export const getFileSizeForPlatform = async (
-  data: World,
-  platform: 'standalonewindows' | 'android'
-) => {
+export const getFileSizeForPlatform = async (data: World, platform: string) => {
   const recentPackageForPlatform = getMostRecentUnityPackageForPlatform(
     data,
     platform

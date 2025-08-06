@@ -24,10 +24,7 @@ export const calculatePackageSizes = async (data: World): Promise<number[]> => {
   const supportedPlatforms = getSupportedPlatforms(data.unityPackages);
 
   const sizePromises = supportedPlatforms.map(async (platform) => {
-    return await getFileSizeForPlatform(
-      data,
-      platform as 'standalonewindows' | 'android'
-    );
+    return await getFileSizeForPlatform(data, platform);
   });
 
   return await Promise.all(sizePromises);
