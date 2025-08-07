@@ -11,30 +11,9 @@ const TWITTER_LINK_REGEX =
 const FILE_ID_REGEX = /file_([a-f0-9-]+)/;
 
 // Configurable terms for world name extraction
-// const WORLD_TERMS = [
-//   'World',
-//   'ワルード', // Japanese
-//   '世界', // Japanese
-//   'World Name',
-//   'World Name:',
-//   'World:',
-//   '📸✨🌏World:'
-// ];
-
 const WORLD_TERMS = Config.WORLD_NAME_MATCHERS;
 
 // Configurable terms for author name extraction
-// const AUTHOR_TERMS = [
-//   'Author',
-//   '作者', // Japanese
-//   '作成者', // Japanese
-//   'Author Name',
-//   'Author Name:',
-//   'Author:',
-//   'By:',
-//   'By :',
-//   '👤Author:'
-// ];
 const AUTHOR_TERMS = Config.AUTHOR_NAME_MATCHERS;
 
 export function extractWorldLink(message: string): string | null {
@@ -91,12 +70,14 @@ export function extractWorldName(
     )
     .join('|');
 
+  // More flexible regex that handles various formats including Japanese
   const worldNameRegex = new RegExp(
-    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r]+?)(?=\\s*(?:${AUTHOR_TERMS.join('|')})|$)`,
+    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*(?:${AUTHOR_TERMS.join('|')})|\\s*#|\\s*$|\\s*\\n)`,
     'i'
   );
 
   const match = message.match(worldNameRegex);
+
   return match?.[1]?.trim() ?? null;
 }
 
@@ -119,8 +100,9 @@ export function extractAuthorName(
     )
     .join('|');
 
+  // More flexible regex that handles various formats including Japanese
   const authorNameRegex = new RegExp(
-    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r]+?)(?=\\s*$|\\s*#|\\s*\\n)`,
+    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*$|\\s*#|\\s*\\n)`,
     'i'
   );
 

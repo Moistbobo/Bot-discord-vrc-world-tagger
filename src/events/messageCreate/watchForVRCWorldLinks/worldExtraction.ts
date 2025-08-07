@@ -36,15 +36,31 @@ export const extractWorldIdFromMessage = async (
 
 export const parseWorldInfoFromPlainText = async (tweetContent: string) => {
   logger.info('Attempting to extract World and Author Name');
-  const worldName = extractWorldName(tweetContent).trim();
-  const authorName = extractAuthorName(tweetContent).trim();
+
+  const worldName = extractWorldName(tweetContent);
+  const authorName = extractAuthorName(tweetContent);
+
+  // Check if both world name and author name were found
+  if (!worldName || !authorName) {
+    logger.warn(
+      'Could not extract world name or author name from tweet content:',
+      {
+        worldName: worldName || 'null',
+        authorName: authorName || 'null',
+        tweetContent: tweetContent.substring(0, 200) + '...' // Log first 200 chars
+      }
+    );
+    return null;
+  }
+
+  logger.info(`Extracted - World: "${worldName}", Author: "${authorName}"`);
 
   const limitedWorldData = await searchByWorldAndAuthorName(
-    worldName,
-    authorName
+    worldName.trim(),
+    authorName.trim()
   );
 
-  const world = filterWorldsWithAuthorName(limitedWorldData, authorName);
+  const world = filterWorldsWithAuthorName(limitedWorldData, authorName.trim());
 
   return world?.id;
 };
