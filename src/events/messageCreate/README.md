@@ -19,6 +19,9 @@ Set a channel as forward target for worlds with >=60 people. Subsequent calls wi
 ### `.clearForwardingChannels`
 Clear the forwarding targets (done like this because I am lazy)
 
+### `.remove`
+Remove a world from the processed worlds list. This allows the world to be processed again if it's shared in the future.
+
 ### `.die`
 Kills the bot before it kills us
 
