@@ -8,6 +8,7 @@ import maxSlots from './forwarding/maxSlots';
 import clearForwardingChannels from './forwarding/clearForwardingChannels';
 import withProtection from './wrappers/withProtection';
 import die from './die';
+import { remove } from './remove';
 
 const messageCreate = async (message: Message) => {
   if (message.content.startsWith('.watch')) {
@@ -20,6 +21,8 @@ const messageCreate = async (message: Message) => {
     return withProtection(maxSlots)(message);
   } else if (message.content.startsWith('.clearForwardingChannels')) {
     return withProtection(clearForwardingChannels)(message);
+  } else if (message.content.startsWith('.remove')) {
+    return withProtection(remove)(message);
   } else if (message.content.startsWith('.die')) {
     return withProtection(die)(message);
   } else {

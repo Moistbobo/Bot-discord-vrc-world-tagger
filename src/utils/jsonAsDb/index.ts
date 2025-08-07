@@ -1,6 +1,7 @@
 import KeyvFile from 'keyv-file';
 import path from 'path';
 import { kvKeys, DbOperationResult } from './types';
+import logger from '../logger';
 
 interface KvConfig {
   filename?: string;
@@ -255,4 +256,22 @@ export const saveKvp = async (
   const kvp = await getKvpForKey(key);
   const newKvp = { ...kvp, [keyToSave]: valueToSave };
   return await saveKvpForKey(key, newKvp);
+};
+
+export const removeItemFromKvp = async (
+  key: kvKeys,
+  keyToRemove: string
+): Promise<boolean> => {
+  try {
+    const kvp = await getKvpForKey(key);
+    if (!kvp[keyToRemove]) {
+      return false;
+    }
+    delete kvp[keyToRemove];
+    await saveKvpForKey(key, kvp);
+    return true;
+  } catch (err) {
+    logger.error(err);
+    return false;
+  }
 };
