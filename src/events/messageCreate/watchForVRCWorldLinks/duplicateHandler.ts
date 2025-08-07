@@ -1,6 +1,9 @@
 import { Message } from 'discord.js';
 import logger from '../../../utils/logger';
-import { getKvp, saveKvp } from '../../../utils/jsonAsDb';
+import {
+  getValue,
+  setValue
+} from '../../../utils/jsonAsDb/handlers/persistentKvp';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import { emojiMap } from '../../../assets/icons';
 
@@ -15,7 +18,7 @@ export const checkAndHandleDuplicate = async (
   worldId: string
 ): Promise<boolean> => {
   // Check if world has already been processed and generate original message link if so
-  const originalMessageId = await getKvp(
+  const originalMessageId = await getValue(
     kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
     `${worldId}-${message.guildId}`
   );
@@ -52,7 +55,7 @@ export const checkAndHandleDuplicate = async (
     }
   } else {
     // Save the original message ID for this world
-    await saveKvp(
+    await setValue(
       kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
       `${worldId}-${message.guildId}`,
       message.id

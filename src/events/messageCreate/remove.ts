@@ -1,15 +1,13 @@
 import { Message } from 'discord.js';
-import { isItemInList, removeItemFromKvp } from '../../utils/jsonAsDb';
+import { has } from '../../utils/jsonAsDb/handlers/persistentList';
+import { removeValue } from '../../utils/jsonAsDb/handlers/persistentKvp';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 import logger from '../../utils/logger';
 import { extractWorldIdFromMessage } from './watchForVRCWorldLinks/worldExtraction';
 
 export const remove = async (message: Message) => {
   // Check if channel is being watched
-  const isWatched = await isItemInList(
-    kvKeys.WATCHED_CHANNELS,
-    message.channelId
-  );
+  const isWatched = await has(kvKeys.WATCHED_CHANNELS, message.channelId);
   if (!isWatched) {
     return;
   }
@@ -24,7 +22,7 @@ export const remove = async (message: Message) => {
       return;
     }
 
-    const removeResult = await removeItemFromKvp(
+    const removeResult = await removeValue(
       kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
       `${worldId}-${message.guildId}`
     );

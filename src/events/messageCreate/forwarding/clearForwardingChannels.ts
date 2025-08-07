@@ -1,13 +1,13 @@
 import { Message } from 'discord.js';
-import { wipeValuesForKey } from '../../../utils/jsonAsDb';
+import { clear } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import logger from '../../../utils/logger';
 
 const clearForwardingChannels = async (message: Message) => {
   try {
     const results = await Promise.all([
-      wipeValuesForKey(kvKeys.ANDROID_FORWARDING_CHANNEL),
-      wipeValuesForKey(kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL)
+      clear(kvKeys.ANDROID_FORWARDING_CHANNEL),
+      clear(kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL)
     ]);
 
     const allSuccessful = results.every((result) => result.success);

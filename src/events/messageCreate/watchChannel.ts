@@ -1,6 +1,6 @@
 import { channelMention, Message } from 'discord.js';
 import logger from '../../utils/logger';
-import { addItemToList, isItemInList } from '../../utils/jsonAsDb';
+import { add, has } from '../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 
 export const watchChannel = async (message: Message) => {
@@ -15,10 +15,7 @@ export const watchChannel = async (message: Message) => {
 
   const channelId = firstMentionedChannel.id;
 
-  const isAlreadyWatched = await isItemInList(
-    kvKeys.WATCHED_CHANNELS,
-    channelId
-  );
+  const isAlreadyWatched = await has(kvKeys.WATCHED_CHANNELS, channelId);
 
   if (isAlreadyWatched) {
     logger.error(`Channel ID ${channelId} is already being watched.`);
@@ -28,7 +25,7 @@ export const watchChannel = async (message: Message) => {
       );
     }
   } else {
-    const result = await addItemToList(kvKeys.WATCHED_CHANNELS, channelId);
+    const result = await add(kvKeys.WATCHED_CHANNELS, channelId);
 
     if (message.channel.isSendable()) {
       if (result.success) {

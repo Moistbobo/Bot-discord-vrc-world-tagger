@@ -1,7 +1,7 @@
 import { EmbedBuilder, Message } from 'discord.js';
 import { World } from 'vrchat';
 import logger from '../../../utils/logger';
-import { addItemToList, getFirstItemInList } from '../../../utils/jsonAsDb';
+import { add, getFirst } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import { hasAndroidSupport } from '../../../utils/helpers';
 import { emojiMap } from '../../../assets/icons';
@@ -19,7 +19,7 @@ export interface ForwardingChannel {
  * Adds world to processed worlds list
  */
 export const markWorldAsProcessed = async (worldId: string): Promise<void> => {
-  const result = await addItemToList(kvKeys.PROCESSED_WORLDS, worldId, true);
+  const result = await add(kvKeys.PROCESSED_WORLDS, worldId, true);
   if (!result.success) {
     logger.error(
       `Failed to add world ${worldId} to processed worlds:`,
@@ -69,15 +69,13 @@ export const getForwardingChannels = async (
   const channels: ForwardingChannel[] = [];
 
   // Check Android support
-  const androidChannel = await getFirstItemInList(
-    kvKeys.ANDROID_FORWARDING_CHANNEL
-  );
+  const androidChannel = await getFirst(kvKeys.ANDROID_FORWARDING_CHANNEL);
   if (androidChannel && hasAndroidSupport(supportedPlatforms)) {
     channels.push({ id: androidChannel, tag: 'Android Support' });
   }
 
   // Check player capacity threshold
-  const playerCountChannel = await getFirstItemInList(
+  const playerCountChannel = await getFirst(
     kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL
   );
   if (playerCountChannel && data.capacity >= PLAYER_CAPACITY_THRESHOLD) {

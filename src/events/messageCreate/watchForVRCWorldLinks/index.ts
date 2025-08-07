@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
 import logger from '../../../utils/logger';
 import { getSupportedPlatforms, getWorldNameId } from '../../../utils/helpers';
-import { isItemInList } from '../../../utils/jsonAsDb';
+import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import { extractWorldIdFromMessage } from './worldExtraction';
 import { fetchWorldData, calculatePackageSizes } from './worldData';
@@ -19,10 +19,7 @@ import Config from '../../../assets/config';
  */
 const watchForVRCWorldLinks = async (message: Message): Promise<void> => {
   // Check if channel is being watched
-  const isWatched = await isItemInList(
-    kvKeys.WATCHED_CHANNELS,
-    message.channelId
-  );
+  const isWatched = await has(kvKeys.WATCHED_CHANNELS, message.channelId);
   if (!isWatched) {
     return;
   }

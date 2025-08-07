@@ -1,6 +1,6 @@
 import { channelMention, Message } from 'discord.js';
 import logger from '../../../utils/logger';
-import { replaceListWithItem } from '../../../utils/jsonAsDb';
+import { replace } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 
 type ForwardingChannelType = 'android' | 'playerCount';
@@ -36,7 +36,7 @@ const setForwardingChannel = async (
 
   logger.info(`Saving ${channelId} as ${config.key}`);
 
-  const result = await replaceListWithItem(config.key, channelId);
+  const result = await replace(config.key, channelId);
 
   if (message.channel.isSendable()) {
     if (result.success) {

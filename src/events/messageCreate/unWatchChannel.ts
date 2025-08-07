@@ -1,6 +1,6 @@
 import { channelMention, Message } from 'discord.js';
 import logger from '../../utils/logger';
-import { isItemInList, removeItemFromList } from '../../utils/jsonAsDb';
+import { has, remove } from '../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 
 export const unWatchChannel = async (message: Message) => {
@@ -15,7 +15,7 @@ export const unWatchChannel = async (message: Message) => {
 
   const channelId = firstMentionedChannel.id;
 
-  const isWatched = await isItemInList(kvKeys.WATCHED_CHANNELS, channelId);
+  const isWatched = await has(kvKeys.WATCHED_CHANNELS, channelId);
 
   if (!isWatched) {
     logger.error(`${channelId} is not being watched.`);
@@ -25,7 +25,7 @@ export const unWatchChannel = async (message: Message) => {
       );
     }
   } else {
-    const result = await removeItemFromList(kvKeys.WATCHED_CHANNELS, channelId);
+    const result = await remove(kvKeys.WATCHED_CHANNELS, channelId);
 
     if (message.channel.isSendable()) {
       if (result.success) {
