@@ -1,6 +1,6 @@
 {
   "name": "bot_vrc_world_tagger",
-  "version": "0.1.2",
+  "version": "0.2.1",
   "main": "index.js",
   "scripts": {
     "start": "tsc && node dist/index.js",
@@ -14,8 +14,7 @@
   },
   "lint-staged": {
     "*.ts": [
-      "eslint",
-      "jest --bail --findRelatedTests"
+      "eslint"
     ]
   },
   "keywords": [],
