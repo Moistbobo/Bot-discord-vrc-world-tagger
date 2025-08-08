@@ -1,4 +1,4 @@
-import { EmbedBuilder, Message } from 'discord.js';
+import { EmbedBuilder, Message, messageLink } from 'discord.js';
 import { World } from 'vrchat';
 import logger from '../../../utils/logger';
 import { add, getFirst } from '../../../utils/jsonAsDb/handlers/persistentList';
@@ -55,7 +55,20 @@ export const forwardToChannel = async (
       await forwardedMessage.channel.send({ embeds: [embed] });
     }
   } catch (error) {
-    logger.error(`Failed to forward to channel ${channelId}:`, error);
+    if (error.code === 40005) {
+      logger.warn(
+        `Failed to forward to channel ${channelId} due to discord upload limit. Forwarding using alternative method.`
+      );
+
+      if (forwardingChannel.isSendable()) {
+        await forwardingChannel.send({
+          content: `Original message omitted due to size  ${messageLink(message.channelId, message.id)}.`,
+          embeds: [embed]
+        });
+      }
+    } else {
+      logger.error(`Failed to forward to channel ${channelId}:`, error);
+    }
   }
 };
 
