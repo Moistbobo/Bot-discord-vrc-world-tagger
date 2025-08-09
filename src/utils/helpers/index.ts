@@ -1,6 +1,6 @@
 import { FileVersion, UnityPackage, World } from 'vrchat';
-import { getFileIdFromAssetUrl } from './regex';
-import { vrchat } from './externalApi/vrchat';
+import { getFileIdFromAssetUrl } from '../regex';
+import { vrchat } from '../externalApi/vrchat';
 
 export const getSupportedPlatforms = (
   unityPackages: Array<UnityPackage>

@@ -3,12 +3,12 @@ import {
   extractWorldId,
   extractWorldName,
   getLinkFromMessage
-} from '../../../utils/regex';
-import { searchByWorldAndAuthorName } from '../../../utils/externalApi/vrchat';
-import getTweetContent from '../../../utils/externalApi/vxtwitter';
+} from '../../../../utils/regex';
+import { searchByWorldAndAuthorName } from '../../../../utils/externalApi/vrchat';
+import getTweetContent from '../../../../utils/externalApi/vxtwitter';
 import { LimitedWorld } from 'vrchat';
 import { closest } from 'fastest-levenshtein';
-import logger from '../../../utils/logger';
+import logger from '../../../../utils/logger';
 
 /**
  * Extracts world ID from message content or Twitter links

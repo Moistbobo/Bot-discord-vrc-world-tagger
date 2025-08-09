@@ -1,4 +1,4 @@
-import Config from '../assets/config';
+import Config from '../../assets/config';
 
 const VRCHAT_WORLD_LINK_REGEX =
   /https:\/\/vrchat\.com\/home\/world\/wrld_[a-f0-9-]{36}/;

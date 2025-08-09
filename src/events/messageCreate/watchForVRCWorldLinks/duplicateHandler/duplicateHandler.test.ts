@@ -1,9 +1,9 @@
 import { Message, SendableChannels } from 'discord.js';
-import { kvKeys } from '../../../utils/jsonAsDb/types';
+import { kvKeys } from '../../../../utils/jsonAsDb/types';
 
 // Mock persistentKvp handler (module may not exist physically, so mark virtual)
 jest.mock(
-  '../../../utils/jsonAsDb/handlers/persistentKvp',
+  '../../../../utils/jsonAsDb/handlers/persistentKvp',
   () => {
     return {
       getValue: jest.fn(),
@@ -14,7 +14,7 @@ jest.mock(
 );
 
 // Optionally mock logger to silence output
-jest.mock('../../../utils/logger', () => ({
+jest.mock('../../../../utils/logger', () => ({
   __esModule: true,
   default: {
     info: jest.fn(),
@@ -24,7 +24,7 @@ jest.mock('../../../utils/logger', () => ({
 }));
 
 // Use real emoji map (simple enough), fallback if needed
-jest.mock('../../../assets/icons', () => ({
+jest.mock('../../../../assets/icons', () => ({
   emojiMap: {
     recycle: '♻',
     actually: ':actually:',
@@ -35,8 +35,8 @@ jest.mock('../../../assets/icons', () => ({
 import {
   getValue,
   setValue
-} from '../../../utils/jsonAsDb/handlers/persistentKvp';
-import { checkAndHandleDuplicate } from './duplicateHandler';
+} from '../../../../utils/jsonAsDb/handlers/persistentKvp';
+import { checkAndHandleDuplicate } from './index';
 
 const asMock = <T extends (...args: any[]) => any>(fn: any) =>
   fn as jest.MockedFunction<T>;

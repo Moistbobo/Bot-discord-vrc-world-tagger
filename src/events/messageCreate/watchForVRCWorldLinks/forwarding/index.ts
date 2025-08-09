@@ -1,10 +1,13 @@
 import { EmbedBuilder, Message, messageLink } from 'discord.js';
 import { World } from 'vrchat';
-import logger from '../../../utils/logger';
-import { add, getFirst } from '../../../utils/jsonAsDb/handlers/persistentList';
-import { kvKeys } from '../../../utils/jsonAsDb/types';
-import { hasAndroidSupport } from '../../../utils/helpers';
-import { emojiMap } from '../../../assets/icons';
+import logger from '../../../../utils/logger';
+import {
+  add,
+  getFirst
+} from '../../../../utils/jsonAsDb/handlers/persistentList';
+import { kvKeys } from '../../../../utils/jsonAsDb/types';
+import { hasAndroidSupport } from '../../../../utils/helpers';
+import { emojiMap } from '../../../../assets/icons';
 
 // Constants
 export const PLAYER_CAPACITY_THRESHOLD = 60;

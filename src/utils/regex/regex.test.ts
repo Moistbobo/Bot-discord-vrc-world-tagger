@@ -1,7 +1,7 @@
-import { extractWorldName, extractAuthorName } from './regex';
+import { extractWorldName, extractAuthorName } from './index';
 
 // Mock the config to avoid environment variable dependencies
-jest.mock('../assets/config', () => {
+jest.mock('../../assets/config', () => {
   return {
     TOKEN: 'mock-token',
     ADMIN_ID: ['mock-admin-id'],

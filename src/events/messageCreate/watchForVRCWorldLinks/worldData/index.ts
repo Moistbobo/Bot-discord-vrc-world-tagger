@@ -1,9 +1,9 @@
 import { World } from 'vrchat';
-import { vrchat } from '../../../utils/externalApi/vrchat';
+import { vrchat } from '../../../../utils/externalApi/vrchat';
 import {
   getSupportedPlatforms,
   getFileSizeForPlatform
-} from '../../../utils/helpers';
+} from '../../../../utils/helpers';
 
 /**
  * Fetches world data from VRChat API

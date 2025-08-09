@@ -1,8 +1,8 @@
 import { EmbedBuilder } from 'discord.js';
 import { World } from 'vrchat';
-import { buildWorldUrl } from '../../../utils/helpers';
-import { emojiMap } from '../../../assets/icons';
-import Config from '../../../assets/config';
+import { buildWorldUrl } from '../../../../utils/helpers';
+import { emojiMap } from '../../../../assets/icons';
+import Config from '../../../../assets/config';
 
 /**
  * Creates Discord embed for world information

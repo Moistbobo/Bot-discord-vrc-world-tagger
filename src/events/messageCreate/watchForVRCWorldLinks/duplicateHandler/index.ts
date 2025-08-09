@@ -1,11 +1,11 @@
 import { Message } from 'discord.js';
-import logger from '../../../utils/logger';
+import logger from '../../../../utils/logger';
 import {
   getValue,
   setValue
-} from '../../../utils/jsonAsDb/handlers/persistentKvp';
-import { kvKeys } from '../../../utils/jsonAsDb/types';
-import { emojiMap } from '../../../assets/icons';
+} from '../../../../utils/jsonAsDb/handlers/persistentKvp';
+import { kvKeys } from '../../../../utils/jsonAsDb/types';
+import { emojiMap } from '../../../../assets/icons';
 
 /**
  * Checks if a world has already been processed and handles duplicate responses
