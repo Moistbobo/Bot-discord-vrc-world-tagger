@@ -20,5 +20,10 @@ export default defineConfig([
     plugins: { json },
     language: 'json/json',
     extends: ['json/recommended']
+  },
+  {
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off'
+    }
   }
 ]);
