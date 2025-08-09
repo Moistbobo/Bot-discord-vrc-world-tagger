@@ -3,7 +3,7 @@ import { createStream } from 'rotating-file-stream';
 
 const stream = createStream('tslog.log', {
   size: '10M', // rotate every 10 MegaBytes written
-  interval: '1d', // rotate daily
+  interval: '7d', // rotate weekly
   compress: 'gzip' // compress rotated files
 });
 
