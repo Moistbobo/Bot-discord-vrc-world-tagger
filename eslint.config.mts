@@ -25,5 +25,9 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/no-explicit-any': 'off'
     }
+  },
+  {
+    // ... other configurations
+    ignores: ['dist/**/*.js'] // Example: ignore all JS files within dist
   }
 ]);
