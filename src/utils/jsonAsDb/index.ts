@@ -1,6 +1,7 @@
 import KeyvFile from 'keyv-file';
 import path from 'path';
 import { kvKeys } from './types';
+import logger from '../logger';
 
 interface KvConfig {
   filename?: string;
@@ -22,7 +23,7 @@ class Kv extends KeyvFile {
       const result = await this.get(key);
       return result as T;
     } catch (error) {
-      console.error(`Error getting key "${key}":`, error);
+      logger.error(`Error getting key "${key}":`, error);
       return undefined;
     }
   }
@@ -35,7 +36,7 @@ class Kv extends KeyvFile {
       await this.set(key, value);
       return true;
     } catch (error) {
-      console.error(`Error setting key "${key}":`, error);
+      logger.error(`Error setting key "${key}":`, error);
       return false;
     }
   }
@@ -47,7 +48,7 @@ class Kv extends KeyvFile {
     try {
       return await this.delete(key);
     } catch (error) {
-      console.error(`Error deleting key "${key}":`, error);
+      logger.error(`Error deleting key "${key}":`, error);
       return false;
     }
   }

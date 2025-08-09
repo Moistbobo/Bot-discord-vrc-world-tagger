@@ -1,5 +1,6 @@
 import { kvKeys } from '../types';
 import { get, set } from '../index';
+import logger from '../../logger';
 
 /**
  * Get a value from a key-value pair
@@ -40,7 +41,7 @@ export const removeValue = async (
     delete kvp[keyToRemove];
     return await set(key, kvp);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return false;
   }
 };
