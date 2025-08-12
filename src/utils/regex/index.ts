@@ -16,6 +16,18 @@ const WORLD_TERMS = Config.WORLD_NAME_MATCHERS;
 // Configurable terms for author name extraction
 const AUTHOR_TERMS = Config.AUTHOR_NAME_MATCHERS;
 
+// Custom matchers for specific Twitter link patterns
+export const customMatchers = {
+  n4rGm5DmrVXXz6I: {
+    getWorldName: (content: string) => {
+      return content.split('\n')[0].trim();
+    },
+    getAuthorName: (content: string) => {
+      return content.split('\n')[1].trim();
+    }
+  }
+};
+
 export function extractWorldLink(message: string): string | null {
   if (!message) return null;
   const match = message.match(VRCHAT_WORLD_LINK_REGEX);
@@ -108,4 +120,30 @@ export function extractAuthorName(
 
   const match = message.match(authorNameRegex);
   return match?.[1]?.trim() ?? null;
+}
+
+/**
+ * Attempts to extract world and author names using custom matchers
+ * @param twitterLink - The Twitter link to check against custom matchers
+ * @param tweetContent - The content of the tweet
+ * @returns Object with worldName and authorName if custom matcher found, null otherwise
+ */
+export function extractWithCustomMatcher(
+  twitterLink: string,
+  tweetContent: string
+): { worldName: string; authorName: string } | null {
+  const customMatcherKeys = Object.keys(customMatchers);
+
+  for (const matcherKey of customMatcherKeys) {
+    if (new RegExp(matcherKey, 'i').test(twitterLink)) {
+      const worldName = customMatchers[matcherKey].getWorldName(tweetContent);
+      const authorName = customMatchers[matcherKey].getAuthorName(tweetContent);
+
+      if (worldName && authorName) {
+        return { worldName, authorName };
+      }
+    }
+  }
+
+  return null;
 }

@@ -1,6 +1,6 @@
 import { Message } from 'discord.js';
 import logger from '../../../utils/logger';
-import { getSupportedPlatforms, getWorldNameId } from '../../../utils/helpers';
+import { getSupportedPlatforms } from '../../../utils/helpers';
 import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import { extractWorldIdFromMessage } from './worldExtraction';
@@ -43,7 +43,6 @@ const watchForVRCWorldLinks = async (message: Message): Promise<void> => {
 
     // Fetch world data
     const worldData = await fetchWorldData(worldId);
-    logger.info(`Retrieved world info: ${getWorldNameId(worldData)}`);
 
     // Get supported platforms and calculate package sizes
     const supportedPlatforms = getSupportedPlatforms(worldData.unityPackages);

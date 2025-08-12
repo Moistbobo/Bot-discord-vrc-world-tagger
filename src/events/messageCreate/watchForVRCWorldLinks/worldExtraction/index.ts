@@ -2,7 +2,8 @@ import {
   extractAuthorName,
   extractWorldId,
   extractWorldName,
-  getLinkFromMessage
+  getLinkFromMessage,
+  extractWithCustomMatcher
 } from '../../../../utils/regex';
 import { searchByWorldAndAuthorName } from '../../../../utils/externalApi/vrchat';
 import getTweetContent from '../../../../utils/externalApi/vxtwitter';
@@ -29,16 +30,35 @@ export const extractWorldIdFromMessage = async (
     if (worldIdFromTwitterLink) return worldIdFromTwitterLink;
 
     // Try to parse the world data from the tweet content
-    return parseWorldInfoFromPlainText(tweetContent);
+    return parseWorldInfoFromPlainText(twitterLink, tweetContent);
   }
   return null;
 };
 
-export const parseWorldInfoFromPlainText = async (tweetContent: string) => {
+export const parseWorldInfoFromPlainText = async (
+  twitterLink: string,
+  tweetContent: string
+) => {
   logger.info('Attempting to extract World and Author Name');
 
-  const worldName = extractWorldName(tweetContent);
-  const authorName = extractAuthorName(tweetContent);
+  // Try custom matcher first
+  const customMatch = extractWithCustomMatcher(twitterLink, tweetContent);
+
+  let worldName = null;
+  let authorName = null;
+
+  if (customMatch) {
+    worldName = customMatch.worldName;
+    authorName = customMatch.authorName;
+  }
+
+  // Fall back to regex extraction if custom matcher didn't work
+  if (worldName === null) {
+    worldName = extractWorldName(tweetContent);
+  }
+  if (authorName === null) {
+    authorName = extractAuthorName(tweetContent);
+  }
 
   // Check if both world name and author name were found
   if (!worldName || !authorName) {
