@@ -84,8 +84,7 @@ export function extractWorldName(
 
   // More flexible regex that handles various formats including Japanese
   const worldNameRegex = new RegExp(
-    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*(?:${AUTHOR_TERMS.join('|')})|\\s*#|\\s*$|\\s*\\n)`,
-    'i'
+    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*(?:${AUTHOR_TERMS.join('|')})|\\s*#|\\s*$|\\s*\\n)`
   );
 
   const match = message.match(worldNameRegex);
@@ -146,4 +145,15 @@ export function extractWithCustomMatcher(
   }
 
   return null;
+}
+
+/**
+ * Cleans tweet content by removing all URLs/links
+ * @param content - The tweet content to clean
+ * @returns Cleaned content with all links removed
+ */
+export function removeLinksFromTweet(content: string): string {
+  // Remove URLs (http, https, www, etc.)
+  const urlRegex = /https?:\/\/[^\s]+|www\.[^\s]+/gi;
+  return content.replace(urlRegex, '').trim();
 }

@@ -3,7 +3,8 @@ import {
   extractWorldId,
   extractWorldName,
   getLinkFromMessage,
-  extractWithCustomMatcher
+  extractWithCustomMatcher,
+  removeLinksFromTweet
 } from '../../../../utils/regex';
 import { searchByWorldAndAuthorName } from '../../../../utils/externalApi/vrchat';
 import getTweetContent from '../../../../utils/externalApi/vxtwitter';
@@ -54,10 +55,10 @@ export const parseWorldInfoFromPlainText = async (
 
   // Fall back to regex extraction if custom matcher didn't work
   if (worldName === null) {
-    worldName = extractWorldName(tweetContent);
+    worldName = extractWorldName(removeLinksFromTweet(tweetContent));
   }
   if (authorName === null) {
-    authorName = extractAuthorName(tweetContent);
+    authorName = extractAuthorName(removeLinksFromTweet(tweetContent));
   }
 
   // Check if both world name and author name were found

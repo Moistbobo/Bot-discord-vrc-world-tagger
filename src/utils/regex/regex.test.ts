@@ -66,7 +66,13 @@ Author: Marc_99 @MarcVRCHK
   `ワールド名　B5区画検問所 - B5 Section Checkpoint
   By 暇神／Himajin514
   #VRChat_world紹介
-  #VRChat`
+  #VRChat`,
+  //@2Y6yzB93ibkUUMS
+  `
+  #VRChat #VRChat_world紹介
+World : Liminal - Room Tours
+Author : ~Zoid~
+`
 ];
 
 describe('regex', () => {
@@ -93,6 +99,9 @@ describe('regex', () => {
         'B5区画検問所 - B5 Section Checkpoint'
       );
     });
+    it('Extracts correctly from World : Liminal - Room Tours (with URL)', () => {
+      expect(extractWorldName(testData[6])).toEqual('Liminal - Room Tours');
+    });
   });
 
   describe('extractAuthorName', () => {
@@ -113,6 +122,9 @@ describe('regex', () => {
     });
     it('Extracts correctly from By 暇神／Himajin514', () => {
       expect(extractAuthorName(testData[5])).toEqual('暇神／Himajin514');
+    });
+    it('Extracts correctly from Author : ~Zoid~ https://t.co/vSh7Ac81pb', () => {
+      expect(extractAuthorName(testData[6])).toEqual('~Zoid~');
     });
   });
 });
