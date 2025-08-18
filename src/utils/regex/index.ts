@@ -64,6 +64,34 @@ export function getFileIdFromAssetUrl(assetUrl: string): string | null {
 }
 
 /**
+ * Primary function to extract world and author names
+ * Tries the line-by-line approach first for better accuracy, then falls back to regex
+ * @param message - The message content to search
+ * @returns Object with worldName and authorName if found, null otherwise
+ */
+export function extractWorldAndAuthor(
+  message: string
+): { worldName: string; authorName: string } | null {
+  if (!message) return null;
+
+  // Try line-by-line approach first (more accurate for structured formats)
+  const lineResult = extractWorldAndAuthorByLines(message);
+  if (lineResult) {
+    return lineResult;
+  }
+
+  // Fall back to regex approach for less structured formats
+  const worldName = extractWorldName(message);
+  const authorName = extractAuthorName(message);
+
+  if (worldName && authorName) {
+    return { worldName, authorName };
+  }
+
+  return null;
+}
+
+/**
  * Extracts world name from message content using configurable terms
  * @param message - The message content to search
  * @param customTerms - Optional array of additional terms to match
@@ -90,6 +118,58 @@ export function extractWorldName(
   const match = message.match(worldNameRegex);
 
   return match?.[1]?.trim() ?? null;
+}
+
+/**
+ * Extracts world and author names by parsing content line by line
+ * This approach is more reliable for structured formats like:
+ * World: Tokyo Mood by BEAMS Summer Version
+ * Author: BEAMS_STAFF_1
+ * @param message - The message content to search
+ * @returns Object with worldName and authorName if found, null otherwise
+ */
+export function extractWorldAndAuthorByLines(
+  message: string
+): { worldName: string; authorName: string } | null {
+  if (!message) return null;
+
+  const lines = message
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  let worldName: string | null = null;
+  let authorName: string | null = null;
+
+  for (const line of lines) {
+    // Check for world name
+    for (const worldTerm of WORLD_TERMS) {
+      if (line.toLowerCase().startsWith(worldTerm.toLowerCase())) {
+        const colonIndex = line.indexOf(':');
+        if (colonIndex !== -1) {
+          worldName = line.substring(colonIndex + 1).trim();
+          break;
+        }
+      }
+    }
+
+    // Check for author name
+    for (const authorTerm of AUTHOR_TERMS) {
+      if (line.toLowerCase().startsWith(authorTerm.toLowerCase())) {
+        const colonIndex = line.indexOf(':');
+        if (colonIndex !== -1) {
+          authorName = line.substring(colonIndex + 1).trim();
+          break;
+        }
+      }
+    }
+  }
+
+  if (worldName && authorName) {
+    return { worldName, authorName };
+  }
+
+  return null;
 }
 
 /**

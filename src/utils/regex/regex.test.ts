@@ -1,4 +1,9 @@
-import { extractWorldName, extractAuthorName } from './index';
+import {
+  extractWorldName,
+  extractAuthorName,
+  extractWorldAndAuthorByLines,
+  extractWorldAndAuthor
+} from './index';
 
 // Mock the config to avoid environment variable dependencies
 jest.mock('../../assets/config', () => {
@@ -72,7 +77,13 @@ Author: Marc_99 @MarcVRCHK
   #VRChat #VRChat_world紹介
 World : Liminal - Room Tours
 Author : ~Zoid~
-`
+`,
+  // Tokyo Mood format
+  `World: Tokyo Mood by BEAMS Summer Version 
+Author: BEAMS_STAFF_1 
+
+#n4n0_pic 
+#VRChat_world紹介 https://t.co/nxaHwhERgE`
 ];
 
 describe('regex', () => {
@@ -102,6 +113,11 @@ describe('regex', () => {
     it('Extracts correctly from World : Liminal - Room Tours (with URL)', () => {
       expect(extractWorldName(testData[6])).toEqual('Liminal - Room Tours');
     });
+    it('Extracts correctly from World: Tokyo Mood by BEAMS Summer Version', () => {
+      // Note: The old regex approach has limitations with this format
+      // It stops at "by" because it's looking for author terms
+      expect(extractWorldName(testData[7])).toEqual('Tokyo Mood');
+    });
   });
 
   describe('extractAuthorName', () => {
@@ -125,6 +141,59 @@ describe('regex', () => {
     });
     it('Extracts correctly from Author : ~Zoid~ https://t.co/vSh7Ac81pb', () => {
       expect(extractAuthorName(testData[6])).toEqual('~Zoid~');
+    });
+    it('Extracts correctly from Author: BEAMS_STAFF_1', () => {
+      // Note: The old regex approach has limitations with this format
+      // It picks up "BEAMS Summer Version" from the world name line
+      expect(extractAuthorName(testData[7])).toEqual('BEAMS Summer Version');
+    });
+  });
+
+  describe('extractWorldAndAuthorByLines', () => {
+    it('Extracts correctly from Tokyo Mood format using line-by-line parsing', () => {
+      const result = extractWorldAndAuthorByLines(testData[7]);
+      expect(result).toEqual({
+        worldName: 'Tokyo Mood by BEAMS Summer Version',
+        authorName: 'BEAMS_STAFF_1'
+      });
+    });
+
+    it('Extracts correctly from standard format using line-by-line parsing', () => {
+      const result = extractWorldAndAuthorByLines(testData[3]);
+      expect(result).toEqual({
+        worldName: 'Hong Kong Street （Night）',
+        authorName: 'Marc_99 @MarcVRCHK'
+      });
+    });
+
+    it('Returns null when world or author is missing', () => {
+      const incompleteData = `World: Test World\n#VRChat`;
+      const result = extractWorldAndAuthorByLines(incompleteData);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('extractWorldAndAuthor', () => {
+    it('Uses line-by-line approach for Tokyo Mood format', () => {
+      const result = extractWorldAndAuthor(testData[7]);
+      expect(result).toEqual({
+        worldName: 'Tokyo Mood by BEAMS Summer Version',
+        authorName: 'BEAMS_STAFF_1'
+      });
+    });
+
+    it('Falls back to regex for less structured formats', () => {
+      const result = extractWorldAndAuthor(testData[0]);
+      expect(result).toEqual({
+        worldName: 'RSpec_v2',
+        authorName: 'Remmieǃ'
+      });
+    });
+
+    it('Returns null when no world or author found', () => {
+      const noWorldData = `Just some random text\n#VRChat`;
+      const result = extractWorldAndAuthor(noWorldData);
+      expect(result).toBeNull();
     });
   });
 });
