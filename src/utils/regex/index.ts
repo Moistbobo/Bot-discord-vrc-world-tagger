@@ -101,23 +101,27 @@ export function extractWorldName(
   message: string,
   customTerms: string[] = []
 ): string | null {
-  if (!message) return null;
+  try {
+    if (!message) return null;
 
-  const allTerms = [...WORLD_TERMS, ...customTerms];
-  const termsPattern = allTerms
-    .map(
-      (term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex special characters
-    )
-    .join('|');
+    const allTerms = [...WORLD_TERMS, ...customTerms];
+    const termsPattern = allTerms
+      .map(
+        (term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex special characters
+      )
+      .join('|');
 
-  // More flexible regex that handles various formats including Japanese
-  const worldNameRegex = new RegExp(
-    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*(?:${AUTHOR_TERMS.join('|')})|\\s*#|\\s*$|\\s*\\n)`
-  );
+    // More flexible regex that handles various formats including Japanese
+    const worldNameRegex = new RegExp(
+      `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*(?:${AUTHOR_TERMS.join('|')})|\\s*#|\\s*$|\\s*\\n)`
+    );
 
-  const match = message.match(worldNameRegex);
-
-  return match?.[1]?.trim() ?? null;
+    const match = message.match(worldNameRegex);
+    return match?.[1]?.trim() ?? null;
+  } catch (error) {
+    console.error('Error in extractWorldName:', error);
+    return null;
+  }
 }
 
 /**
@@ -182,23 +186,28 @@ export function extractAuthorName(
   message: string,
   customTerms: string[] = []
 ): string | null {
-  if (!message) return null;
+  try {
+    if (!message) return null;
 
-  const allTerms = [...AUTHOR_TERMS, ...customTerms];
-  const termsPattern = allTerms
-    .map(
-      (term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex special characters
-    )
-    .join('|');
+    const allTerms = [...AUTHOR_TERMS, ...customTerms];
+    const termsPattern = allTerms
+      .map(
+        (term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex special characters
+      )
+      .join('|');
 
-  // More flexible regex that handles various formats including Japanese
-  const authorNameRegex = new RegExp(
-    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*$|\\s*#|\\s*\\n)`,
-    'i'
-  );
+    // More flexible regex that handles various formats including Japanese
+    const authorNameRegex = new RegExp(
+      `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*$|\\s*#|\\s*\\n)`,
+      'i'
+    );
 
-  const match = message.match(authorNameRegex);
-  return match?.[1]?.trim() ?? null;
+    const match = message.match(authorNameRegex);
+    return match?.[1]?.trim() ?? null;
+  } catch (error) {
+    console.error('Error in extractAuthorName:', error);
+    return null;
+  }
 }
 
 /**
@@ -211,17 +220,41 @@ export function extractWithCustomMatcher(
   twitterLink: string,
   tweetContent: string
 ): { worldName: string; authorName: string } | null {
-  const customMatcherKeys = Object.keys(customMatchers);
+  try {
+    // Input validation
+    if (
+      !twitterLink ||
+      !tweetContent ||
+      typeof twitterLink !== 'string' ||
+      typeof tweetContent !== 'string'
+    ) {
+      return null;
+    }
 
-  for (const matcherKey of customMatcherKeys) {
-    if (new RegExp(matcherKey, 'i').test(twitterLink)) {
-      const worldName = customMatchers[matcherKey].getWorldName(tweetContent);
-      const authorName = customMatchers[matcherKey].getAuthorName(tweetContent);
+    const customMatcherKeys = Object.keys(customMatchers);
 
-      if (worldName && authorName) {
-        return { worldName, authorName };
+    for (const matcherKey of customMatcherKeys) {
+      try {
+        // Safe regex testing with error handling
+        const regex = new RegExp(matcherKey, 'i');
+        if (regex.test(twitterLink)) {
+          const worldName =
+            customMatchers[matcherKey].getWorldName(tweetContent);
+          const authorName =
+            customMatchers[matcherKey].getAuthorName(tweetContent);
+
+          if (worldName && authorName) {
+            return { worldName, authorName };
+          }
+        }
+      } catch (matcherError) {
+        // Log error for specific matcher but continue with others
+        console.error(`Error in custom matcher ${matcherKey}:`, matcherError);
+        continue;
       }
     }
+  } catch (error) {
+    console.error('Error in extractWithCustomMatcher:', error);
   }
 
   return null;
