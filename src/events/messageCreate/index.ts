@@ -10,6 +10,7 @@ import withProtection from './wrappers/withProtection';
 import die from './die';
 import { remove } from './remove';
 import { stats } from './stats';
+import { exportWorlds, exportWorldsFull } from './export';
 
 const messageCreate = async (message: Message) => {
   if (message.content.startsWith('.watch')) {
@@ -28,6 +29,10 @@ const messageCreate = async (message: Message) => {
     return withProtection(die)(message);
   } else if (message.content.startsWith('.stats')) {
     return stats(message);
+  } else if (message.content.startsWith('.exportFull')) {
+    return withProtection(exportWorldsFull)(message);
+  } else if (message.content.startsWith('.export')) {
+    return exportWorlds(message);
   } else {
     return watchForVRCWorldLinks(message);
   }
