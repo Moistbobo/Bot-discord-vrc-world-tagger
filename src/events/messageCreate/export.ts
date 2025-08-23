@@ -1,6 +1,6 @@
 import { Message, AttachmentBuilder } from 'discord.js';
 import logger from '../../utils/logger';
-import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
+import { get } from '../../utils/jsonAsDb/index';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 import { vrchat } from '../../utils/externalApi/vrchat';
 import { emojiMap } from '../../assets/icons';
@@ -30,6 +30,53 @@ const extractAllPlatforms = (unityPackages: any[] | undefined): string => {
   }
 
   return platforms.length === 1 ? platforms[0] : platforms.join(' ');
+};
+
+// Helper function to get unique world IDs from PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID
+const getUniqueWorldIds = async (): Promise<string[]> => {
+  try {
+    const processedWorldsData = await get<Record<string, string>>(
+      kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID
+    );
+
+    if (!processedWorldsData) {
+      return [];
+    }
+
+    // Extract unique world IDs from keys
+    const worldIds = new Set<string>();
+    for (const key of Object.keys(processedWorldsData)) {
+      // Handle both formats:
+      // 1. Simple world ID: "wrld_abc123-def4-5678-90ab-cdefghijklmn"
+      // 2. World ID with guild: "wrld_abc123-def4-5678-90ab-cdefghijklmn-123456789"
+      if (key.startsWith('wrld_')) {
+        // If key contains a hyphen, check if it's worldId-guildId format
+        if (key.includes('-')) {
+          const parts = key.split('-');
+          // If we have more than 5 parts, the last one is likely the guild ID
+          // World IDs have format: wrld_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (5 parts)
+          if (parts.length > 5) {
+            // Take everything except the last part (guild ID)
+            const worldId = parts.slice(0, -1).join('-');
+            if (worldId.startsWith('wrld_')) {
+              worldIds.add(worldId);
+            }
+          } else {
+            // Simple world ID format (no guild ID appended)
+            worldIds.add(key);
+          }
+        } else {
+          // Simple world ID format without hyphens (shouldn't happen, but just in case)
+          worldIds.add(key);
+        }
+      }
+    }
+
+    return Array.from(worldIds);
+  } catch (error) {
+    logger.error('Error getting unique world IDs:', error);
+    return [];
+  }
 };
 
 // Helper function to fetch world data with timeout
@@ -83,8 +130,8 @@ const fetchWorldDataWithTimeout = async (
 
 export const exportWorlds = async (message: Message) => {
   try {
-    // Get all processed worlds
-    const processedWorlds = await getAll(kvKeys.PROCESSED_WORLDS);
+    // Get all unique processed world IDs
+    const processedWorlds = await getUniqueWorldIds();
 
     if (processedWorlds.length === 0) {
       if (message.channel.isSendable()) {
@@ -159,8 +206,8 @@ export const exportWorldsFull = async (message: Message) => {
   isFullExportRunning = true;
 
   try {
-    // Get all processed worlds
-    const processedWorlds = await getAll(kvKeys.PROCESSED_WORLDS);
+    // Get all unique processed world IDs
+    const processedWorlds = await getUniqueWorldIds();
 
     if (processedWorlds.length === 0) {
       if (message.channel.isSendable()) {
