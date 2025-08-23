@@ -7,7 +7,7 @@ const VRCHAT_LINK_REMOVE_REGEX =
   /https:\/\/vrchat\.com\/home\/world\/wrld_[a-f0-9-]{36}(\/\S*)?/;
 const GENERIC_LINK_REGEX = /https?:\/\/\S+/;
 const TWITTER_LINK_REGEX =
-  /(?:https?:\/\/)?(?:x\.com|fixupx\.com|vxtwitter\.com)\/([^?\s]+)/;
+  /(?:https?:\/\/)?(?:x\.com|twitter\.com|fixupx\.com|vxtwitter\.com)\/([^?\s]+)/;
 const FILE_ID_REGEX = /file_([a-f0-9-]+)/;
 
 // Configurable terms for world name extraction
@@ -20,11 +20,11 @@ const AUTHOR_TERMS = Config.AUTHOR_NAME_MATCHERS;
 export const customMatchers = {
   n4rGm5DmrVXXz6I: {
     getWorldName: (content: string) => {
-      if (!content) return '';
+      if (!content) return null;
       return content.split('\n')[0].trim();
     },
     getAuthorName: (content: string) => {
-      if (!content) return '';
+      if (!content) return null;
       return content.split('\n')[1].trim();
     }
   }
