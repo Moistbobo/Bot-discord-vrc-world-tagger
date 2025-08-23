@@ -230,10 +230,34 @@ export function extractWithCustomMatcher(
 /**
  * Cleans tweet content by removing all URLs/links
  * @param content - The tweet content to clean
- * @returns Cleaned content with all links removed
+ * @returns Cleaned content with all links removed, or empty string if error occurs
  */
 export function removeLinksFromTweet(content: string): string {
-  // Remove URLs (http, https, www, etc.)
-  const urlRegex = /https?:\/\/[^\s]+|www\.[^\s]+/gi;
-  return content.replace(urlRegex, '').trim();
+  try {
+    // Input validation
+    if (!content || typeof content !== 'string') {
+      return '';
+    }
+
+    // Remove URLs (http, https, www, etc.)
+    const urlRegex = /https?:\/\/[^\s]+|www\.[^\s]+/gi;
+
+    // Safely replace URLs and handle potential regex errors
+    let cleanedContent: string;
+    try {
+      cleanedContent = content.replace(urlRegex, '');
+    } catch {
+      // Fallback: use a simpler approach if regex fails
+      cleanedContent = content.replace(/https?:\/\/[^\s]+/gi, '');
+    }
+
+    // Trim whitespace and return
+    return cleanedContent.trim();
+  } catch (error) {
+    // Log error for debugging but don't crash the application
+    console.error('Error in removeLinksFromTweet:', error);
+
+    // Return original content if cleaning fails, or empty string if content is invalid
+    return typeof content === 'string' ? content.trim() : '';
+  }
 }

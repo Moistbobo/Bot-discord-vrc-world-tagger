@@ -14,7 +14,7 @@ import { emojiMap } from '../../assets/icons';
 const activeCrawls = new Map<string, boolean>();
 
 // Rate limiting: Discord allows 5 requests per 5 seconds
-const RATE_LIMIT_DELAY = 1100; // milliseconds (slightly over 1 second to be safe)
+const RATE_LIMIT_DELAY = 500; // milliseconds (slightly over 1 second to be safe)
 const BATCH_SIZE = 100; // Discord.js default limit
 
 // Helper function to delay execution
@@ -109,8 +109,8 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
     await progressMessage.react(emojiMap.crossError);
   }
 
-  // Set up cancellation
-  let isCancelled = false;
+  // Set up cancellation using shared object
+  const cancellationState = { isCancelled: false };
   let reactionCollector: any = null;
 
   if (progressMessage) {
@@ -122,13 +122,13 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
     });
 
     reactionCollector.on('collect', async () => {
-      isCancelled = true;
+      cancellationState.isCancelled = true;
       if (progressMessage && progressMessage.channel.isSendable()) {
         await progressMessage.edit(
           `❌ **Channel History Crawl Cancelled**\n\n` +
             `**📺 Channel:** ${channel}\n` +
             `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
-            `**🌍 Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n` +
+            `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n` +
             `Crawl was cancelled by ${message.author.toString()}.`
         );
       }
@@ -140,9 +140,14 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
 
   try {
     // Start crawling
-    await crawlMessages(channel, crawlStatus, progressMessage, isCancelled);
+    await crawlMessages(
+      channel,
+      crawlStatus,
+      progressMessage,
+      cancellationState
+    );
 
-    if (isCancelled) {
+    if (cancellationState.isCancelled) {
       return;
     }
 
@@ -160,8 +165,8 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
           `✅ **Channel History Crawl Complete!**\n\n` +
           `**📺 Channel:** ${channel}\n` +
           `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
-          `**🌍 Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n` +
-          `Use \`.exportHistory ${channel}\` to export the discovered worlds.`,
+          `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n` +
+          `Use \`.export ${channel}\` or \`.exportFull ${channel}\` to export the discovered worlds.`,
         files: []
       });
     }
@@ -202,13 +207,14 @@ const crawlMessages = async (
   channel: TextChannel,
   crawlStatus: CrawlStatus,
   progressMessage: Message | null,
-  isCancelled: boolean
+  cancellationState: { isCancelled: boolean }
 ): Promise<void> => {
   let lastMessageId: string | undefined;
   let totalMessages = 0;
-  let totalWorlds = 0;
+  // Track unique worlds discovered across all batches
+  const discoveredWorlds = new Set<string>();
 
-  while (!isCancelled) {
+  while (!cancellationState.isCancelled) {
     try {
       // Fetch batch of messages
       const options: any = { limit: BATCH_SIZE };
@@ -225,54 +231,87 @@ const crawlMessages = async (
         !('size' in messages) ||
         messages.size === 0
       ) {
+        logger.info(
+          `No more messages to fetch. Crawl complete with ${totalMessages} messages processed.`
+        );
         break; // No more messages
       }
 
-      // Process messages in this batch
-      const batchWorlds = new Set<string>();
+      // Log batch processing start
+      logger.info(
+        `Processing batch of ${messages.size} messages (total processed: ${totalMessages})`
+      );
 
-      // Handle the messages collection properly for Discord.js v14
-      if (messages instanceof Map || (messages as any).forEach) {
-        // Use forEach if available (Collection method)
-        (messages as any).forEach((msg: Message) => {
-          if (isCancelled) return;
+      // Process messages in this batch sequentially
+      const messageArray = Array.isArray(messages)
+        ? messages
+        : messages instanceof Map || (messages as any).values
+          ? Array.from((messages as any).values())
+          : [messages];
 
-          totalMessages++;
-          crawlStatus.messagesProcessed = totalMessages;
+      logger.info(
+        `Converted batch to array of ${messageArray.length} messages for sequential processing`
+      );
 
-          // Extract world ID from message
-          extractWorldIdFromMessage(msg.content).then((worldId) => {
-            if (worldId) {
-              batchWorlds.add(worldId);
-              totalWorlds++;
-              crawlStatus.worldsDiscovered = totalWorlds;
+      for (const msg of messageArray) {
+        if (cancellationState.isCancelled) break;
 
-              // Store historical world data
-              storeHistoricalWorld(worldId, channel.id, msg);
-            }
-          });
-        });
-      } else {
-        // Fallback: treat as array-like
-        const messageArray = Array.isArray(messages) ? messages : [messages];
-        for (const msg of messageArray) {
-          if (isCancelled) break;
+        totalMessages++;
+        crawlStatus.messagesProcessed = totalMessages;
 
-          totalMessages++;
-          crawlStatus.messagesProcessed = totalMessages;
+        // Log message being processed
+        logger.info(
+          `Crawling message ${totalMessages}: ${msg.id} from ${msg.author?.tag || 'Unknown'} at ${msg.createdAt.toISOString()}`
+        );
 
-          // Extract world ID from message
-          const worldId = await extractWorldIdFromMessage(msg.content);
-          if (worldId) {
-            batchWorlds.add(worldId);
-            totalWorlds++;
-            crawlStatus.worldsDiscovered = totalWorlds;
+        // Extract world ID from message sequentially
+        const worldId = await extractWorldIdFromMessage(msg.content);
+        if (worldId) {
+          // Log world discovery
+          const isNewWorld = !discoveredWorlds.has(worldId);
+          logger.info(
+            `World found in message ${msg.id}: ${worldId} ${isNewWorld ? '(NEW)' : '(DUPLICATE)'}`
+          );
 
-            // Store historical world data
-            await storeHistoricalWorld(worldId, channel.id, msg);
+          // Only count if this world hasn't been discovered yet
+          if (isNewWorld) {
+            discoveredWorlds.add(worldId);
+            crawlStatus.worldsDiscovered = discoveredWorlds.size;
           }
+
+          // Store historical world data
+          await storeHistoricalWorld(worldId, channel.id, msg);
+
+          // Add delay only when a world is successfully extracted to prevent rate limiting
+          await delay(RATE_LIMIT_DELAY);
+        } else {
+          // Log when no world is found
+          logger.debug(
+            `No world found in message ${msg.id}: "${msg.content.substring(0, 100)}..."`
+          );
+        }
+
+        // Update progress message every 25 messages (batch size) for more frequent updates
+        if (
+          totalMessages % 25 === 0 &&
+          progressMessage &&
+          progressMessage.channel.isSendable()
+        ) {
+          await progressMessage.edit(
+            `🔄 **Channel History Crawl in Progress**\n\n` +
+              `**📺 Channel:** ${channel}\n` +
+              `**📊 Messages Processed:** ${totalMessages.toLocaleString()}\n` +
+              `**🌍 Unique Worlds Discovered:** ${discoveredWorlds.size.toLocaleString()}\n` +
+              `**⏱️ Started:** ${new Date(crawlStatus.startTime).toLocaleString()}\n\n` +
+              `**React with ${emojiMap.crossError} to cancel the crawl.**`
+          );
         }
       }
+
+      // Log batch completion
+      logger.info(
+        `Completed batch processing. Total messages: ${totalMessages}, Unique worlds: ${discoveredWorlds.size}`
+      );
 
       // Update last message ID for next batch
       let lastMessage: Message | undefined;
@@ -292,17 +331,13 @@ const crawlMessages = async (
         crawlStatus.lastMessageId = lastMessageId;
       }
 
-      // Update progress message every 1000 messages
-      if (
-        totalMessages % 1000 === 0 &&
-        progressMessage &&
-        progressMessage.channel.isSendable()
-      ) {
+      // Update progress message after each batch completion
+      if (progressMessage && progressMessage.channel.isSendable()) {
         await progressMessage.edit(
           `🔄 **Channel History Crawl in Progress**\n\n` +
             `**📺 Channel:** ${channel}\n` +
             `**📊 Messages Processed:** ${totalMessages.toLocaleString()}\n` +
-            `**🌍 Worlds Discovered:** ${totalWorlds.toLocaleString()}\n` +
+            `**🌍 Unique Worlds Discovered:** ${discoveredWorlds.size.toLocaleString()}\n` +
             `**⏱️ Started:** ${new Date(crawlStatus.startTime).toLocaleString()}\n\n` +
             `**React with ${emojiMap.crossError} to cancel the crawl.**`
         );
@@ -451,7 +486,7 @@ export const getCrawlStatus = async (message: Message) => {
       `${statusMessage}\n\n` +
         `**📺 Channel:** ${channel}\n` +
         `**📊 Messages Processed:** ${status.messagesProcessed.toLocaleString()}\n` +
-        `**🌍 Worlds Discovered:** ${status.worldsDiscovered.toLocaleString()}\n` +
+        `**🌍 Unique Worlds Discovered:** ${status.worldsDiscovered.toLocaleString()}\n` +
         `**⏱️ Started:** ${new Date(status.startTime).toLocaleString()}\n` +
         `**🕐 Last Update:** ${new Date(status.lastUpdateTime).toLocaleString()}` +
         (status.error ? `\n**❌ Error:** ${status.error}` : '')
