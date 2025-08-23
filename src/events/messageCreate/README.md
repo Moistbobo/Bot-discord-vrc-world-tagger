@@ -75,6 +75,30 @@ This directory contains all the commands that can be triggered by messages in Di
   - Separate error text file when API errors occur
   - **Note**: Only one full export can run at a time to prevent API overload
 
+### `.crawlHistory <#channel>`
+- **Description**: Crawl through the entire channel history to discover all VRChat world links
+- **Usage**: `.crawlHistory #channel-name`
+- **Admin Only**: Yes
+- **Example**: `.crawlHistory #vrchat-worlds`
+- **Features**:
+  - Scans entire channel history for world links
+  - Processes messages in batches with rate limiting
+  - Stores historical world data with timestamps
+  - Progress tracking and cancellation support
+  - Discovers worlds from before the bot was active
+  - **Note**: Only one crawl can run per channel at a time
+
+### `.crawlStatus <#channel>`
+- **Description**: Check the status of a channel history crawl
+- **Usage**: `.crawlStatus #channel-name`
+- **Admin Only**: No (available to all users)
+- **Example**: `.crawlStatus #vrchat-worlds`
+- **Features**:
+  - Shows crawl progress and statistics
+  - Displays messages processed and worlds discovered
+  - Shows start time and last update
+  - Reports any errors that occurred
+
 ### `.stats`
 - **Description**: Display comprehensive bot statistics and activity information
 - **Usage**: `.stats`
@@ -99,8 +123,9 @@ Most commands are protected by the `withProtection` wrapper, which restricts acc
 The following commands are available to all users as they only provide read-only information or export functionality:
 - `.stats` - Bot statistics and activity information
 - `.export` - Simple world ID export
+- `.crawlStatus` - Crawl status information
 
-**Note**: `.exportFull` requires admin privileges as it makes API calls to VRChat and can be resource-intensive.
+**Note**: `.exportFull` and `.crawlHistory` require admin privileges as they make API calls and can be resource-intensive.
 
 ## Automatic Processing
 

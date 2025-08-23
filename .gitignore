@@ -114,7 +114,7 @@ typings/
 data.json
 
 # End of https://www.gitignore.io/api/node,macos
-db.json
+db.back.json
 
 # tslogs
 *.log.gz
