@@ -2,6 +2,7 @@ import { Message, TextChannel } from 'discord.js';
 import logger from '../../utils/logger';
 import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
 import { set, get as getValue } from '../../utils/jsonAsDb/index';
+import { getValue as getKvpValue } from '../../utils/jsonAsDb/handlers/persistentKvp';
 import { kvKeys, CrawlStatus } from '../../utils/jsonAsDb/types';
 import { extractWorldIdFromMessage } from './watchForVRCWorldLinks/worldExtraction';
 import { checkAndHandleDuplicate } from './watchForVRCWorldLinks/duplicateHandler';
@@ -303,9 +304,23 @@ const crawlMessages = async (
           `Crawling message ${totalMessages}: ${msg.id} at ${msg.createdAt.toISOString()}`
         );
 
-        // Extract world ID from message sequentially
+        // Check if this message has already been processed by looking for any world IDs
         const worldId = await extractWorldIdFromMessage(msg.content);
         if (worldId) {
+          // Check if this world has already been processed in this guild
+          const originalMessageId = await getKvpValue(
+            kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
+            `${worldId}-${msg.guildId}`
+          );
+
+          if (originalMessageId && originalMessageId !== msg.id) {
+            // This world has already been processed in another message, skip it
+            logger.info(
+              `Skipping already processed world in message ${msg.id}: ${worldId} (already processed in message ${originalMessageId})`
+            );
+            continue; // Skip to next message
+          }
+
           // Use the existing duplicate detection system in silent mode for crawl operations
           const isDuplicate = await checkAndHandleDuplicate(msg, worldId, true);
 
