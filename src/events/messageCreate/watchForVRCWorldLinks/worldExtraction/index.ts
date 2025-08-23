@@ -7,7 +7,7 @@ import {
   removeLinksFromTweet,
   extractWorldAndAuthor
 } from '../../../../utils/regex';
-import { searchByWorldAndAuthorName } from '../../../../utils/externalApi/vrchat';
+import { searchByWorldName } from '../../../../utils/externalApi/vrchat';
 import getTweetContent from '../../../../utils/externalApi/vxtwitter';
 import { LimitedWorld } from 'vrchat';
 import { closest, distance } from 'fastest-levenshtein';
@@ -85,10 +85,7 @@ export const parseWorldInfoFromPlainText = async (
 
   logger.info(`Extracted - World: "${worldName}", Author: "${authorName}"`);
 
-  const limitedWorldData = await searchByWorldAndAuthorName(
-    worldName.trim(),
-    authorName.trim()
-  );
+  const limitedWorldData = await searchByWorldName(worldName.trim());
 
   // First try to filter by world name using Levenshtein distance
   const filteredByWorldName = filterWorldsWithWorldName(

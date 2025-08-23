@@ -30,23 +30,10 @@ export const getUserIdByName = async (name: string) => {
   }
 };
 
-export const searchByWorldAndAuthorName = async (
-  worldName: string,
-  authorName: string
-) => {
-  const vrcUser = await getUserIdByName(authorName);
-
+export const searchByWorldName = async (worldName: string) => {
   const searchResults = await vrchat.searchWorlds({
     client: vrchat.client,
-    query: vrcUser
-      ? {
-          search: `"${worldName}"`,
-          userId: vrcUser.id,
-          fuzzy: false,
-          n: 10,
-          sort: 'relevance'
-        }
-      : { search: `"${worldName}"`, fuzzy: false, n: 10, sort: 'relevance' }
+    query: { search: `"${worldName}"`, fuzzy: true, n: 10, sort: 'relevance' }
   });
 
   return searchResults.data;
