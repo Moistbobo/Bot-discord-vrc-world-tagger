@@ -61,6 +61,18 @@ This directory contains all the commands that can be triggered by messages in Di
   - Last processed world
   - Total activity summary
 
+### `.export`
+- **Description**: Export all processed worlds to a CSV file
+- **Usage**: `.export`
+- **Admin Only**: Yes
+- **Example**: `.export`
+- **Features**:
+  - Generates CSV file with all processed world IDs
+  - Includes export date, total count, and timestamp
+  - CSV columns: World ID, Export Date, Total Worlds, Export Timestamp
+  - File named with current date and time (e.g., `vrchat_worlds_export_2024-01-15T12-30-45-123Z.csv`)
+  - Useful for data analysis, backup, and tracking purposes
+
 ## Command Protection
 
 Most commands are protected by the `withProtection` wrapper, which restricts access to users whose Discord IDs are listed in the `ADMIN_ID` environment variable.
@@ -69,4 +81,4 @@ The `.stats` command is available to all users as it only provides read-only inf
 
 ## Automatic Processing
 
-When no command is detected, the bot automatically processes the message for VRChat world links using the `watchForVRCWorldLinks` function. 
+When no command is detected, the bot automatically processes the message for VRChat world links using the `watchForVRCWorldLinks` function.
