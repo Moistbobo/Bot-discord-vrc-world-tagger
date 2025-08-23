@@ -4,5 +4,6 @@ export const emojiMap = {
   ios: '<:platform_ios:1402642195726729276>',
   actually: '<:actually:1402298773517893684>',
   recycle: '♻',
-  checkmark: '✅'
+  checkmark: '✅',
+  crossError: '❌'
 };

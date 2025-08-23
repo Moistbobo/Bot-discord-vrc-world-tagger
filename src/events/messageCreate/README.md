@@ -46,6 +46,32 @@ This directory contains all the commands that can be triggered by messages in Di
 - **Admin Only**: Yes
 - **Example**: `.die`
 
+### `.export`
+- **Description**: Export a simple list of all processed world IDs in CSV format
+- **Usage**: `.export`
+- **Admin Only**: No (available to all users)
+- **Example**: `.export`
+- **Features**:
+  - Fast execution (no API calls required)
+  - Simple CSV with Index and World ID columns
+  - Instant results for quick access to world IDs
+  - Useful for bulk operations or quick reference
+
+### `.exportFull`
+- **Description**: Export comprehensive world information with detailed data from VRChat API
+- **Usage**: `.exportFull`
+- **Admin Only**: No (available to all users)
+- **Example**: `.exportFull`
+- **Features**:
+  - Detailed CSV with world names, authors, capacity, platforms, and status
+  - Fetches live data from VRChat API for each world
+  - Rate-limited to respect VRChat API limits
+  - Progress updates during export process
+  - Cancellable with reaction (❌)
+  - Error collection and reporting
+  - Separate error text file when API errors occur
+  - **Note**: Only one full export can run at a time to prevent API overload
+
 ### `.stats`
 - **Description**: Display comprehensive bot statistics and activity information
 - **Usage**: `.stats`
@@ -61,12 +87,26 @@ This directory contains all the commands that can be triggered by messages in Di
   - Last processed world
   - Total activity summary
 
+### `.export`
+- **Description**: Export all processed worlds to a CSV file
+- **Usage**: `.export`
+- **Admin Only**: Yes
+- **Example**: `.export`
+- **Features**:
+  - Generates CSV file with all processed world IDs
+  - Includes export date, total count, and timestamp
+  - CSV columns: World ID, Export Date, Total Worlds, Export Timestamp
+  - File named with current date and time (e.g., `vrchat_worlds_export_2024-01-15T12-30-45-123Z.csv`)
+  - Useful for data analysis, backup, and tracking purposes
+
 ## Command Protection
 
 Most commands are protected by the `withProtection` wrapper, which restricts access to users whose Discord IDs are listed in the `ADMIN_ID` environment variable.
 
-The `.stats` command is available to all users as it only provides read-only information about bot activity. However, it can only be used in channels that are being watched with the `.watch` command.
+The following commands are available to all users as they only provide read-only information or export functionality:
+- `.stats` - Bot statistics and activity information
+- `.export` - Simple world ID export
 
 ## Automatic Processing
 
-When no command is detected, the bot automatically processes the message for VRChat world links using the `watchForVRCWorldLinks` function. 
+When no command is detected, the bot automatically processes the message for VRChat world links using the `watchForVRCWorldLinks` function.
