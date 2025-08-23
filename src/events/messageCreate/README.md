@@ -50,6 +50,7 @@ This directory contains all the commands that can be triggered by messages in Di
 - **Description**: Display comprehensive bot statistics and activity information
 - **Usage**: `.stats`
 - **Admin Only**: No (available to all users)
+- **Channel Restriction**: Only works in channels being watched with `.watch`
 - **Example**: `.stats`
 - **Features**:
   - Worlds processed count
@@ -64,7 +65,7 @@ This directory contains all the commands that can be triggered by messages in Di
 
 Most commands are protected by the `withProtection` wrapper, which restricts access to users whose Discord IDs are listed in the `ADMIN_ID` environment variable.
 
-The `.stats` command is available to all users as it only provides read-only information about bot activity.
+The `.stats` command is available to all users as it only provides read-only information about bot activity. However, it can only be used in channels that are being watched with the `.watch` command.
 
 ## Automatic Processing
 

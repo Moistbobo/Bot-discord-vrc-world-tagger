@@ -1,10 +1,20 @@
 import { EmbedBuilder, Message } from 'discord.js';
 import logger from '../../utils/logger';
-import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
+import { getAll, has } from '../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 
 export const stats = async (message: Message) => {
   try {
+    // Check if the current channel is being watched
+    const isChannelWatched = await has(
+      kvKeys.WATCHED_CHANNELS,
+      message.channelId
+    );
+
+    if (!isChannelWatched) {
+      return;
+    }
+
     // Get various statistics from the database
     const processedWorlds = await getAll(kvKeys.PROCESSED_WORLDS);
     const processedWorldsCount = processedWorlds.length;
