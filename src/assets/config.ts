@@ -10,7 +10,8 @@ const Config = {
   VRC_TOTP_KEY: process.env.VRC_TOTP_KEY,
   DEV_MODE: process.env.DEV,
   WORLD_NAME_MATCHERS: process.env.WORLD_NAME_MATCHERS.split(','),
-  AUTHOR_NAME_MATCHERS: process.env.AUTHOR_NAME_MATCHERS.split(',')
+  AUTHOR_NAME_MATCHERS: process.env.AUTHOR_NAME_MATCHERS.split(','),
+  EXPORT_RATE_LIMIT: Number(process.env.EXPORT_RATE_LIMIT) || 1500
 };
 
 export default Config;

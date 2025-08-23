@@ -4,9 +4,9 @@ import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 import { vrchat } from '../../utils/externalApi/vrchat';
 import { emojiMap } from '../../assets/icons';
+import Config from '../../assets/config';
 
-// Rate limiting: 1 request per 1.5 seconds to be safe
-const RATE_LIMIT_DELAY = 1500; // milliseconds
+const RATE_LIMIT_DELAY = Config.EXPORT_RATE_LIMIT; // milliseconds
 
 // Global state to prevent concurrent full exports
 let isFullExportRunning = false;
@@ -313,13 +313,18 @@ export const exportWorldsFull = async (message: Message) => {
             progressMessage.channel.isSendable() &&
             !isCancelled
           ) {
+            const remainingTime = Math.ceil(
+              ((processedWorlds.length - processedCount) *
+                (RATE_LIMIT_DELAY / 1000)) /
+                60
+            );
             await progressMessage.edit(
               `🔄 **Full World Export in Progress...**\n\n` +
                 `**📈 Total Worlds to Process:** ${processedWorlds.length}\n` +
                 `**📊 Progress:** ${processedCount}/${processedWorlds.length} worlds processed\n` +
                 `**✅ Successfully Fetched:** ${successCount}\n` +
                 `**❌ API Errors:** ${errorCount}\n` +
-                `**⏱️ Remaining:** ~${Math.ceil(((processedWorlds.length - processedCount) * 1.5) / 60)} minutes\n\n` +
+                `**⏱️ Remaining:** ~${remainingTime} minutes\n\n` +
                 `This will take some time due to VRChat API rate limits. I'll update this message with progress.\n\n` +
                 `**📋 Error Details:** Any API errors will be collected and included in a separate text file.\n\n` +
                 `**React with ${emojiMap.crossError} to cancel the export.**`
