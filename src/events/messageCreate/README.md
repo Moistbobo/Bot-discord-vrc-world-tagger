@@ -106,7 +106,6 @@ Most commands are protected by the `withProtection` wrapper, which restricts acc
 The following commands are available to all users as they only provide read-only information or export functionality:
 - `.stats` - Bot statistics and activity information
 - `.export` - Simple world ID export
-- `.exportFull` - Detailed world information export
 
 ## Automatic Processing
 

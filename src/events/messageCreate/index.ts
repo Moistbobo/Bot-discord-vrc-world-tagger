@@ -32,7 +32,7 @@ const messageCreate = async (message: Message) => {
   } else if (message.content.startsWith('.exportFull')) {
     return withProtection(exportWorldsFull)(message);
   } else if (message.content.startsWith('.export')) {
-    return withProtection(exportWorlds)(message);
+    return exportWorlds(message);
   } else {
     return watchForVRCWorldLinks(message);
   }
