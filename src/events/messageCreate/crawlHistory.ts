@@ -2,11 +2,7 @@ import { Message, TextChannel } from 'discord.js';
 import logger from '../../utils/logger';
 import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
 import { set, get as getValue } from '../../utils/jsonAsDb/index';
-import {
-  kvKeys,
-  CrawlStatus,
-  HistoricalWorld
-} from '../../utils/jsonAsDb/types';
+import { kvKeys, CrawlStatus } from '../../utils/jsonAsDb/types';
 import { extractWorldIdFromMessage } from './watchForVRCWorldLinks/worldExtraction';
 import { emojiMap } from '../../assets/icons';
 
@@ -77,16 +73,42 @@ export const crawlChannelHistory = async (message: Message) => {
  * Start the actual crawling process
  */
 const startCrawl = async (message: Message, channel: TextChannel) => {
-  // Initialize crawl status
-  const crawlStatus: CrawlStatus = {
-    channelId: channel.id,
-    isRunning: true,
-    startTime: new Date().toISOString(),
-    lastUpdateTime: new Date().toISOString(),
-    messagesProcessed: 0,
-    worldsDiscovered: 0,
-    lastMessageId: undefined
-  };
+  // Check for existing crawl status to potentially resume
+  const existingStatuses = await getValue(kvKeys.CHANNEL_HISTORY_CRAWL_STATUS);
+  const existingStatus =
+    existingStatuses &&
+    typeof existingStatuses === 'object' &&
+    existingStatuses[channel.id]
+      ? (existingStatuses[channel.id] as CrawlStatus)
+      : null;
+
+  let isResuming = false;
+  let crawlStatus: CrawlStatus;
+
+  if (existingStatus && existingStatus.isRunning) {
+    // Resume from existing interrupted crawl
+    isResuming = true;
+    crawlStatus = {
+      ...existingStatus,
+      isRunning: true,
+      lastUpdateTime: new Date().toISOString()
+    };
+
+    logger.info(
+      `Resuming interrupted crawl for channel ${channel.id} from message ${crawlStatus.lastMessageId || 'beginning'}`
+    );
+  } else {
+    // Start new crawl
+    crawlStatus = {
+      channelId: channel.id,
+      isRunning: true,
+      startTime: new Date().toISOString(),
+      lastUpdateTime: new Date().toISOString(),
+      messagesProcessed: 0,
+      worldsDiscovered: 0,
+      lastMessageId: undefined
+    };
+  }
 
   // Store crawl status with channel ID as part of the data
   await set(kvKeys.CHANNEL_HISTORY_CRAWL_STATUS, {
@@ -96,12 +118,20 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
   // Send initial message
   let progressMessage: Message | null = null;
   if (message.channel.isSendable()) {
+    const statusText = isResuming ? 'Resuming...' : 'Initializing...';
+    const descriptionText = isResuming
+      ? `Resuming crawl from message ${crawlStatus.lastMessageId || 'beginning'}`
+      : 'This will scan the entire channel history for VRChat world links.';
+
     progressMessage = await message.channel.send(
-      `🔄 **Starting Channel History Crawl**\n\n` +
+      `🔄 **${isResuming ? 'Resuming' : 'Starting'} Channel History Crawl**\n\n` +
         `**📺 Channel:** ${channel}\n` +
-        `**📊 Status:** Initializing...\n` +
-        `**⏱️ Started:** ${new Date().toLocaleString()}\n\n` +
-        `This will scan the entire channel history for VRChat world links.\n` +
+        `**📊 Status:** ${statusText}\n` +
+        `**⏱️ Started:** ${new Date(crawlStatus.startTime).toLocaleString()}\n` +
+        (isResuming
+          ? `**📊 Progress:** ${crawlStatus.messagesProcessed.toLocaleString()} messages, ${crawlStatus.worldsDiscovered.toLocaleString()} worlds\n`
+          : '') +
+        `\n${descriptionText}\n` +
         `**React with ${emojiMap.crossError} to cancel the crawl.**`
     );
 
@@ -118,7 +148,7 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
       filter: (reaction, user) =>
         reaction.emoji.name === emojiMap.crossError &&
         user.id === message.author.id,
-      time: 24 * 60 * 60 * 1000 // 24 hours
+      time: 48 * 60 * 60 * 1000 // 48 hours
     });
 
     reactionCollector.on('collect', async () => {
@@ -129,7 +159,8 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
             `**📺 Channel:** ${channel}\n` +
             `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
             `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n` +
-            `Crawl was cancelled by ${message.author.toString()}.`
+            `Crawl was cancelled by ${message.author.toString()}.\n\n` +
+            `**💡 Tip:** Run the command again to resume from where you left off.`
         );
       }
       logger.info(
@@ -165,8 +196,7 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
           `✅ **Channel History Crawl Complete!**\n\n` +
           `**📺 Channel:** ${channel}\n` +
           `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
-          `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n` +
-          `Use \`.export ${channel}\` or \`.exportFull ${channel}\` to export the discovered worlds.`,
+          `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n`,
         files: []
       });
     }
@@ -209,10 +239,21 @@ const crawlMessages = async (
   progressMessage: Message | null,
   cancellationState: { isCancelled: boolean }
 ): Promise<void> => {
-  let lastMessageId: string | undefined;
-  let totalMessages = 0;
-  // Track unique worlds discovered across all batches
+  let lastMessageId: string | undefined = crawlStatus.lastMessageId;
+  let totalMessages = crawlStatus.messagesProcessed;
+  // Track unique worlds discovered across all batches, preserving existing count
   const discoveredWorlds = new Set<string>();
+
+  // If resuming, we need to get the existing discovered worlds count
+  // This is a simplified approach - in a full implementation you might want to
+  // reconstruct the exact set of world IDs from the database
+  if (crawlStatus.worldsDiscovered > 0) {
+    // For now, we'll just use the count and let the duplicate detection handle it
+    // The actual worlds will be rediscovered as we process messages
+    logger.info(
+      `Resuming crawl with ${crawlStatus.worldsDiscovered} previously discovered worlds`
+    );
+  }
 
   while (!cancellationState.isCancelled) {
     try {
@@ -261,7 +302,7 @@ const crawlMessages = async (
 
         // Log message being processed
         logger.info(
-          `Crawling message ${totalMessages}: ${msg.id} from ${msg.author?.tag || 'Unknown'} at ${msg.createdAt.toISOString()}`
+          `Crawling message ${totalMessages}: ${msg.id} at ${msg.createdAt.toISOString()}`
         );
 
         // Extract world ID from message sequentially
@@ -276,11 +317,9 @@ const crawlMessages = async (
           // Only count if this world hasn't been discovered yet
           if (isNewWorld) {
             discoveredWorlds.add(worldId);
-            crawlStatus.worldsDiscovered = discoveredWorlds.size;
+            // Update the total count including previously discovered worlds
+            crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
           }
-
-          // Store historical world data
-          await storeHistoricalWorld(worldId, channel.id, msg);
 
           // Add delay only when a world is successfully extracted to prevent rate limiting
           await delay(RATE_LIMIT_DELAY);
@@ -301,7 +340,7 @@ const crawlMessages = async (
             `🔄 **Channel History Crawl in Progress**\n\n` +
               `**📺 Channel:** ${channel}\n` +
               `**📊 Messages Processed:** ${totalMessages.toLocaleString()}\n` +
-              `**🌍 Unique Worlds Discovered:** ${discoveredWorlds.size.toLocaleString()}\n` +
+              `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered.toLocaleString()}\n` +
               `**⏱️ Started:** ${new Date(crawlStatus.startTime).toLocaleString()}\n\n` +
               `**React with ${emojiMap.crossError} to cancel the crawl.**`
           );
@@ -310,7 +349,7 @@ const crawlMessages = async (
 
       // Log batch completion
       logger.info(
-        `Completed batch processing. Total messages: ${totalMessages}, Unique worlds: ${discoveredWorlds.size}`
+        `Completed batch processing. Total messages: ${totalMessages}, Unique worlds: ${crawlStatus.worldsDiscovered}`
       );
 
       // Update last message ID for next batch
@@ -337,7 +376,7 @@ const crawlMessages = async (
           `🔄 **Channel History Crawl in Progress**\n\n` +
             `**📺 Channel:** ${channel}\n` +
             `**📊 Messages Processed:** ${totalMessages.toLocaleString()}\n` +
-            `**🌍 Unique Worlds Discovered:** ${discoveredWorlds.size.toLocaleString()}\n` +
+            `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered.toLocaleString()}\n` +
             `**⏱️ Started:** ${new Date(crawlStatus.startTime).toLocaleString()}\n\n` +
             `**React with ${emojiMap.crossError} to cancel the crawl.**`
         );
@@ -355,95 +394,6 @@ const crawlMessages = async (
       logger.error(`Error fetching messages for ${channel.id}:`, error);
       throw error;
     }
-  }
-};
-
-/**
- * Store historical world data
- */
-const storeHistoricalWorld = async (
-  worldId: string,
-  channelId: string,
-  message: Message
-) => {
-  try {
-    // Get existing historical world or create new one
-    const existingWorld = await getValue(kvKeys.HISTORICAL_WORLDS);
-    const worldData = (existingWorld as Record<string, HistoricalWorld>) || {};
-
-    const now = new Date().toISOString();
-    const source = {
-      channelId,
-      messageId: message.id,
-      timestamp: message.createdAt.toISOString(),
-      content: message.content.substring(0, 500) // Limit content length
-    };
-
-    if (worldData[worldId]) {
-      // Update existing world
-      const world: HistoricalWorld = {
-        ...worldData[worldId],
-        lastSeen: now,
-        messageCount: worldData[worldId].messageCount + 1,
-        channels: worldData[worldId].channels.includes(channelId)
-          ? worldData[worldId].channels
-          : [...worldData[worldId].channels, channelId],
-        sources: [...worldData[worldId].sources, source]
-      };
-      worldData[worldId] = world;
-    } else {
-      // Create new historical world
-      const world: HistoricalWorld = {
-        worldId,
-        firstSeen: now,
-        lastSeen: now,
-        messageCount: 1,
-        channels: [channelId],
-        sources: [source]
-      };
-      worldData[worldId] = world;
-    }
-
-    await set(kvKeys.HISTORICAL_WORLDS, worldData);
-
-    // Also add to duplicate handler database to prevent future duplicate alerts
-    // Use the first source message as the "original" message for duplicate detection
-    if (message.guildId) {
-      const duplicateKey = `${worldId}-${message.guildId}`;
-      const existingDuplicateEntry = await getValue(
-        kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID
-      );
-
-      if (
-        existingDuplicateEntry &&
-        typeof existingDuplicateEntry === 'object'
-      ) {
-        const duplicateData = existingDuplicateEntry as Record<string, string>;
-        if (!duplicateData[duplicateKey]) {
-          // Only add if not already present
-          duplicateData[duplicateKey] = message.id;
-          await set(
-            kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
-            duplicateData
-          );
-          logger.info(
-            `Added crawled world ${worldId} to duplicate handler database with message ID ${message.id}`
-          );
-        }
-      } else {
-        // Create new duplicate handler entry
-        const duplicateData = { [duplicateKey]: message.id };
-        await set(
-          kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
-          duplicateData
-        );
-        logger.info(
-          `Created duplicate handler entry for crawled world ${worldId} with message ID ${message.id}`
-        );
-      }
-    }
-  } catch (error) {
-    logger.error(`Error storing historical world ${worldId}:`, error);
   }
 };
 

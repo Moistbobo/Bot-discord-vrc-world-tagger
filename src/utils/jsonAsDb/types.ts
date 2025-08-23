@@ -13,11 +13,7 @@ export enum kvKeys {
   /** Worlds that have been processed to avoid duplicates, with original message ID */
   PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID = 'PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID',
   /** Channel history crawling status and progress */
-  CHANNEL_HISTORY_CRAWL_STATUS = 'CHANNEL_HISTORY_CRAWL_STATUS',
-  /** Historical worlds discovered through crawling */
-  HISTORICAL_WORLDS = 'HISTORICAL_WORLDS',
-  /** Crawl progress tracking */
-  CRAWL_PROGRESS = 'CRAWL_PROGRESS'
+  CHANNEL_HISTORY_CRAWL_STATUS = 'CHANNEL_HISTORY_CRAWL_STATUS'
 }
 
 /**
@@ -40,26 +36,4 @@ export interface CrawlStatus {
   worldsDiscovered: number;
   lastMessageId?: string;
   error?: string;
-}
-
-export interface HistoricalWorld {
-  worldId: string;
-  firstSeen: string; // ISO timestamp
-  lastSeen: string; // ISO timestamp
-  messageCount: number;
-  channels: string[]; // Channel IDs where found
-  sources: {
-    channelId: string;
-    messageId: string;
-    timestamp: string;
-    content: string;
-  }[];
-}
-
-export interface CrawlProgress {
-  channelId: string;
-  currentBatch: number;
-  totalBatches: number;
-  messagesInCurrentBatch: number;
-  estimatedRemaining: number; // in seconds
 }
