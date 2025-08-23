@@ -10,8 +10,8 @@ import { emojiMap } from '../../assets/icons';
 const activeCrawls = new Map<string, boolean>();
 
 // Rate limiting: Discord allows 5 requests per 5 seconds
-const RATE_LIMIT_DELAY = 500; // milliseconds (slightly over 1 second to be safe)
-const BATCH_SIZE = 100; // Discord.js default limit
+const RATE_LIMIT_DELAY = 500;
+const BATCH_SIZE = 100;
 
 // Helper function to delay execution
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -25,7 +25,7 @@ export const crawlChannelHistory = async (message: Message) => {
   if (!channel) {
     if (message.channel.isSendable()) {
       await message.channel.send(
-        '❌ Please mention a channel to crawl (e.g., `.crawlHistory #channel-name`)'
+        `${emojiMap.crossError} Please mention a channel to crawl (e.g., \`.crawlHistory #channel-name\`)`
       );
     }
     return;
@@ -33,7 +33,9 @@ export const crawlChannelHistory = async (message: Message) => {
 
   if (!(channel instanceof TextChannel)) {
     if (message.channel.isSendable()) {
-      await message.channel.send('❌ Can only crawl text channels');
+      await message.channel.send(
+        `${emojiMap.crossError} Can only crawl text channels`
+      );
     }
     return;
   }
@@ -53,7 +55,7 @@ export const crawlChannelHistory = async (message: Message) => {
   if (!watchedChannels.includes(channel.id)) {
     if (message.channel.isSendable()) {
       await message.channel.send(
-        `❌ Channel ${channel} is not being watched. Use \`.watch ${channel}\` first.`
+        `${emojiMap.crossError} Channel ${channel} is not being watched. Use \`.watch ${channel}\` first.`
       );
     }
     return;
@@ -155,7 +157,7 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
       cancellationState.isCancelled = true;
       if (progressMessage && progressMessage.channel.isSendable()) {
         await progressMessage.edit(
-          `❌ **Channel History Crawl Cancelled**\n\n` +
+          `${emojiMap.crossError} **Channel History Crawl Cancelled**\n\n` +
             `**📺 Channel:** ${channel}\n` +
             `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
             `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n` +
@@ -217,9 +219,9 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
 
     if (message.channel.isSendable()) {
       await message.channel.send(
-        `❌ **Channel History Crawl Failed**\n\n` +
+        `${emojiMap.crossError} **Channel History Crawl Failed**\n\n` +
           `**📺 Channel:** ${channel}\n` +
-          `**❌ Error:** ${error.message}\n\n` +
+          `**${emojiMap.crossError} Error:** ${error.message}\n\n` +
           `Please try again later or contact an administrator.`
       );
     }
@@ -406,7 +408,7 @@ export const getCrawlStatus = async (message: Message) => {
   if (!channel) {
     if (message.channel.isSendable()) {
       await message.channel.send(
-        '❌ Please mention a channel to check status (e.g., `.crawlStatus #channel-name`)'
+        `${emojiMap.crossError} Please mention a channel to check status (e.g., \`.crawlStatus #channel-name\`)`
       );
     }
     return;
@@ -439,7 +441,9 @@ export const getCrawlStatus = async (message: Message) => {
         `**🌍 Unique Worlds Discovered:** ${status.worldsDiscovered.toLocaleString()}\n` +
         `**⏱️ Started:** ${new Date(status.startTime).toLocaleString()}\n` +
         `**🕐 Last Update:** ${new Date(status.lastUpdateTime).toLocaleString()}` +
-        (status.error ? `\n**❌ Error:** ${status.error}` : '')
+        (status.error
+          ? `\n**${emojiMap.crossError} Error:** ${status.error}`
+          : '')
     );
   }
 };
