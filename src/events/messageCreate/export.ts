@@ -29,8 +29,7 @@ const extractAllPlatforms = (unityPackages: any[] | undefined): string => {
     return 'Unknown';
   }
 
-  // Return comma-separated platforms, or single platform if only one
-  return platforms.length === 1 ? platforms[0] : platforms.join(', ');
+  return platforms.length === 1 ? platforms[0] : platforms.join(' ');
 };
 
 // Helper function to fetch world data with timeout
@@ -94,10 +93,13 @@ export const exportWorlds = async (message: Message) => {
       return;
     }
 
-    // Create simple CSV with just world IDs
-    const csvHeader = 'Index,World ID\n';
+    // Create simple CSV with world IDs and URLs
+    const csvHeader = 'Index,World ID,World URL\n';
     const csvRows = processedWorlds
-      .map((worldId, index) => `${index + 1},${worldId}`)
+      .map(
+        (worldId, index) =>
+          `${index + 1},${worldId},https://vrchat.com/home/world/${worldId}`
+      )
       .join('\n');
     const csvContent = csvHeader + csvRows;
 
@@ -113,8 +115,8 @@ export const exportWorlds = async (message: Message) => {
         content:
           `📊 **VRChat World IDs Export Complete!**\n\n` +
           `**📈 Total Worlds:** ${processedWorlds.length}\n` +
-          `**📁 File Format:** CSV with world IDs only\n\n` +
-          `The attached CSV contains just the world IDs in order. Use \`.exportFull\` for detailed world information.`,
+          `**📁 File Format:** CSV with world IDs and direct links\n\n` +
+          `The attached CSV contains world IDs with direct VRChat world URLs for easy access. Use \`.exportFull\` for detailed world information.`,
         files: [attachment]
       });
     }
@@ -396,11 +398,11 @@ export const exportWorldsFull = async (message: Message) => {
 
     // Create CSV content with world information
     const csvHeader =
-      'Index,World ID,World Name,Author Name,Capacity,Platform,Status\n';
+      'Index,World ID,World URL,World Name,Author Name,Capacity,Platform,Status\n';
     const csvRows = worldData
       .map(
         (world) =>
-          `${world.index},${world.worldId},"${world.name.replace(/"/g, '""')}","${world.authorName.replace(/"/g, '""')}",${world.capacity},${world.platform},${world.status}`
+          `${world.index},${world.worldId},https://vrchat.com/home/world/${world.worldId},"${world.name.replace(/"/g, '""')}","${world.authorName.replace(/"/g, '""')}",${world.capacity},${world.platform},${world.status}`
       )
       .join('\n');
     const csvContent = csvHeader + csvRows;
@@ -481,7 +483,7 @@ export const exportWorldsFull = async (message: Message) => {
           `**✅ Successfully Fetched:** ${successCount}\n` +
           `**❌ API Errors:** ${errorCount}\n` +
           `**📁 File Format:** CSV with world details${errorFileMessage}\n\n` +
-          `The attached CSV contains world IDs, names, authors, capacity, platform, and status information. ` +
+          `The attached CSV contains world IDs, direct VRChat URLs, names, authors, capacity, platform, and status information. ` +
           `You can open this file in Excel, Google Sheets, or any spreadsheet application for analysis.`,
         files: files
       });
