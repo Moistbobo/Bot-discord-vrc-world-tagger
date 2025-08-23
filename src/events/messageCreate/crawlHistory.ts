@@ -130,7 +130,7 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
       `🔄 **${isResuming ? 'Resuming' : 'Starting'} Channel History Crawl**\n\n` +
         `**📺 Channel:** ${channel}\n` +
         `**📊 Status:** ${statusText}\n` +
-        `**⏱️ Started:** ${new Date(crawlStatus.startTime).toLocaleString()}\n` +
+        `**⏱️ Started:** <t:${Math.floor(new Date(crawlStatus.startTime).getTime() / 1000)}:F>\n` +
         (isResuming
           ? `**📊 Progress:** ${crawlStatus.messagesProcessed.toLocaleString()} messages, ${crawlStatus.worldsDiscovered.toLocaleString()} worlds\n`
           : '') +
@@ -161,7 +161,7 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
           `${emojiMap.crossError} **Channel History Crawl Cancelled**\n\n` +
             `**📺 Channel:** ${channel}\n` +
             `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
-            `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n` +
+            `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n` +
             `Crawl was cancelled by ${message.author.toString()}.\n\n` +
             `**💡 Tip:** Run the command again to resume from where you left off.`
         );
@@ -199,7 +199,7 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
           `✅ **Channel History Crawl Complete!**\n\n` +
           `**📺 Channel:** ${channel}\n` +
           `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
-          `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n`,
+          `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n`,
         files: []
       });
     }
@@ -339,8 +339,8 @@ const crawlMessages = async (
             `🔄 **Channel History Crawl in Progress**\n\n` +
               `**📺 Channel:** ${channel}\n` +
               `**📊 Messages Processed:** ${totalMessages.toLocaleString()}\n` +
-              `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered.toLocaleString()}\n` +
-              `**⏱️ Started:** ${new Date(crawlStatus.startTime).toLocaleString()}\n\n` +
+              `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered.toLocaleString()}\n` +
+              `**⏱️ Started:** <t:${Math.floor(new Date(crawlStatus.startTime).getTime() / 1000)}:F>\n\n` +
               `**React with ${emojiMap.crossError} to cancel the crawl.**`
           );
         }
@@ -379,8 +379,8 @@ const crawlMessages = async (
           `🔄 **Channel History Crawl in Progress**\n\n` +
             `**📺 Channel:** ${channel}\n` +
             `**📊 Messages Processed:** ${totalMessages.toLocaleString()}\n` +
-            `**🌍 Unique Worlds Discovered:** ${crawlStatus.worldsDiscovered.toLocaleString()}\n` +
-            `**⏱️ Started:** ${new Date(crawlStatus.startTime).toLocaleString()}\n\n` +
+            `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered.toLocaleString()}\n` +
+            `**⏱️ Started:** <t:${Math.floor(new Date(crawlStatus.startTime).getTime() / 1000)}:F>\n\n` +
             `**React with ${emojiMap.crossError} to cancel the crawl.**`
         );
       }
@@ -441,9 +441,9 @@ export const getCrawlStatus = async (message: Message) => {
       `${statusMessage}\n\n` +
         `**📺 Channel:** ${channel}\n` +
         `**📊 Messages Processed:** ${status.messagesProcessed.toLocaleString()}\n` +
-        `**🌍 Unique Worlds Discovered:** ${status.worldsDiscovered.toLocaleString()}\n` +
-        `**⏱️ Started:** ${new Date(status.startTime).toLocaleString()}\n` +
-        `**🕐 Last Update:** ${new Date(status.lastUpdateTime).toLocaleString()}` +
+        `**🌍 New Worlds Discovered:** ${status.worldsDiscovered.toLocaleString()}\n` +
+        `**⏱️ Started:** <t:${Math.floor(new Date(status.startTime).getTime() / 1000)}:F>\n` +
+        `**🕐 Last Update:** <t:${Math.floor(new Date(status.lastUpdateTime).getTime() / 1000)}:F>` +
         (status.error
           ? `\n**${emojiMap.crossError} Error:** ${status.error}`
           : '')
