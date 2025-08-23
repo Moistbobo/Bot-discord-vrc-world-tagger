@@ -53,17 +53,20 @@ This directory contains all the commands that can be triggered by messages in Di
 - **Example**: `.export`
 - **Features**:
   - Fast execution (no API calls required)
-  - Simple CSV with Index and World ID columns
+  - CSV columns: Index, World ID, World URL
+  - Direct VRChat world links for easy access
   - Instant results for quick access to world IDs
   - Useful for bulk operations or quick reference
 
 ### `.exportFull`
 - **Description**: Export comprehensive world information with detailed data from VRChat API
 - **Usage**: `.exportFull`
-- **Admin Only**: No (available to all users)
+- **Admin Only**: Yes
 - **Example**: `.exportFull`
 - **Features**:
   - Detailed CSV with world names, authors, capacity, platforms, and status
+  - CSV columns: Index, World ID, World URL, World Name, Author Name, Capacity, Platform, Status
+  - Direct VRChat world links for easy access
   - Fetches live data from VRChat API for each world
   - Rate-limited to respect VRChat API limits
   - Progress updates during export process
@@ -87,17 +90,7 @@ This directory contains all the commands that can be triggered by messages in Di
   - Last processed world
   - Total activity summary
 
-### `.export`
-- **Description**: Export all processed worlds to a CSV file
-- **Usage**: `.export`
-- **Admin Only**: Yes
-- **Example**: `.export`
-- **Features**:
-  - Generates CSV file with all processed world IDs
-  - Includes export date, total count, and timestamp
-  - CSV columns: World ID, Export Date, Total Worlds, Export Timestamp
-  - File named with current date and time (e.g., `vrchat_worlds_export_2024-01-15T12-30-45-123Z.csv`)
-  - Useful for data analysis, backup, and tracking purposes
+
 
 ## Command Protection
 
@@ -106,6 +99,8 @@ Most commands are protected by the `withProtection` wrapper, which restricts acc
 The following commands are available to all users as they only provide read-only information or export functionality:
 - `.stats` - Bot statistics and activity information
 - `.export` - Simple world ID export
+
+**Note**: `.exportFull` requires admin privileges as it makes API calls to VRChat and can be resource-intensive.
 
 ## Automatic Processing
 
