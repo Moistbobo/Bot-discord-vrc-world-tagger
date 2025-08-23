@@ -10,7 +10,7 @@ import {
 import { searchByWorldAndAuthorName } from '../../../../utils/externalApi/vrchat';
 import getTweetContent from '../../../../utils/externalApi/vxtwitter';
 import { LimitedWorld } from 'vrchat';
-import { closest } from 'fastest-levenshtein';
+import { closest, distance } from 'fastest-levenshtein';
 import logger from '../../../../utils/logger';
 
 /**
@@ -90,9 +90,127 @@ export const parseWorldInfoFromPlainText = async (
     authorName.trim()
   );
 
-  const world = filterWorldsWithAuthorName(limitedWorldData, authorName.trim());
+  // First try to filter by world name using Levenshtein distance
+  const filteredByWorldName = filterWorldsWithWorldName(
+    limitedWorldData,
+    worldName.trim()
+  );
+
+  // If we still have multiple results, fall back to author name filtering
+  let world: LimitedWorld | undefined;
+  if (filteredByWorldName && filteredByWorldName.length > 1) {
+    world = filterWorldsWithAuthorName(filteredByWorldName, authorName.trim());
+  } else if (filteredByWorldName && filteredByWorldName.length === 1) {
+    world = filteredByWorldName[0];
+  } else {
+    // Fall back to original author name filtering if world name filtering didn't work
+    world = filterWorldsWithAuthorName(limitedWorldData, authorName.trim());
+  }
 
   return world?.id;
+};
+
+/**
+ * Filter worlds by world name using Levenshtein distance
+ * @param data - Array of limited world data to search through
+ * @param worldName - The world name to match against
+ * @returns Array of worlds filtered by world name similarity, or empty array if error occurs
+ */
+export const filterWorldsWithWorldName = (
+  data: LimitedWorld[],
+  worldName: string
+): LimitedWorld[] => {
+  try {
+    // Input validation
+    if (!data || !Array.isArray(data)) {
+      logger.warn(
+        'filterWorldsWithWorldName: Invalid data parameter - not an array'
+      );
+      return [];
+    }
+
+    if (!worldName || typeof worldName !== 'string') {
+      logger.warn(
+        'filterWorldsWithWorldName: Invalid worldName parameter - not a string'
+      );
+      return [];
+    }
+
+    if (data.length === 0) {
+      logger.info('filterWorldsWithWorldName: Empty data array provided');
+      return [];
+    }
+
+    // Check if data has the expected structure
+    if (
+      !data.every((item) => item && typeof item === 'object' && 'name' in item)
+    ) {
+      logger.warn(
+        'filterWorldsWithWorldName: Data array contains invalid items - missing name property'
+      );
+      return [];
+    }
+
+    // Extract world names safely
+    const worldNames = data
+      .map((x) => {
+        if (x && x.name && typeof x.name === 'string') {
+          return x.name;
+        }
+        logger.warn(
+          'filterWorldsWithWorldName: Invalid name found in data item:',
+          x
+        );
+        return '';
+      })
+      .filter((name) => name !== ''); // Remove empty names
+
+    if (worldNames.length === 0) {
+      logger.warn(
+        'filterWorldsWithWorldName: No valid world names found in data'
+      );
+      return [];
+    }
+
+    // Calculate similarity scores for all worlds
+    const worldScores = data.map((world) => {
+      if (world && world.name && typeof world.name === 'string') {
+        try {
+          const levenshteinDistance = distance(worldName, world.name);
+          const maxLength = Math.max(worldName.length, world.name.length);
+          const similarity = 1 - levenshteinDistance / maxLength;
+          return { world, score: similarity };
+        } catch (levenshteinError) {
+          logger.error(
+            'filterWorldsWithWorldName: Error in Levenshtein comparison:',
+            levenshteinError
+          );
+          return { world, score: 0 };
+        }
+      }
+      return { world, score: 0 };
+    });
+
+    // Filter worlds with similarity score above threshold (0.5 = 50% similarity)
+    const threshold = 0.5;
+    const filteredWorlds = worldScores
+      .filter(({ score }) => score >= threshold)
+      .sort((a, b) => b.score - a.score) // Sort by similarity score (highest first)
+      .map(({ world }) => world);
+
+    logger.info(
+      `filterWorldsWithWorldName: Filtered ${data.length} worlds to ${filteredWorlds.length} by world name similarity (threshold: ${threshold})`
+    );
+
+    return filteredWorlds;
+  } catch (error) {
+    // Catch any unexpected errors
+    logger.error(
+      'filterWorldsWithWorldName: Unexpected error occurred:',
+      error
+    );
+    return [];
+  }
 };
 
 /**
