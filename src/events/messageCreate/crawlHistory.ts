@@ -332,7 +332,8 @@ const crawlMessages = async (
         if (
           totalMessages % 25 === 0 &&
           progressMessage &&
-          progressMessage.channel.isSendable()
+          progressMessage.channel.isSendable() &&
+          !cancellationState.isCancelled
         ) {
           await progressMessage.edit(
             `🔄 **Channel History Crawl in Progress**\n\n` +
@@ -369,7 +370,11 @@ const crawlMessages = async (
       }
 
       // Update progress message after each batch completion
-      if (progressMessage && progressMessage.channel.isSendable()) {
+      if (
+        progressMessage &&
+        progressMessage.channel.isSendable() &&
+        !cancellationState.isCancelled
+      ) {
         await progressMessage.edit(
           `🔄 **Channel History Crawl in Progress**\n\n` +
             `**📺 Channel:** ${channel}\n` +
@@ -381,13 +386,15 @@ const crawlMessages = async (
       }
 
       // Update crawl status
-      crawlStatus.lastUpdateTime = new Date().toISOString();
-      await set(kvKeys.CHANNEL_HISTORY_CRAWL_STATUS, {
-        [channel.id]: crawlStatus
-      });
+      if (!cancellationState.isCancelled) {
+        crawlStatus.lastUpdateTime = new Date().toISOString();
+        await set(kvKeys.CHANNEL_HISTORY_CRAWL_STATUS, {
+          [channel.id]: crawlStatus
+        });
 
-      // Rate limiting
-      await delay(RATE_LIMIT_DELAY);
+        // Rate limiting
+        await delay(RATE_LIMIT_DELAY);
+      }
     } catch (error) {
       logger.error(`Error fetching messages for ${channel.id}:`, error);
       throw error;
