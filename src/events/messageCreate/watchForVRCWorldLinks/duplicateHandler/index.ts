@@ -11,11 +11,13 @@ import { emojiMap } from '../../../../assets/icons';
  * Checks if a world has already been processed and handles duplicate responses
  * @param message - The Discord message
  * @param worldId - The world ID to check
+ * @param silent - If true, suppresses user-facing messages and reactions (default: false)
  * @returns Promise resolving to true if world is a duplicate, false if new
  */
 export const checkAndHandleDuplicate = async (
   message: Message,
-  worldId: string
+  worldId: string,
+  silent: boolean = false
 ): Promise<boolean> => {
   // Check if world has already been processed and generate original message link if so
   const originalMessageId = await getValue(
@@ -35,20 +37,28 @@ export const checkAndHandleDuplicate = async (
     if (guildId && channelId) {
       const originalMessageLink = `https://discord.com/channels/${guildId}/${channelId}/${originalMessageId}`;
 
-      // React to the original message with a recycle emoji
-      try {
-        await message.react(emojiMap.recycle);
-      } catch (err) {
-        logger.warn(`Failed to react with recycle emoji: ${err}`);
-      }
+      // Only show user-facing responses if not in silent mode
+      if (!silent) {
+        // React to the original message with a recycle emoji
+        try {
+          await message.react(emojiMap.recycle);
+        } catch (err) {
+          logger.warn(`Failed to react with recycle emoji: ${err}`);
+        }
 
-      if (message.channel.isSendable()) {
-        await message.channel.send(
-          `${emojiMap.actually} Uhm Ackhusally this is a duplicate of ${originalMessageLink}`
-        );
+        if (message.channel.isSendable()) {
+          await message.channel.send(
+            `${emojiMap.actually} Uhm Ackhusally this is a duplicate of ${originalMessageLink}`
+          );
+        } else {
+          logger.warn(
+            `Message channel is not sendable, skipping original message link for world ${worldId}`
+          );
+        }
       } else {
-        logger.warn(
-          `Message channel is not sendable, skipping original message link for world ${worldId}`
+        // Log silently for crawl operations
+        logger.debug(
+          `Silent duplicate detection: World ${worldId} is a duplicate of message ${originalMessageId}`
         );
       }
       return true; // World is a duplicate

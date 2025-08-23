@@ -19,7 +19,8 @@ jest.mock('../../../../utils/logger', () => ({
   default: {
     info: jest.fn(),
     warn: jest.fn(),
-    error: jest.fn()
+    error: jest.fn(),
+    debug: jest.fn()
   }
 }));
 
@@ -110,6 +111,22 @@ describe('checkAndHandleDuplicate', () => {
     expect(nonSendableMessage.react).toHaveBeenCalledWith('♻');
     const sent = (nonSendableMessage.channel as SendableChannels)
       .send as jest.Mock;
+    expect(sent).not.toHaveBeenCalled();
+  });
+
+  it('suppresses user-facing responses when silent mode is enabled', async () => {
+    asMock(getValue).mockResolvedValue('333'); // original message id
+
+    const result = await checkAndHandleDuplicate(baseMessage, 'wrld_abc', true);
+
+    expect(result).toBe(true);
+    expect(getValue).toHaveBeenCalledWith(
+      kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
+      'wrld_abc-111'
+    );
+    // Should not react or send messages in silent mode
+    expect(baseMessage.react).not.toHaveBeenCalled();
+    const sent = (baseMessage.channel as any).send as jest.Mock;
     expect(sent).not.toHaveBeenCalled();
   });
 });

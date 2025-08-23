@@ -4,6 +4,7 @@ import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
 import { set, get as getValue } from '../../utils/jsonAsDb/index';
 import { kvKeys, CrawlStatus } from '../../utils/jsonAsDb/types';
 import { extractWorldIdFromMessage } from './watchForVRCWorldLinks/worldExtraction';
+import { checkAndHandleDuplicate } from './watchForVRCWorldLinks/duplicateHandler';
 import { emojiMap } from '../../assets/icons';
 
 // Global state to prevent concurrent crawls on the same channel
@@ -243,15 +244,10 @@ const crawlMessages = async (
 ): Promise<void> => {
   let lastMessageId: string | undefined = crawlStatus.lastMessageId;
   let totalMessages = crawlStatus.messagesProcessed;
-  // Track unique worlds discovered across all batches, preserving existing count
-  const discoveredWorlds = new Set<string>();
 
   // If resuming, we need to get the existing discovered worlds count
-  // This is a simplified approach - in a full implementation you might want to
-  // reconstruct the exact set of world IDs from the database
+  // The duplicate detection system will handle tracking unique worlds
   if (crawlStatus.worldsDiscovered > 0) {
-    // For now, we'll just use the count and let the duplicate detection handle it
-    // The actual worlds will be rediscovered as we process messages
     logger.info(
       `Resuming crawl with ${crawlStatus.worldsDiscovered} previously discovered worlds`
     );
@@ -310,17 +306,17 @@ const crawlMessages = async (
         // Extract world ID from message sequentially
         const worldId = await extractWorldIdFromMessage(msg.content);
         if (worldId) {
-          // Log world discovery
-          const isNewWorld = !discoveredWorlds.has(worldId);
-          logger.info(
-            `World found in message ${msg.id}: ${worldId} ${isNewWorld ? '(NEW)' : '(DUPLICATE)'}`
-          );
+          // Use the existing duplicate detection system in silent mode for crawl operations
+          const isDuplicate = await checkAndHandleDuplicate(msg, worldId, true);
 
-          // Only count if this world hasn't been discovered yet
-          if (isNewWorld) {
-            discoveredWorlds.add(worldId);
-            // Update the total count including previously discovered worlds
+          if (!isDuplicate) {
+            // This is a new world, count it
             crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
+            logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
+          } else {
+            logger.info(
+              `World found in message ${msg.id}: ${worldId} (DUPLICATE)`
+            );
           }
 
           // Add delay only when a world is successfully extracted to prevent rate limiting
