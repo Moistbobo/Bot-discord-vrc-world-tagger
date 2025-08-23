@@ -20,9 +20,11 @@ const AUTHOR_TERMS = Config.AUTHOR_NAME_MATCHERS;
 export const customMatchers = {
   n4rGm5DmrVXXz6I: {
     getWorldName: (content: string) => {
+      if (!content) return '';
       return content.split('\n')[0].trim();
     },
     getAuthorName: (content: string) => {
+      if (!content) return '';
       return content.split('\n')[1].trim();
     }
   }
@@ -186,28 +188,23 @@ export function extractAuthorName(
   message: string,
   customTerms: string[] = []
 ): string | null {
-  try {
-    if (!message) return null;
+  if (!message) return null;
 
-    const allTerms = [...AUTHOR_TERMS, ...customTerms];
-    const termsPattern = allTerms
-      .map(
-        (term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex special characters
-      )
-      .join('|');
+  const allTerms = [...AUTHOR_TERMS, ...customTerms];
+  const termsPattern = allTerms
+    .map(
+      (term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape regex special characters
+    )
+    .join('|');
 
-    // More flexible regex that handles various formats including Japanese
-    const authorNameRegex = new RegExp(
-      `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*$|\\s*#|\\s*\\n)`,
-      'i'
-    );
+  // More flexible regex that handles various formats including Japanese
+  const authorNameRegex = new RegExp(
+    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*$|\\s*#|\\s*\\n)`,
+    'i'
+  );
 
-    const match = message.match(authorNameRegex);
-    return match?.[1]?.trim() ?? null;
-  } catch (error) {
-    console.error('Error in extractAuthorName:', error);
-    return null;
-  }
+  const match = message.match(authorNameRegex);
+  return match?.[1]?.trim() ?? null;
 }
 
 /**
