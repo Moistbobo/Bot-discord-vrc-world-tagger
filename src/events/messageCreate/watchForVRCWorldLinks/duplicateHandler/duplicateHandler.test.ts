@@ -1,4 +1,4 @@
-import { Message, SendableChannels } from 'discord.js';
+import { Message } from 'discord.js';
 import { kvKeys } from '../../../../utils/jsonAsDb/types';
 
 // Mock persistentKvp handler (module may not exist physically, so mark virtual)
@@ -48,11 +48,14 @@ describe('checkAndHandleDuplicate', () => {
     guildId: '111',
     channelId: '222',
     react: jest.fn(async () => undefined),
+    reply: jest.fn(async () => undefined),
     channel: {
       isSendable: () => true,
       send: jest.fn(async () => undefined)
     }
-  } as unknown as Message;
+  } as unknown as Message & {
+    reply: jest.MockedFunction<Message['reply']>;
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -69,11 +72,14 @@ describe('checkAndHandleDuplicate', () => {
       'wrld_abc-111'
     );
     expect(baseMessage.react).toHaveBeenCalledWith('♻');
-    // Ensure a link containing guild/channel/message ids is sent
-    const sent = (baseMessage.channel as any).send as jest.Mock;
-    expect(sent).toHaveBeenCalledTimes(1);
-    const [sentMsg] = sent.mock.calls[0];
-    expect(String(sentMsg)).toContain('/111/222/333');
+    // Ensure a reply is sent with the duplicate message
+    expect(baseMessage.reply).toHaveBeenCalledTimes(1);
+    const [replyOptions] = baseMessage.reply.mock.calls[0];
+    expect(replyOptions).toEqual({
+      allowedMentions: { repliedUser: false },
+      content:
+        ':actually: Uhm Ackhusally this is a duplicate of https://discord.com/channels/111/222/333'
+    });
   });
 
   it('returns false and saves original message when not a duplicate', async () => {
@@ -90,8 +96,7 @@ describe('checkAndHandleDuplicate', () => {
     );
     // Should not send duplicate notice nor react when saving new
     expect(baseMessage.react).not.toHaveBeenCalled();
-    const sent = (baseMessage.channel as any).send as jest.Mock;
-    expect(sent).not.toHaveBeenCalled();
+    expect(baseMessage.reply).not.toHaveBeenCalled();
   });
 
   it('skips sending message if channel not sendable but still returns true for duplicate', async () => {
@@ -100,7 +105,9 @@ describe('checkAndHandleDuplicate', () => {
     const nonSendableMessage = {
       ...baseMessage,
       channel: { isSendable: () => false, send: jest.fn() }
-    } as unknown as Message;
+    } as unknown as Message & {
+      reply: jest.MockedFunction<Message['reply']>;
+    };
 
     const result = await checkAndHandleDuplicate(
       nonSendableMessage,
@@ -109,9 +116,7 @@ describe('checkAndHandleDuplicate', () => {
 
     expect(result).toBe(true);
     expect(nonSendableMessage.react).toHaveBeenCalledWith('♻');
-    const sent = (nonSendableMessage.channel as SendableChannels)
-      .send as jest.Mock;
-    expect(sent).not.toHaveBeenCalled();
+    expect(nonSendableMessage.reply).not.toHaveBeenCalled();
   });
 
   it('suppresses user-facing responses when silent mode is enabled', async () => {
@@ -126,7 +131,6 @@ describe('checkAndHandleDuplicate', () => {
     );
     // Should not react or send messages in silent mode
     expect(baseMessage.react).not.toHaveBeenCalled();
-    const sent = (baseMessage.channel as any).send as jest.Mock;
-    expect(sent).not.toHaveBeenCalled();
+    expect(baseMessage.reply).not.toHaveBeenCalled();
   });
 });
