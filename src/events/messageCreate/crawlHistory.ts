@@ -5,6 +5,7 @@ import { set, get as getValue } from '../../utils/jsonAsDb/index';
 import { getValue as getKvpValue } from '../../utils/jsonAsDb/handlers/persistentKvp';
 import { kvKeys, CrawlStatus } from '../../utils/jsonAsDb/types';
 import { extractWorldIdFromMessage } from './watchForVRCWorldLinks/worldExtraction';
+import { extractWorldId } from '../../utils/regex';
 import { checkAndHandleDuplicate } from './watchForVRCWorldLinks/duplicateHandler';
 import { emojiMap } from '../../assets/icons';
 
@@ -76,6 +77,9 @@ export const crawlChannelHistory = async (message: Message) => {
  * Start the actual crawling process
  */
 const startCrawl = async (message: Message, channel: TextChannel) => {
+  // Start timing the crawl operation
+  const crawlStartTime = Date.now();
+
   // Check for existing crawl status to potentially resume
   const existingStatuses = await getValue(kvKeys.CHANNEL_HISTORY_CRAWL_STATUS);
   const existingStatus =
@@ -157,11 +161,21 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
     reactionCollector.on('collect', async () => {
       cancellationState.isCancelled = true;
       if (progressMessage && progressMessage.channel.isSendable()) {
+        // Calculate duration up to cancellation
+        const cancelDuration = Date.now() - crawlStartTime;
+        const cancelMinutes = Math.floor(cancelDuration / 60000);
+        const cancelSeconds = Math.floor((cancelDuration % 60000) / 1000);
+        const cancelDurationText =
+          cancelMinutes > 0
+            ? `${cancelMinutes}m ${cancelSeconds}s`
+            : `${cancelSeconds}s`;
+
         await progressMessage.edit(
           `${emojiMap.crossError} **Channel History Crawl Cancelled**\n\n` +
             `**📺 Channel:** ${channel}\n` +
             `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
-            `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n` +
+            `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n` +
+            `**⏱️ Duration:** ${cancelDurationText}\n\n` +
             `Crawl was cancelled by ${message.author.toString()}.\n\n` +
             `**💡 Tip:** Run the command again to resume from where you left off.`
         );
@@ -192,6 +206,15 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
       [channel.id]: crawlStatus
     });
 
+    // Calculate total crawl duration
+    const crawlDuration = Date.now() - crawlStartTime;
+    const durationMinutes = Math.floor(crawlDuration / 60000);
+    const durationSeconds = Math.floor((crawlDuration % 60000) / 1000);
+    const durationText =
+      durationMinutes > 0
+        ? `${durationMinutes}m ${durationSeconds}s`
+        : `${durationSeconds}s`;
+
     // Send completion message
     if (message.channel.isSendable()) {
       await message.channel.send({
@@ -199,13 +222,14 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
           `✅ **Channel History Crawl Complete!**\n\n` +
           `**📺 Channel:** ${channel}\n` +
           `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
-          `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n\n`,
+          `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n` +
+          `**⏱️ Duration:** ${durationText}\n\n`,
         files: []
       });
     }
 
     logger.info(
-      `Channel history crawl completed for ${channel.id}: ${crawlStatus.messagesProcessed} messages, ${crawlStatus.worldsDiscovered} worlds`
+      `Channel history crawl completed for ${channel.id}: ${crawlStatus.messagesProcessed} messages, ${crawlStatus.worldsDiscovered} worlds in ${durationText}`
     );
   } catch (error) {
     logger.error(`Channel history crawl failed for ${channel.id}:`, error);
@@ -245,6 +269,29 @@ const crawlMessages = async (
   let lastMessageId: string | undefined = crawlStatus.lastMessageId;
   let totalMessages = crawlStatus.messagesProcessed;
 
+  // Load all processed worlds into memory for fast cache lookups
+  logger.info('Loading processed worlds cache for optimization...');
+  const processedWorldsData = await getValue(
+    kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID
+  );
+  const processedWorldsCache = new Set<string>();
+
+  if (processedWorldsData && typeof processedWorldsData === 'object') {
+    // Extract all world-guild combinations that have already been processed
+    for (const key of Object.keys(processedWorldsData)) {
+      if (key.startsWith('wrld_')) {
+        processedWorldsCache.add(key);
+      }
+    }
+    logger.info(
+      `Loaded ${processedWorldsCache.size} processed worlds into cache`
+    );
+  } else {
+    logger.info(
+      'No previously processed worlds found, starting with empty cache'
+    );
+  }
+
   // If resuming, we need to get the existing discovered worlds count
   // The duplicate detection system will handle tracking unique worlds
   if (crawlStatus.worldsDiscovered > 0) {
@@ -276,21 +323,12 @@ const crawlMessages = async (
         break; // No more messages
       }
 
-      // Log batch processing start
-      logger.info(
-        `Processing batch of ${messages.size} messages (total processed: ${totalMessages})`
-      );
-
       // Process messages in this batch sequentially
       const messageArray = Array.isArray(messages)
         ? messages
         : messages instanceof Map || (messages as any).values
           ? Array.from((messages as any).values())
           : [messages];
-
-      logger.info(
-        `Converted batch to array of ${messageArray.length} messages for sequential processing`
-      );
 
       for (const msg of messageArray) {
         if (cancellationState.isCancelled) break;
@@ -302,6 +340,20 @@ const crawlMessages = async (
         logger.info(
           `Crawling message ${totalMessages}: ${msg.id} at ${msg.createdAt.toISOString()}`
         );
+
+        // Quick cache check: if this message contains a world ID that's already been processed,
+        // we can skip the expensive regex extraction
+        const potentialWorldId = extractWorldId(msg.content);
+        if (potentialWorldId) {
+          const cacheKey = `${potentialWorldId}-${msg.guildId}`;
+          if (processedWorldsCache.has(cacheKey)) {
+            // This world has already been processed, skip expensive operations
+            logger.debug(
+              `Skipping message ${msg.id}: world ${potentialWorldId} already processed (cache hit)`
+            );
+            continue; // Skip to next message
+          }
+        }
 
         // Check if this message has already been processed by looking for any world IDs
         const worldId = await extractWorldIdFromMessage(msg.content);
@@ -327,6 +379,10 @@ const crawlMessages = async (
             // This is a new world, count it
             crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
             logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
+
+            // Add to cache to avoid processing this world again in the same crawl session
+            const cacheKey = `${worldId}-${msg.guildId}`;
+            processedWorldsCache.add(cacheKey);
           } else {
             logger.info(
               `World found in message ${msg.id}: ${worldId} (DUPLICATE)`
@@ -406,8 +462,7 @@ const crawlMessages = async (
           [channel.id]: crawlStatus
         });
 
-        // Rate limiting
-        await delay(RATE_LIMIT_DELAY);
+        // No delay needed - only local database operations
       }
     } catch (error) {
       logger.error(`Error fetching messages for ${channel.id}:`, error);
