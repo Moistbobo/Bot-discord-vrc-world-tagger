@@ -11,8 +11,7 @@ import { emojiMap } from '../../assets/icons';
 // Global state to prevent concurrent crawls on the same channel
 const activeCrawls = new Map<string, boolean>();
 
-// Rate limiting: Discord allows 5 requests per 5 seconds
-const RATE_LIMIT_DELAY = 500;
+const RATE_LIMIT_DELAY = 250;
 const BATCH_SIZE = 100;
 
 // Helper function to delay execution
