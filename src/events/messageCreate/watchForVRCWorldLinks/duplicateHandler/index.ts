@@ -47,9 +47,10 @@ export const checkAndHandleDuplicate = async (
         }
 
         if (message.channel.isSendable()) {
-          await message.channel.send(
-            `${emojiMap.actually} Uhm Ackhusally this is a duplicate of ${originalMessageLink}`
-          );
+          await message.reply({
+            allowedMentions: { repliedUser: false },
+            content: `${emojiMap.actually} Uhm Ackhusally this is a duplicate of ${originalMessageLink}`
+          });
         } else {
           logger.warn(
             `Message channel is not sendable, skipping original message link for world ${worldId}`
