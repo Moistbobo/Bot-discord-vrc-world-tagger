@@ -115,7 +115,7 @@ export function extractWorldName(
 
     // More flexible regex that handles various formats including Japanese
     const worldNameRegex = new RegExp(
-      `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*(?:${AUTHOR_TERMS.join('|')})|\\s*#|\\s*$|\\s*\\n)`
+      `(?:${termsPattern})\\s*[:：]?\\s*([^\\n\\r#]+?)(?=\\s*(?:${AUTHOR_TERMS.join('|')})|\\s*#|\\s*$|\\s*\\n)`
     );
 
     const match = message.match(worldNameRegex);
@@ -151,8 +151,10 @@ export function extractWorldAndAuthorByLines(
     // Check for world name
     for (const worldTerm of WORLD_TERMS) {
       if (line.toLowerCase().startsWith(worldTerm.toLowerCase())) {
-        const colonIndex = line.indexOf(':');
-        if (colonIndex !== -1) {
+        // Handle both regular colons and Japanese full-width colons
+        const colonMatch = line.match(/[:：]/);
+        if (colonMatch) {
+          const colonIndex = colonMatch.index!;
           worldName = line.substring(colonIndex + 1).trim();
           break;
         }
@@ -162,8 +164,10 @@ export function extractWorldAndAuthorByLines(
     // Check for author name
     for (const authorTerm of AUTHOR_TERMS) {
       if (line.toLowerCase().startsWith(authorTerm.toLowerCase())) {
-        const colonIndex = line.indexOf(':');
-        if (colonIndex !== -1) {
+        // Handle both regular colons and Japanese full-width colons
+        const colonMatch = line.match(/[:：]/);
+        if (colonMatch) {
+          const colonIndex = colonMatch.index!;
           authorName = line.substring(colonIndex + 1).trim();
           break;
         }
@@ -199,7 +203,7 @@ export function extractAuthorName(
 
   // More flexible regex that handles various formats including Japanese
   const authorNameRegex = new RegExp(
-    `(?:${termsPattern})\\s*:?\\s*([^\\n\\r#]+?)(?=\\s*$|\\s*#|\\s*\\n)`,
+    `(?:${termsPattern})\\s*[:：]?\\s*([^\\n\\r#]+?)(?=\\s*$|\\s*#|\\s*\\n)`,
     'i'
   );
 

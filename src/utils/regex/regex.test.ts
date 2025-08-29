@@ -20,7 +20,9 @@ jest.mock('../../assets/config', () => {
       '📸✨🌏World:',
       'World name:',
       'World',
-      'ワールド名'
+      'ワールド名',
+      'world：',
+      'World：'
     ],
     AUTHOR_NAME_MATCHERS: [
       'Author:',
@@ -28,7 +30,9 @@ jest.mock('../../assets/config', () => {
       '👤Author:',
       'By:',
       'Author',
-      'by'
+      'by',
+      'By ：',
+      'Author：'
     ]
   };
 });
@@ -83,7 +87,15 @@ Author : ~Zoid~
 Author: BEAMS_STAFF_1 
 
 #n4n0_pic 
-#VRChat_world紹介 https://t.co/nxaHwhERgE`
+#VRChat_world紹介 https://t.co/nxaHwhERgE`,
+  `
+  バス停がある真夏の風景のワールド
+︀︀マップが広くて色々な場所にスポットがあるようだ
+︀︀空を入れて撮影すると夏らしい1枚が撮れる
+︀︀world：炎天、途中下車 -One day in the summer-
+︀︀By ：だにゃえる
+︀︀タグ：景観
+  `
 ];
 
 describe('regex', () => {
@@ -118,6 +130,13 @@ describe('regex', () => {
       // It stops at "by" because it's looking for author terms
       expect(extractWorldName(testData[7])).toEqual('Tokyo Mood');
     });
+    it('Extracts correctly from ︀︀ world：炎天、途中下車 -One day in the summer-', () => {
+      // Note: The old regex approach has limitations with this format
+      // It stops at "by" because it's looking for author terms
+      expect(extractWorldName(testData[8])).toEqual(
+        '炎天、途中下車 -One day in the summer-'
+      );
+    });
   });
 
   describe('extractAuthorName', () => {
@@ -146,6 +165,11 @@ describe('regex', () => {
       // Note: The old regex approach has limitations with this format
       // It picks up "BEAMS Summer Version" from the world name line
       expect(extractAuthorName(testData[7])).toEqual('BEAMS Summer Version');
+    });
+    it('Extracts correctly from Author: だにゃえる', () => {
+      // Note: The old regex approach has limitations with this format
+      // It picks up "BEAMS Summer Version" from the world name line
+      expect(extractAuthorName(testData[8])).toEqual('だにゃえる');
     });
   });
 
