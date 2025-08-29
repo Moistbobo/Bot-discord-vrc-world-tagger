@@ -32,6 +32,8 @@ const extractAllPlatforms = (unityPackages: any[] | undefined): string => {
   return platforms.length === 1 ? platforms[0] : platforms.join(' ');
 };
 
+const xIfTrue = (condition: boolean) => (condition ? 'X' : '');
+
 // Helper function to get unique world IDs from PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID
 const getUniqueWorldIds = async (): Promise<string[]> => {
   try {
@@ -445,11 +447,11 @@ export const exportWorldsFull = async (message: Message) => {
 
     // Create CSV content with world information
     const csvHeader =
-      'Index,World ID,World URL,World Name,Author Name,Capacity,Platform,Status\n';
+      'Index,World ID,World URL,World Name,Author Name,Capacity,PC,Android,iOS,Status\n';
     const csvRows = worldData
       .map(
         (world) =>
-          `${world.index},${world.worldId},https://vrchat.com/home/world/${world.worldId},"${world.name.replace(/"/g, '""')}","${world.authorName.replace(/"/g, '""')}",${world.capacity},${world.platform},${world.status}`
+          `${world.index},${world.worldId},https://vrchat.com/home/world/${world.worldId},"${world.name.replace(/"/g, '""')}","${world.authorName.replace(/"/g, '""')}",${world.capacity},${xIfTrue(world.platform.includes('standalone'))},${xIfTrue(world.platform.includes('android'))},${xIfTrue(world.platform.includes('ios'))},${world.status}`
       )
       .join('\n');
     const csvContent = csvHeader + csvRows;
