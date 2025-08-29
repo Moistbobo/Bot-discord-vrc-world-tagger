@@ -1,8 +1,9 @@
 import { EmbedBuilder, Message } from 'discord.js';
 import logger from '../../utils/logger';
-import { getAll, has } from '../../utils/jsonAsDb/handlers/persistentList';
-import { get } from '../../utils/jsonAsDb/index';
+import { has } from '../../utils/jsonAsDb/handlers/persistentList';
+import { get } from '../../utils/jsonAsDb';
 import { kvKeys } from '../../utils/jsonAsDb/types';
+import packageJson from '../../../package.json';
 
 // Helper function to get unique world IDs from PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID
 const getUniqueWorldIds = async (): Promise<string[]> => {
@@ -67,23 +68,6 @@ export const stats = async (message: Message) => {
     const processedWorlds = await getUniqueWorldIds();
     const processedWorldsCount = processedWorlds.length;
 
-    const watchedChannels = await getAll(kvKeys.WATCHED_CHANNELS);
-    const watchedChannelsCount = watchedChannels.length;
-
-    const playerCountForwardingChannel = await getAll(
-      kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL
-    );
-    const playerCountForwardingCount = playerCountForwardingChannel.length;
-
-    const androidForwardingChannel = await getAll(
-      kvKeys.ANDROID_FORWARDING_CHANNEL
-    );
-    const androidForwardingCount = androidForwardingChannel.length;
-
-    // Calculate total forwarding channels
-    const totalForwardingChannels =
-      playerCountForwardingCount + androidForwardingCount;
-
     // Get bot uptime
     const uptime = process.uptime();
     const uptimeHours = Math.floor(uptime / 3600);
@@ -94,7 +78,6 @@ export const stats = async (message: Message) => {
     const memoryUsageMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
 
     // Get system information
-    const nodeVersion = process.version;
     const platform = process.platform;
 
     // Get last processed world (if any)
@@ -117,32 +100,6 @@ export const stats = async (message: Message) => {
           inline: true
         },
         {
-          name: '👀 Channels Watched',
-          value: `**${watchedChannelsCount}** channels`,
-          inline: true
-        },
-        {
-          name: '📡 Forwarding Channels',
-          value: `**${totalForwardingChannels}** total`,
-          inline: true
-        },
-        {
-          name: '📊 Player Count Forwarding',
-          value:
-            playerCountForwardingCount > 0
-              ? `**${playerCountForwardingCount}** channels`
-              : 'None configured',
-          inline: true
-        },
-        {
-          name: '🤖 Android Support Forwarding',
-          value:
-            androidForwardingCount > 0
-              ? `**${androidForwardingCount}** channels`
-              : 'None configured',
-          inline: true
-        },
-        {
           name: '⏰ Bot Uptime',
           value: `**${uptimeHours}h ${uptimeMinutes}m**`,
           inline: true
@@ -153,13 +110,13 @@ export const stats = async (message: Message) => {
           inline: true
         },
         {
-          name: '🔧 Node.js Version',
-          value: `**${nodeVersion}**`,
+          name: '💻 Platform',
+          value: `**${platform}**`,
           inline: true
         },
         {
-          name: '💻 Platform',
-          value: `**${platform}**`,
+          name: '🏷️ Bot Version',
+          value: `**v${packageJson.version}**`,
           inline: true
         },
         {
