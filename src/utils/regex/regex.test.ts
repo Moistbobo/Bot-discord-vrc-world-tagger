@@ -20,7 +20,9 @@ jest.mock('../../assets/config', () => {
       '📸✨🌏World:',
       'World name:',
       'World',
-      'ワールド名'
+      'ワールド名',
+      'world：',
+      'World：'
     ],
     AUTHOR_NAME_MATCHERS: [
       'Author:',
@@ -28,7 +30,9 @@ jest.mock('../../assets/config', () => {
       '👤Author:',
       'By:',
       'Author',
-      'by'
+      'by',
+      'By ：',
+      'Author：'
     ]
   };
 });
@@ -121,18 +125,18 @@ describe('regex', () => {
     it('Extracts correctly from World : Liminal - Room Tours (with URL)', () => {
       expect(extractWorldName(testData[6])).toEqual('Liminal - Room Tours');
     });
-    (it('Extracts correctly from World: Tokyo Mood by BEAMS Summer Version', () => {
+    it('Extracts correctly from World: Tokyo Mood by BEAMS Summer Version', () => {
       // Note: The old regex approach has limitations with this format
       // It stops at "by" because it's looking for author terms
       expect(extractWorldName(testData[7])).toEqual('Tokyo Mood');
-    }),
-      it('Extracts correctly from ︀︀ world：炎天、途中下車 -One day in the summer-', () => {
-        // Note: The old regex approach has limitations with this format
-        // It stops at "by" because it's looking for author terms
-        expect(extractWorldName(testData[8])).toEqual(
-          '炎天、途中下車 -One day in the summer-'
-        );
-      }));
+    });
+    it('Extracts correctly from ︀︀ world：炎天、途中下車 -One day in the summer-', () => {
+      // Note: The old regex approach has limitations with this format
+      // It stops at "by" because it's looking for author terms
+      expect(extractWorldName(testData[8])).toEqual(
+        '炎天、途中下車 -One day in the summer-'
+      );
+    });
   });
 
   describe('extractAuthorName', () => {
