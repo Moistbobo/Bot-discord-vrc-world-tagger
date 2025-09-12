@@ -1,12 +1,19 @@
 import { removeTwitterLink } from '../regex';
 import logger from '../logger';
 
-interface VxTwitterResponse {
-  text: string;
-  // Add other potential fields if needed
+// interface VxTwitterResponse {
+//   text: string;
+//   // Add other potential fields if needed
+// }
+
+interface FxTwitterResponse {
+  tweet: {
+    text: string;
+  };
 }
 
-const VX_TWITTER_BASE_URL = 'https://api.vxtwitter.com';
+// const VX_TWITTER_BASE_URL = 'https://api.vxtwitter.com';
+const FX_TWITTER_BASE_URL = 'https://api.fxtwitter.com';
 
 /**
  * Fetches the text content from a Twitter/X link using the VxTwitter API
@@ -27,7 +34,7 @@ const getTweetContent = async (twitterLink: string): Promise<string | null> => {
   }
 
   try {
-    const apiUrl = `${VX_TWITTER_BASE_URL}/${cleanedTwitterLink}`;
+    const apiUrl = `${FX_TWITTER_BASE_URL}/${cleanedTwitterLink}`;
     logger.info('Fetching from VxTwitter API:', apiUrl);
 
     const response = await fetch(apiUrl);
@@ -41,16 +48,16 @@ const getTweetContent = async (twitterLink: string): Promise<string | null> => {
       return null;
     }
 
-    const responseData: VxTwitterResponse = await response.json();
+    const responseData: FxTwitterResponse = await response.json();
 
-    if (!responseData.text) {
-      logger.warn('VxTwitter API response missing text field:', responseData);
+    if (!responseData.tweet.text) {
+      logger.warn('FxTwitter API response missing text field:', responseData);
       return null;
     }
 
-    logger.info('Fetched from VxTwitter API:', responseData.text);
+    logger.info('Fetched from VxTwitter API:', responseData.tweet.text);
 
-    return responseData.text;
+    return responseData.tweet.text;
   } catch (error) {
     logger.error('Error fetching from VxTwitter API:', error);
     return null;
