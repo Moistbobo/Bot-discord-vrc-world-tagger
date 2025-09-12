@@ -1,6 +1,6 @@
 {
   "name": "bot_vrc_world_tagger",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "main": "index.js",
   "scripts": {
     "start": "tsc && node dist/index.js",
