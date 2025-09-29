@@ -8,9 +8,10 @@ import {
 import { kvKeys } from '../../../../utils/jsonAsDb/types';
 import { hasAndroidSupport } from '../../../../utils/helpers';
 import { emojiMap } from '../../../../assets/icons';
+import Config from '../../../../assets/config';
 
 // Constants
-export const PLAYER_CAPACITY_THRESHOLD = 60;
+export const PLAYER_CAPACITY_THRESHOLD = Config.FORWARD_PLAYER_COUNT_THRESHOLD;
 
 // Types
 export interface ForwardingChannel {
@@ -95,7 +96,10 @@ export const getForwardingChannels = async (
     kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL
   );
   if (playerCountChannel && data.capacity >= PLAYER_CAPACITY_THRESHOLD) {
-    channels.push({ id: playerCountChannel, tag: 'Player Cap >= 60' });
+    channels.push({
+      id: playerCountChannel,
+      tag: `Player Cap >= ${PLAYER_CAPACITY_THRESHOLD}`
+    });
   }
 
   return channels;
