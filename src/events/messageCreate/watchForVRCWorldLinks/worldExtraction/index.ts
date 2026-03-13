@@ -37,6 +37,21 @@ export const extractWorldIdFromMessage = async (
   return null;
 };
 
+/**
+ * Searches for a world using only the world name (no author disambiguation).
+ * Returns the best match by name similarity, or null if none found.
+ */
+const searchByWorldNameOnly = async (
+  worldName: string
+): Promise<string | null> => {
+  const limitedWorldData = await searchByWorldName(worldName.trim());
+  const filtered = filterWorldsWithWorldName(
+    limitedWorldData,
+    worldName.trim()
+  );
+  return filtered.length > 0 ? filtered[0].id : null;
+};
+
 export const parseWorldInfoFromPlainText = async (
   twitterLink: string,
   tweetContent: string
@@ -70,17 +85,19 @@ export const parseWorldInfoFromPlainText = async (
     authorName = extractAuthorName(removeLinksFromTweet(tweetContent));
   }
 
-  // Check if both world name and author name were found
-  if (!worldName || !authorName) {
+  // Safeguard: do not search if only author name is available (world name required)
+  if (!worldName) {
     logger.warn(
-      'Could not extract world name or author name from tweet content:',
-      {
-        worldName: worldName || 'null',
-        authorName: authorName || 'null',
-        tweetContent: tweetContent?.substring(0, 200) + '...' // Log first 200 chars
-      }
+      'Could not extract world name from tweet content (author-only is not searchable):',
+      tweetContent?.substring(0, 200) + '...'
     );
     return null;
+  }
+
+  // World name only - search without author disambiguation
+  if (!authorName) {
+    logger.info(`Extracted world name only (no author): "${worldName}"`);
+    return searchByWorldNameOnly(worldName.trim());
   }
 
   logger.info(`Extracted - World: "${worldName}", Author: "${authorName}"`);
