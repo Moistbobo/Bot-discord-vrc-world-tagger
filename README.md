@@ -24,7 +24,7 @@ A Discord bot that monitors channels for VRChat world links and automatically en
 ## Installation
 
 ```bash
-npm install
+pnpm install
 ```
 
 ## Configuration
@@ -53,7 +53,7 @@ cp .env.sample .env
 ### Start the bot
 
 ```bash
-npm start
+pnpm start
 ```
 
 ### Commands
