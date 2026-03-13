@@ -24,10 +24,6 @@ export const hasAndroidSupport = (supportedPlatforms: string[]): boolean => {
   return supportedPlatforms.includes('android');
 };
 
-export const getWorldNameId = (data: World) => {
-  return `${data.name}-${data.id}`;
-};
-
 export const buildWorldUrl = (worldId: string) =>
   `https://vrchat.com/home/world/${worldId}`;
 

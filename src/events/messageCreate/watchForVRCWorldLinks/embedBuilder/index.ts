@@ -1,7 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import { World } from 'vrchat';
 import { buildWorldUrl } from '../../../../utils/helpers';
-import { emojiMap } from '../../../../assets/icons';
+import { emojiMap } from '../../../../assets/media';
 import Config from '../../../../assets/config';
 
 /**

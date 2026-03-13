@@ -17,14 +17,6 @@ export enum kvKeys {
 }
 
 /**
- * Type for database operation results
- */
-export type DbOperationResult = {
-  success: boolean;
-  error?: string;
-};
-
-/**
  * Types for channel history crawling
  */
 export interface CrawlStatus {
