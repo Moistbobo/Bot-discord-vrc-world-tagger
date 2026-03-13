@@ -4,6 +4,8 @@
 export enum kvKeys {
   /** Channels being watched for VRC world links */
   WATCHED_CHANNELS = 'WATCHED_CHANNELS',
+  /** Channels where reaction-based forwarding is enabled */
+  WATCHED_REACTION_CHANNELS = 'WATCHED_REACTION_CHANNELS',
   /** Channel for forwarding player count updates */
   PLAYER_COUNT_FORWARDING_CHANNEL = 'PLAYER_COUNT_FORWARDING_CHANNEL',
   /** Channel for forwarding Android support messages */

@@ -39,8 +39,11 @@ export const onReactionForward = async (
   const message = reaction.message;
   const channelId = message.channelId;
 
-  const isWatched = await has(kvKeys.WATCHED_CHANNELS, channelId);
-  if (!isWatched) return;
+  const isWatchedForReacts = await has(
+    kvKeys.WATCHED_REACTION_CHANNELS,
+    channelId
+  );
+  if (!isWatchedForReacts) return;
 
   const alreadyForwarded = await has(
     kvKeys.REACTION_FORWARDED_MESSAGE_IDS,

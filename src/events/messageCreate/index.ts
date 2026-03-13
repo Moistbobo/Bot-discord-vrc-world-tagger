@@ -3,6 +3,8 @@ import { Message } from 'discord.js';
 import watchForVRCWorldLinks from './watchForVRCWorldLinks';
 import { watchChannel } from './watchChannel';
 import { unWatchChannel } from './unWatchChannel';
+import { watchReacts } from './watchReacts';
+import { unwatchReacts } from './unwatchReacts';
 import androidSupport from './forwarding/androidSupport';
 import maxSlots from './forwarding/maxSlots';
 import forwardReact from './forwarding/forwardReact';
@@ -17,7 +19,11 @@ import { crawlChannelHistory, getCrawlStatus } from './crawlHistory';
 import lowCapacity from './forwarding/lowCapacity';
 
 const messageCreate = async (message: Message) => {
-  if (message.content.startsWith('.watch')) {
+  if (message.content.startsWith('.watchReacts')) {
+    return withProtection(watchReacts)(message);
+  } else if (message.content.startsWith('.unwatchReacts')) {
+    return withProtection(unwatchReacts)(message);
+  } else if (message.content.startsWith('.watch')) {
     return withProtection(watchChannel)(message);
   } else if (message.content.startsWith('.unwatch')) {
     return withProtection(unWatchChannel)(message);
