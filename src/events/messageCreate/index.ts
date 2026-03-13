@@ -5,6 +5,7 @@ import { watchChannel } from './watchChannel';
 import { unWatchChannel } from './unWatchChannel';
 import androidSupport from './forwarding/androidSupport';
 import maxSlots from './forwarding/maxSlots';
+import forwardReact from './forwarding/forwardReact';
 import clearForwardingChannels from './forwarding/clearForwardingChannels';
 import withProtection from './wrappers/withProtection';
 import die from './die';
@@ -23,6 +24,8 @@ const messageCreate = async (message: Message) => {
     return withProtection(androidSupport)(message);
   } else if (message.content.startsWith('.forwardMaxSlots')) {
     return withProtection(maxSlots)(message);
+  } else if (message.content.startsWith('.forwardReact')) {
+    return withProtection(forwardReact)(message);
   } else if (message.content.startsWith('.forwardLowCap')) {
     return withProtection(lowCapacity)(message);
   } else if (message.content.startsWith('.clearForwardingChannels')) {

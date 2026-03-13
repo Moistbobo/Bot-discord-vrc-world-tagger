@@ -10,12 +10,16 @@ export enum kvKeys {
   ANDROID_FORWARDING_CHANNEL = 'ANDROID_FORWARDING_CHANNEL',
   /** Channel for low capacity worlds **/
   LOW_CAPACITY_FORWARDING_CHANNEL = 'LOW_CAPACITY_FORWARDING_CHANNEL',
+  /** Mapping of reaction emoji to forwarding channel IDs */
+  REACTION_FORWARD_CHANNELS = 'REACTION_FORWARD_CHANNELS',
   /** Worlds that have been processed to avoid duplicates */
   PROCESSED_WORLDS = 'PROCESSED_WORLDS',
   /** Worlds that have been processed to avoid duplicates, with original message ID */
   PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID = 'PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID',
   /** Channel history crawling status and progress */
-  CHANNEL_HISTORY_CRAWL_STATUS = 'CHANNEL_HISTORY_CRAWL_STATUS'
+  CHANNEL_HISTORY_CRAWL_STATUS = 'CHANNEL_HISTORY_CRAWL_STATUS',
+  /** Message IDs that have already been forwarded via reaction (one forward per message) */
+  REACTION_FORWARDED_MESSAGE_IDS = 'REACTION_FORWARDED_MESSAGE_IDS'
 }
 
 /**

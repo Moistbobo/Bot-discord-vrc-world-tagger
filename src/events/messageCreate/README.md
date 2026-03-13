@@ -28,6 +28,12 @@ This directory contains all the commands that can be triggered by messages in Di
 - **Admin Only**: Yes
 - **Example**: `.forwardMaxSlots #player-counts`
 
+### `.forwardReact <emoji> <#channel>`
+- **Description**: Map a reaction emoji to a forwarding channel for future \"react to forward\" behavior
+- **Usage**: `.forwardReact 😀 #channel-name`
+- **Admin Only**: Yes
+- **Example**: `.forwardReact 😀 #vrchat-worlds-forwarded`
+
 ### `.clearForwardingChannels`
 - **Description**: Clear all forwarding channel configurations
 - **Usage**: `.clearForwardingChannels`
@@ -113,6 +119,13 @@ This directory contains all the commands that can be triggered by messages in Di
   - System information (Node.js version, platform)
   - Last processed world
   - Total activity summary
+
+## Manual testing for `.forwardReact`
+
+To verify that `.forwardReact` works as expected:
+- **Set a mapping**: Run `.forwardReact 😀 #target-channel` from an admin user. You should see a confirmation message indicating the emoji and channel.
+- **Override a mapping**: Run `.forwardReact 😀 #other-channel` and confirm the confirmation message now references the new channel.
+- **Check stored data**: Inspect `REACTION_FORWARD_CHANNELS` in `db.json` and verify it contains a key for `😀` with the correct channel ID.
 
 
 
