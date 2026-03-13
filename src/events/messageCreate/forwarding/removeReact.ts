@@ -32,7 +32,8 @@ const removeReact = async (message: Message) => {
       return;
     }
 
-    const { ...updatedConfig } = config;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { [emoji]: _removedEmoji, ...updatedConfig } = config;
     const success = await set<ReactionForwardConfig>(
       kvKeys.REACTION_FORWARD_CHANNELS,
       updatedConfig
