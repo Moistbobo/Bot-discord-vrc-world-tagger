@@ -8,6 +8,8 @@ export enum kvKeys {
   PLAYER_COUNT_FORWARDING_CHANNEL = 'PLAYER_COUNT_FORWARDING_CHANNEL',
   /** Channel for forwarding Android support messages */
   ANDROID_FORWARDING_CHANNEL = 'ANDROID_FORWARDING_CHANNEL',
+  /** Channel for low capacity worlds **/
+  LOW_CAPACITY_FORWARDING_CHANNEL = 'LOW_CAPACITY_FORWARDING_CHANNEL',
   /** Worlds that have been processed to avoid duplicates */
   PROCESSED_WORLDS = 'PROCESSED_WORLDS',
   /** Worlds that have been processed to avoid duplicates, with original message ID */

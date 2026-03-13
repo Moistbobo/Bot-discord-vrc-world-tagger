@@ -12,6 +12,7 @@ import Config from '../../../../assets/config';
 
 // Constants
 export const PLAYER_CAPACITY_THRESHOLD = Config.FORWARD_PLAYER_COUNT_THRESHOLD;
+export const LOW_CAPACITY_THRESHOLD = Config.LOW_CAPACITY_THRESHOLD;
 
 // Types
 export interface ForwardingChannel {
@@ -91,7 +92,7 @@ export const getForwardingChannels = async (
     channels.push({ id: androidChannel, tag: 'Android Support' });
   }
 
-  // Check player capacity threshold
+  // Check player capacity threshold (high capacity)
   const playerCountChannel = await getFirst(
     kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL
   );
@@ -99,6 +100,17 @@ export const getForwardingChannels = async (
     channels.push({
       id: playerCountChannel,
       tag: `Player Cap >= ${PLAYER_CAPACITY_THRESHOLD}`
+    });
+  }
+
+  // Check low capacity threshold
+  const lowCapacityChannel = await getFirst(
+    kvKeys.LOW_CAPACITY_FORWARDING_CHANNEL
+  );
+  if (lowCapacityChannel && data.capacity <= LOW_CAPACITY_THRESHOLD) {
+    channels.push({
+      id: lowCapacityChannel,
+      tag: `Low Cap <= ${LOW_CAPACITY_THRESHOLD}`
     });
   }
 

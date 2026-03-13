@@ -12,6 +12,7 @@ import { remove } from './remove';
 import { stats } from './stats';
 import { exportWorlds, exportWorldsFull } from './export';
 import { crawlChannelHistory, getCrawlStatus } from './crawlHistory';
+import lowCapacity from './forwarding/lowCapacity';
 
 const messageCreate = async (message: Message) => {
   if (message.content.startsWith('.watch')) {
@@ -22,6 +23,8 @@ const messageCreate = async (message: Message) => {
     return withProtection(androidSupport)(message);
   } else if (message.content.startsWith('.forwardMaxSlots')) {
     return withProtection(maxSlots)(message);
+  } else if (message.content.startsWith('.forwardLowCap')) {
+    return withProtection(lowCapacity)(message);
   } else if (message.content.startsWith('.clearForwardingChannels')) {
     return withProtection(clearForwardingChannels)(message);
   } else if (message.content.startsWith('.remove')) {
