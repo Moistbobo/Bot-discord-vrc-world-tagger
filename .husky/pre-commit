@@ -1,2 +1,2 @@
-pnpm exec lint-staged --allow-empty
-pnpm test
+npx lint-staged
+yarn test
