@@ -7,7 +7,7 @@ import {
 } from '../../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../../utils/jsonAsDb/types';
 import { hasAndroidSupport } from '../../../../utils/helpers';
-import { emojiMap } from '../../../../assets/icons';
+import { emojiMap } from '../../../../assets/media';
 import Config from '../../../../assets/config';
 
 // Constants

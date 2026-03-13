@@ -3,7 +3,7 @@ import logger from '../../utils/logger';
 import { get } from '../../utils/jsonAsDb/index';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 import { vrchat } from '../../utils/externalApi/vrchat';
-import { emojiMap } from '../../assets/icons';
+import { emojiMap } from '../../assets/media';
 import Config from '../../assets/config';
 
 const RATE_LIMIT_DELAY = Config.EXPORT_RATE_LIMIT; // milliseconds

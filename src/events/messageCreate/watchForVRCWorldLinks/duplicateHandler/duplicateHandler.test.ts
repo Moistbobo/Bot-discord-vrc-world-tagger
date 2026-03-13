@@ -25,7 +25,7 @@ jest.mock('../../../../utils/logger', () => ({
 }));
 
 // Use real emoji map (simple enough), fallback if needed
-jest.mock('../../../../assets/icons', () => ({
+jest.mock('../../../../assets/media', () => ({
   emojiMap: {
     recycle: '♻',
     actually: ':actually:',

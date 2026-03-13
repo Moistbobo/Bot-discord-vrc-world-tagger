@@ -17,7 +17,6 @@ jest.mock('../regex', () => {
 import {
   getSupportedPlatforms,
   hasAndroidSupport,
-  getWorldNameId,
   buildWorldUrl,
   getMostRecentUnityPackageForPlatform,
   getRecentFileVersion,
@@ -61,13 +60,6 @@ describe('utils/helpers', () => {
     it('detects android support', () => {
       expect(hasAndroidSupport(['standalonewindows', 'android'])).toBe(true);
       expect(hasAndroidSupport(['standalonewindows'])).toBe(false);
-    });
-  });
-
-  describe('getWorldNameId', () => {
-    it('concatenates world name and id', () => {
-      const world = { name: 'My World', id: 'wrld_12345' } as any;
-      expect(getWorldNameId(world)).toBe('My World-wrld_12345');
     });
   });
 

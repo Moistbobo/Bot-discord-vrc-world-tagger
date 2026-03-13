@@ -1,18 +1,12 @@
 import { removeTwitterLink } from '../regex';
 import logger from '../logger';
 
-// interface VxTwitterResponse {
-//   text: string;
-//   // Add other potential fields if needed
-// }
-
 interface FxTwitterResponse {
   tweet: {
     text: string;
   };
 }
 
-// const VX_TWITTER_BASE_URL = 'https://api.vxtwitter.com';
 const FX_TWITTER_BASE_URL = 'https://api.fxtwitter.com';
 
 /**

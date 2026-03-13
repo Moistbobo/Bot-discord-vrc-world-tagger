@@ -7,7 +7,7 @@ import { kvKeys, CrawlStatus } from '../../utils/jsonAsDb/types';
 import { extractWorldIdFromMessage } from './watchForVRCWorldLinks/worldExtraction';
 import { extractWorldId } from '../../utils/regex';
 import { checkAndHandleDuplicate } from './watchForVRCWorldLinks/duplicateHandler';
-import { emojiMap } from '../../assets/icons';
+import { emojiMap } from '../../assets/media';
 
 // Global state to prevent concurrent crawls on the same channel
 const activeCrawls = new Map<string, boolean>();
