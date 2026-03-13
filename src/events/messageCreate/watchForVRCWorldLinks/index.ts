@@ -50,6 +50,51 @@ const extractMessageContent = (message: Message): string[] => {
 };
 
 /**
+ * Processes a world ID: fetches data, creates embed, forwards, and sends response.
+ */
+const processWorldId = async (
+  message: Message,
+  worldId: string,
+  sourceContent: string
+): Promise<void> => {
+  if (!Config.DEV_MODE) {
+    const isDuplicate = await checkAndHandleDuplicate(message, worldId);
+    if (isDuplicate) {
+      return;
+    }
+  }
+
+  const worldData = await fetchWorldData(worldId);
+  const supportedPlatforms = getSupportedPlatforms(worldData.unityPackages);
+  const packageSizes = await calculatePackageSizes(worldData);
+
+  const embed = createWorldEmbed(
+    worldData,
+    worldId,
+    supportedPlatforms,
+    packageSizes,
+    sourceContent || message.content
+  );
+
+  const forwardingChannels = await getForwardingChannels(
+    worldData,
+    supportedPlatforms
+  );
+
+  for (const channel of forwardingChannels) {
+    await forwardToChannel(
+      message,
+      channel.id,
+      channel.tag,
+      embed,
+      worldData.id
+    );
+  }
+
+  await sendResponse(message, embed, worldData.id);
+};
+
+/**
  * Main function to watch for VRC world links and process them
  *
  * This function now handles both direct messages and forwarded messages.
@@ -64,17 +109,14 @@ const watchForVRCWorldLinks = async (message: Message): Promise<void> => {
   }
 
   try {
-    // Extract content from both current message and forwarded messages
     const contentArray = extractMessageContent(message);
 
-    // Try to find a world ID in any of the content
     let worldId: string | null = null;
     let sourceContent = '';
 
     for (const content of contentArray) {
-      const extractedWorldId = await extractWorldIdFromMessage(content);
-      if (extractedWorldId) {
-        worldId = extractedWorldId;
+      worldId = await extractWorldIdFromMessage(content);
+      if (worldId) {
         sourceContent = content;
         break;
       }
@@ -92,48 +134,7 @@ const watchForVRCWorldLinks = async (message: Message): Promise<void> => {
       }`
     );
 
-    // Check if world is a duplicate and handle accordingly
-    if (!Config.DEV_MODE) {
-      const isDuplicate = await checkAndHandleDuplicate(message, worldId);
-      if (isDuplicate) {
-        return;
-      }
-    }
-
-    // Fetch world data
-    const worldData = await fetchWorldData(worldId);
-
-    // Get supported platforms and calculate package sizes
-    const supportedPlatforms = getSupportedPlatforms(worldData.unityPackages);
-    const packageSizes = await calculatePackageSizes(worldData);
-
-    // Create embed using the source content (either current message or forwarded content)
-    const embed = createWorldEmbed(
-      worldData,
-      worldId,
-      supportedPlatforms,
-      packageSizes,
-      sourceContent || message.content
-    );
-
-    // Get forwarding channels and forward to them
-    const forwardingChannels = await getForwardingChannels(
-      worldData,
-      supportedPlatforms
-    );
-
-    for (const channel of forwardingChannels) {
-      await forwardToChannel(
-        message,
-        channel.id,
-        channel.tag,
-        embed,
-        worldData.id
-      );
-    }
-
-    // Send response to original message
-    await sendResponse(message, embed, worldData.id);
+    await processWorldId(message, worldId, sourceContent);
   } catch (error) {
     logger.error('Error processing VRC world link:', error);
   }
