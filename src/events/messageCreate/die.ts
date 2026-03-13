@@ -1,6 +1,6 @@
 import { Message } from 'discord.js';
 import logger from '../../utils/logger';
-import { images } from '../../assets/images';
+import { images } from '../../assets/media';
 
 const die = async (message: Message) => {
   if (message.channel.isSendable()) {
