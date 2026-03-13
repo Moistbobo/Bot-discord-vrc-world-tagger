@@ -5,7 +5,7 @@ import {
   setValue
 } from '../../../../utils/jsonAsDb/handlers/persistentKvp';
 import { kvKeys } from '../../../../utils/jsonAsDb/types';
-import { emojiMap } from '../../../../assets/icons';
+import { emojiMap } from '../../../../assets/media';
 
 /**
  * Checks if a world has already been processed and handles duplicate responses

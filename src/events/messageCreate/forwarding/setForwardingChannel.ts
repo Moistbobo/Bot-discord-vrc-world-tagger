@@ -56,4 +56,3 @@ const setForwardingChannel = async (
 };
 
 export default setForwardingChannel;
-export type { ForwardingChannelType };
