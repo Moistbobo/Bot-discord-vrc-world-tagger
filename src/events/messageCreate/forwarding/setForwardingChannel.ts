@@ -3,7 +3,7 @@ import logger from '../../../utils/logger';
 import { replace } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 
-type ForwardingChannelType = 'android' | 'playerCount';
+type ForwardingChannelType = 'android' | 'playerCount' | 'lowCapacity';
 
 const forwardingChannelConfig = {
   android: {
@@ -15,6 +15,11 @@ const forwardingChannelConfig = {
     key: kvKeys.PLAYER_COUNT_FORWARDING_CHANNEL,
     displayName: 'player count forwarding channel',
     logPrefix: 'Player count'
+  },
+  lowCapacity: {
+    key: kvKeys.LOW_CAPACITY_FORWARDING_CHANNEL,
+    displayName: 'low capacity forwarding channel',
+    logPrefix: 'Low Capacity'
   }
 } as const;
 
