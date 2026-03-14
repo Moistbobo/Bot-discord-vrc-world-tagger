@@ -4,6 +4,7 @@ import {
   GatewayIntentBits,
   Message,
   MessageReaction,
+  Partials,
   User
 } from 'discord.js';
 import Config from './assets/config';
@@ -18,7 +19,8 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessageReactions
-  ]
+  ],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
 client.on(Events.MessageCreate, (message: Message) => {
