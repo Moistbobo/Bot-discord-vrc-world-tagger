@@ -62,6 +62,9 @@ export const onReactionForward = async (
 
   if (!targetChannelId) return;
 
+  // Don't forward to the same channel (prevents infinite loop when reacting to a forwarded message)
+  if (targetChannelId === channelId) return;
+
   const targetChannel = message.guild?.channels.cache.get(targetChannelId);
   if (!targetChannel?.isSendable()) {
     logger.warn(
