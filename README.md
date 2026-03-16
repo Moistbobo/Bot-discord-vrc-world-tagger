@@ -58,7 +58,7 @@ npm start
 
 ### Commands
 
-All commands require admin privileges (user ID in `ADMIN_ID`).
+All commands require admin privileges (user ID in `ADMIN_ID`), except where noted.
 
 | Command | Description |
 |---------|-------------|
@@ -66,7 +66,15 @@ All commands require admin privileges (user ID in `ADMIN_ID`).
 | `.unwatch` | Stop watching the current channel |
 | `.forwardAndroid` | Set the current channel as the Android-support forwarding destination |
 | `.forwardMaxSlots` | Set the current channel as the high-capacity forwarding destination |
+| `.forwardLowCap` | Set the current channel as the low-capacity forwarding destination |
 | `.clearForwardingChannels` | Clear all forwarding channel settings |
+| **Reaction forwarding** | |
+| `.watchReacts #channel` | Watch a channel for reaction-based forwarding (react with configured emoji to forward messages) |
+| `.unwatchReacts #channel` | Stop watching a channel for reaction forwarding |
+| `.forwardReact <emoji> #channel` | Map an emoji to a channel; reacting with that emoji in a watched channel forwards the message to the target channel |
+| `.listReacts` | List current reaction-forwarding mappings |
+| `.removeReact <emoji or index>` | Remove reaction forwarding for an emoji, or by index from `.listReacts` |
+| **Other** | |
 | `.remove` | Remove the bot from the current channel (unwatch + clear forwarding) |
 | `.stats` | Show statistics (no admin required) |
 | `.export` | Export watched worlds data |
@@ -78,6 +86,10 @@ All commands require admin privileges (user ID in `ADMIN_ID`).
 ## Data Storage
 
 The bot stores its state in `db.json` (watched channels, forwarding channels, processed worlds, etc.). This file is created automatically.
+
+## Documentation
+
+- **Reaction forwarding** — See [manual/reaction-forwarding.md](manual/reaction-forwarding.md) for setup and behavior.
 
 ## Scripts
 
