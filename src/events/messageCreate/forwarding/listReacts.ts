@@ -19,9 +19,12 @@ const listReacts = async (message: Message) => {
   }
 
   const lines = entries.map(
-    ([emoji, channelId]) => `${emoji} → ${channelMention(channelId)}`
+    ([emoji, channelId], i) =>
+      `${i + 1}. ${emoji} → ${channelMention(channelId)}`
   );
-  await message.channel.send(`**Reaction forwarding:**\n${lines.join('\n')}`);
+  await message.channel.send(
+    `**Reaction forwarding:**\n${lines.join('\n')}\n_Use \`.removeReact <index>\` to remove by number (e.g. \`.removeReact 1\`)._`
+  );
 };
 
 export default listReacts;

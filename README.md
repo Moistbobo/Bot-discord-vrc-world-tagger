@@ -73,7 +73,7 @@ All commands require admin privileges (user ID in `ADMIN_ID`), except where note
 | `.unwatchReacts #channel` | Stop watching a channel for reaction forwarding |
 | `.forwardReact <emoji> #channel` | Map an emoji to a channel; reacting with that emoji in a watched channel forwards the message to the target channel |
 | `.listReacts` | List current reaction-forwarding mappings |
-| `.removeReact <emoji>` | Remove reaction forwarding for an emoji |
+| `.removeReact <emoji or index>` | Remove reaction forwarding for an emoji, or by index from `.listReacts` |
 | **Other** | |
 | `.remove` | Remove the bot from the current channel (unwatch + clear forwarding) |
 | `.stats` | Show statistics (no admin required) |

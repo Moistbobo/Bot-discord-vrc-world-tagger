@@ -21,8 +21,8 @@ All reaction-forwarding commands require admin (user ID in `ADMIN_ID`). No speci
 | `.watchReacts #channel` | Watch a channel for reaction-based forwarding. Reactions in this channel can trigger forwards. |
 | `.unwatchReacts #channel` | Stop watching a channel for reaction forwarding. |
 | `.forwardReact <emoji> #channel` | Map an emoji to a channel. When someone reacts with this emoji in a watched channel, the message is forwarded to the target channel. |
-| `.listReacts` | List current emoji → channel mappings. |
-| `.removeReact <emoji>` | Remove the forwarding mapping for an emoji. |
+| `.listReacts` | List current emoji → channel mappings (with indices). |
+| `.removeReact <emoji or index>` | Remove the forwarding mapping for an emoji, or by 1-based index as shown in `.listReacts`. |
 
 ## How it works
 
@@ -34,7 +34,7 @@ All reaction-forwarding commands require admin (user ID in `ADMIN_ID`). No speci
 
 ## Emoji support
 
-Unicode emojis (e.g. 😀, 📌) and Discord custom emojis are supported. When removing a mapping with `.removeReact`, use the same emoji form as when you added it (e.g. the exact emoji string).
+Unicode emojis (e.g. 😀, 📌) and Discord custom emojis are supported. When removing a mapping with `.removeReact`, use the same emoji form as when you added it (e.g. the exact emoji string). If the emoji was deleted or is hard to type, you can remove by index instead: `.listReacts` shows a number for each mapping; use `.removeReact 1`, `.removeReact 2`, etc.
 
 ## Stored data
 
