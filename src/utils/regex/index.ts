@@ -24,7 +24,6 @@ export const customMatchers = {
       return content.split('\n')[1].trim();
     }
   },
-  // Replace with Twitter username (from profile URL) for "World on line 1, By <author> on line 2" format
   YSoSerious_VR: {
     getWorldName: (content: string) => {
       if (!content) return null;

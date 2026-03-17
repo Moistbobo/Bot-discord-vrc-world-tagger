@@ -10,7 +10,8 @@ Adds a new entry to `customMatchers` in `src/utils/regex/index.ts` so the bot ca
 ## Inputs
 
 - **Required**: One or more example tweet content strings (the raw tweet text where world name and author name appear). Multiple examples let the agent infer a single pattern that works for all.
-- **Optional**: Twitter link or username for the account that uses this format. Used to build the matcher key. If missing, ask the user for the Twitter username or an example link.
+- **Required**: Twitter link or username for the account that uses this format. Used to build the matcher key. If missing, ask the user for the Twitter username or an example link.
+- **Optional**: If the world and author name is not clear from the input, ask the user for clarification.
 
 ## Target
 
