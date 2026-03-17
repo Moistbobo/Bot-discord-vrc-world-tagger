@@ -17,11 +17,13 @@ export const customMatchers = {
   n4rGm5DmrVXXz6I: {
     getWorldName: (content: string) => {
       if (!content) return null;
-      return content.split('\n')[0].trim();
+      const line = content.split('\n')[0]?.trim();
+      return line || null;
     },
     getAuthorName: (content: string) => {
       if (!content) return null;
-      return content.split('\n')[1].trim();
+      const line = content.split('\n')[1]?.trim();
+      return line || null;
     }
   },
   YSoSerious_VR: {
