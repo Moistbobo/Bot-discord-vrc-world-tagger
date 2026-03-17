@@ -12,11 +12,11 @@ export default defineConfig([
     extends: ['js/recommended'],
     languageOptions: { globals: globals.node }
   },
-  // @ts-expect-error known incompatibility
   tseslint.configs.recommended,
   eslintPluginPrettierRecommended,
   {
     files: ['**/*.json'],
+    // @ts-expect-error known incompatibility
     plugins: { json },
     language: 'json/json',
     extends: ['json/recommended']
