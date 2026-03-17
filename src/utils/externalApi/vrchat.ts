@@ -1,3 +1,4 @@
+import type { CurrentUser, RequiresTwoFactorAuth } from 'vrchat';
 import { VRChat } from 'vrchat';
 import Config from '../../assets/config';
 import KeyvFile from 'keyv-file';
@@ -18,6 +19,16 @@ export const vrchat = new VRChat({
   },
   keyv: new KeyvFile({ filename: './data.json' })
 });
+
+/**
+ * Type guard: getCurrentUser can return CurrentUser or RequiresTwoFactorAuth (200).
+ * RequiresTwoFactorAuth only has `requiresTwoFactorAuth`; CurrentUser has `displayName`.
+ */
+export function isCurrentUser(
+  data: CurrentUser | RequiresTwoFactorAuth
+): data is CurrentUser {
+  return 'displayName' in data;
+}
 
 export const getUserIdByName = async (name: string) => {
   const searchResults = await vrchat.searchUsers({
