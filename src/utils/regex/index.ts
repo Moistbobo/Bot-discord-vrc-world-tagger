@@ -23,6 +23,21 @@ export const customMatchers = {
       if (!content) return null;
       return content.split('\n')[1].trim();
     }
+  },
+  // Replace with Twitter username (from profile URL) for "World on line 1, By <author> on line 2" format
+  YSoSerious_VR: {
+    getWorldName: (content: string) => {
+      if (!content) return null;
+      const line = content.split('\n')[0]?.trim();
+      return line || null;
+    },
+    getAuthorName: (content: string) => {
+      if (!content) return null;
+      const line = content.split('\n')[1]?.trim();
+      if (!line) return null;
+      const afterBy = line.replace(/^By\s*[:：]?\s*/i, '').trim();
+      return afterBy || null;
+    }
   }
 };
 
