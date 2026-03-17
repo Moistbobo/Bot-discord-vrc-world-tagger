@@ -28,6 +28,6 @@ export default defineConfig([
   },
   {
     // ... other configurations
-    ignores: ['dist/**/*.js', 'node_modules']
+    ignores: ['dist/**/*.js', 'node_modules', 'dist', '*.json']
   }
 ]);
