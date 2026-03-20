@@ -78,7 +78,7 @@ describe('checkAndHandleDuplicate', () => {
     expect(replyOptions).toEqual({
       allowedMentions: { repliedUser: false },
       content:
-        ':actually: Uhm Ackhusally this is a duplicate of https://discord.com/channels/111/222/333'
+        ':actually: Uhm Ackhusally this is a duplicate of https://discord.com/channels/111/222/333\n-# Press the ♻ reaction to fetch world information anyway.'
     });
   });
 

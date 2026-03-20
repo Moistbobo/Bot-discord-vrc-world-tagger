@@ -49,7 +49,7 @@ export const checkAndHandleDuplicate = async (
         if (message.channel.isSendable()) {
           await message.reply({
             allowedMentions: { repliedUser: false },
-            content: `${emojiMap.actually} Uhm Ackhusally this is a duplicate of ${originalMessageLink}`
+            content: `${emojiMap.actually} Uhm Ackhusally this is a duplicate of ${originalMessageLink}\n-# Press the ${emojiMap.recycle} reaction to fetch world information anyway.`
           });
         } else {
           logger.warn(
