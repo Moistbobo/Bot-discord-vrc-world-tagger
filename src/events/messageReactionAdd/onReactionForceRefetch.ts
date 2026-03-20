@@ -30,11 +30,12 @@ export const onReactionForceRefetch = async (
   const isWatched = await has(kvKeys.WATCHED_CHANNELS, message.channelId);
   if (!isWatched) return;
 
-  const alreadyForceRefetched = await has(
-    kvKeys.FORCE_REFETCHED_MESSAGE_IDS,
-    message.id
-  );
-  if (alreadyForceRefetched) return;
+  // Uncomment to prevent multiple refetches of the same message
+  // const alreadyForceRefetched = await has(
+  //   kvKeys.FORCE_REFETCHED_MESSAGE_IDS,
+  //   message.id
+  // );
+  // if (alreadyForceRefetched) return;
 
   try {
     const didRefetch = await forceRefetchWorldFromMessage(message);
