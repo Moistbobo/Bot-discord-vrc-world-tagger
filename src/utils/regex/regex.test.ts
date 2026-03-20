@@ -2,7 +2,9 @@ import {
   extractWorldName,
   extractAuthorName,
   extractWorldAndAuthorByLines,
-  extractWorldAndAuthor
+  extractWorldAndAuthor,
+  customMatchers,
+  extractWithCustomMatcher
 } from './index';
 
 // Mock the config to avoid environment variable dependencies
@@ -99,6 +101,180 @@ Author: BEAMS_STAFF_1
 ];
 
 describe('regex', () => {
+  describe('customMatchers', () => {
+    describe('n4rGm5DmrVXXz6I', () => {
+      const exampleTweet =
+        '星灯の丘 -Where the Night Learned to Shine-\n' +
+        '円花_madoka\n' +
+        '--\n' +
+        '美しい夜空に星々が瞬き、丘の中央には小さくモダンな長方形の建築が静かに佇む。芝生の上を転がる星を追う。歩いた場所には、くっきりと草が倒れた跡が刻まれていく。\n' +
+        '#VRChat_world紹介 #VRChat #VRC';
+
+      it('getWorldName extracts line 1 as world name', () => {
+        expect(customMatchers.n4rGm5DmrVXXz6I.getWorldName(exampleTweet)).toBe(
+          '星灯の丘 -Where the Night Learned to Shine-'
+        );
+      });
+
+      it('getAuthorName extracts line 2 as author name', () => {
+        expect(customMatchers.n4rGm5DmrVXXz6I.getAuthorName(exampleTweet)).toBe(
+          '円花_madoka'
+        );
+      });
+
+      it('returns null for empty content', () => {
+        expect(customMatchers.n4rGm5DmrVXXz6I.getWorldName('')).toBeNull();
+        expect(customMatchers.n4rGm5DmrVXXz6I.getAuthorName('')).toBeNull();
+      });
+
+      it('trims whitespace on the first two lines', () => {
+        const content = '  World Name  \n  Author Name  \n#tag';
+        expect(customMatchers.n4rGm5DmrVXXz6I.getWorldName(content)).toBe(
+          'World Name'
+        );
+        expect(customMatchers.n4rGm5DmrVXXz6I.getAuthorName(content)).toBe(
+          'Author Name'
+        );
+      });
+
+      it('returns null when author line is missing', () => {
+        expect(
+          customMatchers.n4rGm5DmrVXXz6I.getAuthorName('Only World')
+        ).toBeNull();
+      });
+    });
+
+    describe('YSoSerious_VR', () => {
+      const exampleTweet =
+        'day by day\n' +
+        'By ＊るう＊\n' +
+        '#VRChat #VRChat_world紹介 #VRChatワールド紹介 #VRChatPhotography #VirtualPhotography';
+
+      it('getWorldName extracts line 1 as world name', () => {
+        expect(customMatchers.YSoSerious_VR.getWorldName(exampleTweet)).toBe(
+          'day by day'
+        );
+      });
+
+      it('getAuthorName strips "By" prefix from line 2', () => {
+        expect(customMatchers.YSoSerious_VR.getAuthorName(exampleTweet)).toBe(
+          '＊るう＊'
+        );
+      });
+
+      it('getAuthorName handles full-width colon', () => {
+        const content = 'World Title\nBy：Author Name\n#tag';
+        expect(customMatchers.YSoSerious_VR.getAuthorName(content)).toBe(
+          'Author Name'
+        );
+      });
+
+      it('returns null for empty content', () => {
+        expect(customMatchers.YSoSerious_VR.getWorldName('')).toBeNull();
+        expect(customMatchers.YSoSerious_VR.getAuthorName('')).toBeNull();
+      });
+
+      it('returns null when author line is missing or empty after strip', () => {
+        expect(
+          customMatchers.YSoSerious_VR.getAuthorName('Only World')
+        ).toBeNull();
+        expect(
+          customMatchers.YSoSerious_VR.getAuthorName('World\nBy:   ')
+        ).toBeNull();
+      });
+    });
+  });
+
+  describe('extractWithCustomMatcher', () => {
+    const ysoTweet =
+      'day by day\n' +
+      'By ＊るう＊\n' +
+      '#VRChat #VRChat_world紹介 #VRChatワールド紹介 #VRChatPhotography #VirtualPhotography';
+
+    const n4Tweet =
+      '星灯の丘 -Where the Night Learned to Shine-\n' +
+      '円花_madoka\n' +
+      '--\n' +
+      '美しい夜空に星々が瞬き、丘の中央には小さくモダンな長方形の建築が静かに佇む。芝生の上を転がる星を追う。歩いた場所には、くっきりと草が倒れた跡が刻まれていく。\n' +
+      '#VRChat_world紹介 #VRChat #VRC';
+
+    it('matches YSoSerious_VR and returns world + author', () => {
+      const result = extractWithCustomMatcher(
+        'https://twitter.com/YSoSerious_VR/status/123',
+        ysoTweet
+      );
+      expect(result).toEqual({
+        worldName: 'day by day',
+        authorName: '＊るう＊'
+      });
+    });
+
+    it('matches n4rGm5DmrVXXz6I and returns world + author', () => {
+      const result = extractWithCustomMatcher(
+        'https://x.com/n4rGm5DmrVXXz6I/status/123',
+        n4Tweet
+      );
+      expect(result).toEqual({
+        worldName: '星灯の丘 -Where the Night Learned to Shine-',
+        authorName: '円花_madoka'
+      });
+    });
+
+    it('is case-insensitive for matcher keys', () => {
+      const result = extractWithCustomMatcher(
+        'https://twitter.com/ysoSerious_vr/status/123',
+        ysoTweet
+      );
+      expect(result).toEqual({
+        worldName: 'day by day',
+        authorName: '＊るう＊'
+      });
+    });
+
+    it('returns null when content does not yield both world and author', () => {
+      expect(
+        extractWithCustomMatcher(
+          'https://twitter.com/YSoSerious_VR/status/1',
+          'World\nBy:   '
+        )
+      ).toBeNull();
+    });
+
+    it('returns null when no matcher key matches the link', () => {
+      expect(
+        extractWithCustomMatcher(
+          'https://twitter.com/someone_else/status/1',
+          ysoTweet
+        )
+      ).toBeNull();
+    });
+
+    it('returns null for invalid inputs', () => {
+      expect(extractWithCustomMatcher('', ysoTweet)).toBeNull();
+      expect(
+        extractWithCustomMatcher('https://twitter.com/YSoSerious_VR', '')
+      ).toBeNull();
+      expect(
+        extractWithCustomMatcher(null as unknown as string, ysoTweet)
+      ).toBeNull();
+      expect(
+        extractWithCustomMatcher(
+          'https://twitter.com/YSoSerious_VR',
+          null as unknown as string
+        )
+      ).toBeNull();
+      expect(
+        extractWithCustomMatcher(123 as unknown as string, ysoTweet)
+      ).toBeNull();
+      expect(
+        extractWithCustomMatcher(
+          'https://twitter.com/YSoSerious_VR',
+          123 as unknown as string
+        )
+      ).toBeNull();
+    });
+  });
+
   describe('extractWorldName', () => {
     it('Extracts correctly from World name: RSpec_v2', () => {
       expect(extractWorldName(testData[0])).toEqual('RSpec_v2');

@@ -1,5 +1,7 @@
 {
+  "exclude": ["dist"],
   "compilerOptions": {
+    "skipLibCheck": true,
     "module": "commonjs",
     "esModuleInterop": true,
     "target": "es6",

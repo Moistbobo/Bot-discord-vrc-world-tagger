@@ -55,9 +55,12 @@ const extractMessageContent = (message: Message): string[] => {
 const processWorldId = async (
   message: Message,
   worldId: string,
-  sourceContent: string
+  sourceContent: string,
+  options?: { skipDuplicateCheck?: boolean }
 ): Promise<void> => {
-  if (!Config.DEV_MODE) {
+  const skipDuplicateCheck = options?.skipDuplicateCheck ?? false;
+
+  if (!skipDuplicateCheck && !Config.DEV_MODE) {
     const isDuplicate = await checkAndHandleDuplicate(message, worldId);
     if (isDuplicate) {
       return;
@@ -92,6 +95,30 @@ const processWorldId = async (
   }
 
   await sendResponse(message, embed, worldData.id);
+};
+
+export const forceRefetchWorldFromMessage = async (
+  message: Message
+): Promise<boolean> => {
+  const contentArray = extractMessageContent(message);
+
+  let worldId: string | null = null;
+  let sourceContent = '';
+
+  for (const content of contentArray) {
+    worldId = await extractWorldIdFromMessage(content);
+    if (worldId) {
+      sourceContent = content;
+      break;
+    }
+  }
+
+  if (!worldId) return false;
+
+  await processWorldId(message, worldId, sourceContent, {
+    skipDuplicateCheck: true
+  });
+  return true;
 };
 
 /**
