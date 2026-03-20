@@ -21,7 +21,9 @@ export enum kvKeys {
   /** Channel history crawling status and progress */
   CHANNEL_HISTORY_CRAWL_STATUS = 'CHANNEL_HISTORY_CRAWL_STATUS',
   /** Message IDs that have already been forwarded via reaction (one forward per message) */
-  REACTION_FORWARDED_MESSAGE_IDS = 'REACTION_FORWARDED_MESSAGE_IDS'
+  REACTION_FORWARDED_MESSAGE_IDS = 'REACTION_FORWARDED_MESSAGE_IDS',
+  /** Message IDs that have already been force-refetched via recycle reaction (one refetch per message) */
+  FORCE_REFETCHED_MESSAGE_IDS = 'FORCE_REFETCHED_MESSAGE_IDS'
 }
 
 /**
