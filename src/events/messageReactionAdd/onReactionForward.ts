@@ -13,7 +13,7 @@ type ReactionForwardConfig = Record<string, string>;
  */
 function getEmojiKey(reaction: MessageReaction): string {
   if (reaction.emoji.id) {
-    return reaction.emoji.identifier;
+    return `<:${reaction.emoji.identifier}>`;
   }
   return reaction.emoji.name ?? '';
 }
@@ -54,7 +54,7 @@ export const onReactionForward = async (
   const config =
     (await get<ReactionForwardConfig>(kvKeys.REACTION_FORWARD_CHANNELS)) || {};
   const emojiKey = getEmojiKey(reaction);
-  let targetChannelId = config[`<:${emojiKey}>`];
+  let targetChannelId = config[emojiKey];
   // Fallback: config may have been stored as :name: for custom emojis
   if (!targetChannelId && reaction.emoji.name) {
     targetChannelId = config[`:${reaction.emoji.name}:`];
@@ -72,6 +72,10 @@ export const onReactionForward = async (
     );
     return;
   }
+
+  logger.info(
+    `Forwarding message ${message.id} from channel ${channelId} to ${targetChannelId} (triggered by emoji ${emojiKey})`
+  );
 
   try {
     await message.forward(targetChannelId);
