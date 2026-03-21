@@ -1,4 +1,9 @@
-import { EmbedBuilder, Message, messageLink } from 'discord.js';
+import {
+  EmbedBuilder,
+  Message,
+  messageLink,
+  OmitPartialGroupDMChannel
+} from 'discord.js';
 import { World } from 'vrchat';
 import logger from '../../../../utils/logger';
 import {
@@ -55,10 +60,7 @@ export const forwardToChannel = async (
 
     await markWorldAsProcessed(worldId);
 
-    const forwardedMessage = await message.forward(forwardingChannel.id);
-    if (forwardedMessage.channel.isSendable()) {
-      await forwardedMessage.channel.send({ embeds: [embed] });
-    }
+    await message.forward(forwardingChannel.id);
   } catch (error) {
     if (error.code === 40005) {
       logger.warn(
@@ -67,7 +69,7 @@ export const forwardToChannel = async (
 
       if (forwardingChannel.isSendable()) {
         await forwardingChannel.send({
-          content: `Original message omitted due to size  ${messageLink(message.channelId, message.id)}.`,
+          content: `Message omitted due to size — ${messageLink(message.channelId, message.id)}.`,
           embeds: [embed]
         });
       }
@@ -124,7 +126,7 @@ export const sendResponse = async (
   message: Message,
   embed: EmbedBuilder,
   worldId: string
-): Promise<void> => {
+): Promise<OmitPartialGroupDMChannel<Message<boolean>> | undefined> => {
   if (!message.channel.isSendable()) {
     return;
   }
@@ -133,7 +135,7 @@ export const sendResponse = async (
     await message.react(emojiMap.checkmark);
     await markWorldAsProcessed(worldId);
 
-    await message.reply({
+    return message.reply({
       allowedMentions: { repliedUser: false },
       embeds: [embed]
     });

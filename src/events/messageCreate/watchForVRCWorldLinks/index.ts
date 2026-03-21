@@ -50,7 +50,7 @@ const extractMessageContent = (message: Message): string[] => {
 };
 
 /**
- * Processes a world ID: fetches data, creates embed, forwards, and sends response.
+ * Processes a world ID: fetches data, creates embed, sends the bot reply, then forwards it.
  */
 const processWorldId = async (
   message: Message,
@@ -84,17 +84,19 @@ const processWorldId = async (
     supportedPlatforms
   );
 
-  for (const channel of forwardingChannels) {
-    await forwardToChannel(
-      message,
-      channel.id,
-      channel.tag,
-      embed,
-      worldData.id
-    );
-  }
+  const responseMsg = await sendResponse(message, embed, worldData.id);
 
-  await sendResponse(message, embed, worldData.id);
+  if (responseMsg) {
+    for (const channel of forwardingChannels) {
+      await forwardToChannel(
+        responseMsg,
+        channel.id,
+        channel.tag,
+        embed,
+        worldData.id
+      );
+    }
+  }
 };
 
 export const forceRefetchWorldFromMessage = async (
