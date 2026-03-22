@@ -67,6 +67,20 @@ export const customMatchers = {
       const m = content.match(/WorldInfo\s*:\s*(?:\n\s*)*.+?\s+by\s+(.+)$/im);
       return m?.[1]?.trim() ?? null;
     }
+  },
+  yonesuke2: {
+    getWorldName: (content: string) => {
+      if (!content) return null;
+      const line = content.split('\n')[0]?.trim();
+      return line || null;
+    },
+    getAuthorName: (content: string) => {
+      if (!content) return null;
+      const line = content.split('\n')[1]?.trim();
+      if (!line) return null;
+      const afterBy = line.replace(/^By\s*[:：]?\s*/i, '').trim();
+      return afterBy || null;
+    }
   }
 };
 
