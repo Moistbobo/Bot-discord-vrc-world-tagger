@@ -55,6 +55,18 @@ export const customMatchers = {
       const m = line.match(/^作者様[\s\u3000]+(.+)$/);
       return m?.[1]?.trim() ?? null;
     }
+  },
+  jhn_takashi2020: {
+    getWorldName: (content: string) => {
+      if (!content) return null;
+      const m = content.match(/WorldInfo\s*:\s*(?:\n\s*)*(.+?)\s+by\s+.+$/im);
+      return m?.[1]?.trim() ?? null;
+    },
+    getAuthorName: (content: string) => {
+      if (!content) return null;
+      const m = content.match(/WorldInfo\s*:\s*(?:\n\s*)*.+?\s+by\s+(.+)$/im);
+      return m?.[1]?.trim() ?? null;
+    }
   }
 };
 
