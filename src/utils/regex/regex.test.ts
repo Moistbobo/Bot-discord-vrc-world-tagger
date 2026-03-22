@@ -183,6 +183,43 @@ describe('regex', () => {
         ).toBeNull();
       });
     });
+
+    describe('tetra_moon', () => {
+      const exampleTweet =
+        'ワールド　深海トンネルーUndersea Tunnel\n' +
+        '作者様　　そばこんぶ。\n' +
+        '\n' +
+        '海底トンネルのチルワールド\n' +
+        '外を泳ぐ色んな魚を眺めてゆっくりできる\n' +
+        'ちょっと薄暗いけどホラー要素は一切ないので、良い感じの写真を撮ろう\n' +
+        '#VRChat_world紹介 #VRChat';
+
+      it('getWorldName strips ワールド prefix (full-width spaces)', () => {
+        expect(customMatchers.tetra_moon.getWorldName(exampleTweet)).toBe(
+          '深海トンネルーUndersea Tunnel'
+        );
+      });
+
+      it('getAuthorName strips 作者様 prefix (full-width spaces)', () => {
+        expect(customMatchers.tetra_moon.getAuthorName(exampleTweet)).toBe(
+          'そばこんぶ。'
+        );
+      });
+
+      it('returns null for empty content', () => {
+        expect(customMatchers.tetra_moon.getWorldName('')).toBeNull();
+        expect(customMatchers.tetra_moon.getAuthorName('')).toBeNull();
+      });
+
+      it('returns null when lines do not match the label pattern', () => {
+        expect(
+          customMatchers.tetra_moon.getWorldName('Plain title\n作者様　x')
+        ).toBeNull();
+        expect(
+          customMatchers.tetra_moon.getAuthorName('ワールド　x\nPlain line')
+        ).toBeNull();
+      });
+    });
   });
 
   describe('extractWithCustomMatcher', () => {
@@ -217,6 +254,23 @@ describe('regex', () => {
       expect(result).toEqual({
         worldName: '星灯の丘 -Where the Night Learned to Shine-',
         authorName: '円花_madoka'
+      });
+    });
+
+    it('matches tetra_moon and returns world + author', () => {
+      const tetraTweet =
+        'ワールド　深海トンネルーUndersea Tunnel\n' +
+        '作者様　　そばこんぶ。\n' +
+        '\n' +
+        '海底トンネルのチルワールド\n' +
+        '#VRChat_world紹介 #VRChat';
+      const result = extractWithCustomMatcher(
+        'https://x.com/tetra_moon/status/123',
+        tetraTweet
+      );
+      expect(result).toEqual({
+        worldName: '深海トンネルーUndersea Tunnel',
+        authorName: 'そばこんぶ。'
       });
     });
 
