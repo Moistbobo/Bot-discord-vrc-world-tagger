@@ -262,6 +262,37 @@ describe('regex', () => {
         ).toBeNull();
       });
     });
+
+    describe('yonesuke2', () => {
+      const exampleTweet =
+        'Valhalla Garden 星屑の庭\n' +
+        'ByCOMA\u2024\n' +
+        '無人の図書館の机に開かれた本を通して辿り着く異世界\n' +
+        '壊れた巨大な鳥かごの前に眠るドラゴンの前には無数の武具が\n' +
+        'いくつかの武器に触れるとワールドの雰囲気を変えるギミックがあり撮影などに\n' +
+        '#VRChat #VRChatワールド紹介 #VRChat_World紹介';
+
+      it('getWorldName extracts line 1 as world name', () => {
+        expect(customMatchers.yonesuke2.getWorldName(exampleTweet)).toBe(
+          'Valhalla Garden 星屑の庭'
+        );
+      });
+
+      it('getAuthorName strips tight "By" prefix from line 2', () => {
+        expect(customMatchers.yonesuke2.getAuthorName(exampleTweet)).toBe(
+          'COMA\u2024'
+        );
+      });
+
+      it('returns null for empty content', () => {
+        expect(customMatchers.yonesuke2.getWorldName('')).toBeNull();
+        expect(customMatchers.yonesuke2.getAuthorName('')).toBeNull();
+      });
+
+      it('returns null when author line is missing', () => {
+        expect(customMatchers.yonesuke2.getAuthorName('Only World')).toBeNull();
+      });
+    });
   });
 
   describe('extractWithCustomMatcher', () => {
@@ -313,6 +344,22 @@ describe('regex', () => {
       expect(result).toEqual({
         worldName: '深海トンネルーUndersea Tunnel',
         authorName: 'そばこんぶ。'
+      });
+    });
+
+    it('matches yonesuke2 and returns world + author', () => {
+      const yonesukeTweet =
+        'Valhalla Garden 星屑の庭\n' +
+        'ByCOMA\u2024\n' +
+        '無人の図書館の机に開かれた本を通して辿り着く異世界\n' +
+        '#VRChat #VRChatワールド紹介 #VRChat_World紹介';
+      const result = extractWithCustomMatcher(
+        'https://x.com/yonesuke2/status/123',
+        yonesukeTweet
+      );
+      expect(result).toEqual({
+        worldName: 'Valhalla Garden 星屑の庭',
+        authorName: 'COMA\u2024'
       });
     });
 
