@@ -220,6 +220,48 @@ describe('regex', () => {
         ).toBeNull();
       });
     });
+
+    describe('jhn_takashi2020', () => {
+      const exampleTweet =
+        '#tags\n\nWorldInfo:\n' +
+        '虚拟数码博物馆V1․1 Virtual Digital Product Museum by Con11';
+
+      it('getWorldName parses WorldInfo line before " by "', () => {
+        expect(customMatchers.jhn_takashi2020.getWorldName(exampleTweet)).toBe(
+          '虚拟数码博物馆V1․1 Virtual Digital Product Museum'
+        );
+      });
+
+      it('getAuthorName parses WorldInfo line after " by "', () => {
+        expect(customMatchers.jhn_takashi2020.getAuthorName(exampleTweet)).toBe(
+          'Con11'
+        );
+      });
+
+      it('supports WorldInfo on same line as payload', () => {
+        const content = 'WorldInfo: Some World Name by SomeAuthor\n#tag';
+        expect(customMatchers.jhn_takashi2020.getWorldName(content)).toBe(
+          'Some World Name'
+        );
+        expect(customMatchers.jhn_takashi2020.getAuthorName(content)).toBe(
+          'SomeAuthor'
+        );
+      });
+
+      it('returns null for empty content', () => {
+        expect(customMatchers.jhn_takashi2020.getWorldName('')).toBeNull();
+        expect(customMatchers.jhn_takashi2020.getAuthorName('')).toBeNull();
+      });
+
+      it('returns null when WorldInfo or " by " is missing', () => {
+        expect(
+          customMatchers.jhn_takashi2020.getWorldName('No block here')
+        ).toBeNull();
+        expect(
+          customMatchers.jhn_takashi2020.getAuthorName('WorldInfo:\nNo by')
+        ).toBeNull();
+      });
+    });
   });
 
   describe('extractWithCustomMatcher', () => {
@@ -271,6 +313,20 @@ describe('regex', () => {
       expect(result).toEqual({
         worldName: '深海トンネルーUndersea Tunnel',
         authorName: 'そばこんぶ。'
+      });
+    });
+
+    it('matches jhn_takashi2020 and returns world + author', () => {
+      const jhnTweet =
+        '#愛すべきクセすごツアー\n\nWorldInfo:\n' +
+        '虚拟数码博物馆V1․1 Virtual Digital Product Museum by Con11';
+      const result = extractWithCustomMatcher(
+        'https://x.com/jhn_takashi2020/status/123',
+        jhnTweet
+      );
+      expect(result).toEqual({
+        worldName: '虚拟数码博物馆V1․1 Virtual Digital Product Museum',
+        authorName: 'Con11'
       });
     });
 
