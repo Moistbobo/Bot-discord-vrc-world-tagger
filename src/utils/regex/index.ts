@@ -39,6 +39,48 @@ export const customMatchers = {
       const afterBy = line.replace(/^By\s*[:：]?\s*/i, '').trim();
       return afterBy || null;
     }
+  },
+  tetra_moon: {
+    getWorldName: (content: string) => {
+      if (!content) return null;
+      const line = content.split('\n')[0]?.trim();
+      if (!line) return null;
+      const m = line.match(/^ワールド[\s\u3000]+(.+)$/);
+      return m?.[1]?.trim() ?? null;
+    },
+    getAuthorName: (content: string) => {
+      if (!content) return null;
+      const line = content.split('\n')[1]?.trim();
+      if (!line) return null;
+      const m = line.match(/^作者様[\s\u3000]+(.+)$/);
+      return m?.[1]?.trim() ?? null;
+    }
+  },
+  jhn_takashi2020: {
+    getWorldName: (content: string) => {
+      if (!content) return null;
+      const m = content.match(/WorldInfo\s*:\s*(?:\n\s*)*(.+?)\s+by\s+.+$/im);
+      return m?.[1]?.trim() ?? null;
+    },
+    getAuthorName: (content: string) => {
+      if (!content) return null;
+      const m = content.match(/WorldInfo\s*:\s*(?:\n\s*)*.+?\s+by\s+(.+)$/im);
+      return m?.[1]?.trim() ?? null;
+    }
+  },
+  yonesuke2: {
+    getWorldName: (content: string) => {
+      if (!content) return null;
+      const line = content.split('\n')[0]?.trim();
+      return line || null;
+    },
+    getAuthorName: (content: string) => {
+      if (!content) return null;
+      const line = content.split('\n')[1]?.trim();
+      if (!line) return null;
+      const afterBy = line.replace(/^By\s*[:：]?\s*/i, '').trim();
+      return afterBy || null;
+    }
   }
 };
 
