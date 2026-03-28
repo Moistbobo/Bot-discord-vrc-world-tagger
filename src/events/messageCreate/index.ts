@@ -18,6 +18,8 @@ import { stats } from './stats';
 import { exportWorlds, exportWorldsFull } from './export';
 import { crawlChannelHistory, getCrawlStatus } from './crawlHistory';
 import lowCapacity from './forwarding/lowCapacity';
+import addDeleteReact from './addDeleteReact';
+import removeDeleteReact from './removeDeleteReact';
 
 const messageCreate = async (message: Message) => {
   if (message.content.startsWith('.watchReacts')) {
@@ -38,6 +40,10 @@ const messageCreate = async (message: Message) => {
     return withProtection(listReacts)(message);
   } else if (message.content.startsWith('.removeReact')) {
     return withProtection(removeReact)(message);
+  } else if (message.content.startsWith('.addDeleteReact')) {
+    return withProtection(addDeleteReact)(message);
+  } else if (message.content.startsWith('.removeDeleteReact')) {
+    return withProtection(removeDeleteReact)(message);
   } else if (message.content.startsWith('.forwardLowCap')) {
     return withProtection(lowCapacity)(message);
   } else if (message.content.startsWith('.clearForwardingChannels')) {

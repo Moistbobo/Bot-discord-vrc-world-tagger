@@ -3,20 +3,11 @@ import logger from '../../utils/logger';
 import { get } from '../../utils/jsonAsDb';
 import { has, add } from '../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../utils/jsonAsDb/types';
-
-type ReactionForwardConfig = Record<string, string>;
-
-/**
- * Resolve the emoji key used in REACTION_FORWARD_CHANNELS.
- * Unicode: reaction.emoji.name (e.g. "😀")
- * Custom: reaction.emoji.identifier (e.g. "name:123456")
- */
-function getEmojiKey(reaction: MessageReaction): string {
-  if (reaction.emoji.id) {
-    return `<:${reaction.emoji.identifier}>`;
-  }
-  return reaction.emoji.name ?? '';
-}
+import {
+  getEmojiKey,
+  resolveForwardTargetChannelId,
+  type ReactionForwardConfig
+} from '../../utils/discord/reactionEmoji';
 
 export const onReactionForward = async (
   reaction: MessageReaction,
@@ -54,11 +45,7 @@ export const onReactionForward = async (
   const config =
     (await get<ReactionForwardConfig>(kvKeys.REACTION_FORWARD_CHANNELS)) || {};
   const emojiKey = getEmojiKey(reaction);
-  let targetChannelId = config[emojiKey];
-  // Fallback: config may have been stored as :name: for custom emojis
-  if (!targetChannelId && reaction.emoji.name) {
-    targetChannelId = config[`:${reaction.emoji.name}:`];
-  }
+  const targetChannelId = resolveForwardTargetChannelId(reaction, config);
 
   if (!targetChannelId) return;
 
