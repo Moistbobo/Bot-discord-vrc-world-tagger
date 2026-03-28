@@ -183,6 +183,116 @@ describe('regex', () => {
         ).toBeNull();
       });
     });
+
+    describe('tetra_moon', () => {
+      const exampleTweet =
+        'ワールド　深海トンネルーUndersea Tunnel\n' +
+        '作者様　　そばこんぶ。\n' +
+        '\n' +
+        '海底トンネルのチルワールド\n' +
+        '外を泳ぐ色んな魚を眺めてゆっくりできる\n' +
+        'ちょっと薄暗いけどホラー要素は一切ないので、良い感じの写真を撮ろう\n' +
+        '#VRChat_world紹介 #VRChat';
+
+      it('getWorldName strips ワールド prefix (full-width spaces)', () => {
+        expect(customMatchers.tetra_moon.getWorldName(exampleTweet)).toBe(
+          '深海トンネルーUndersea Tunnel'
+        );
+      });
+
+      it('getAuthorName strips 作者様 prefix (full-width spaces)', () => {
+        expect(customMatchers.tetra_moon.getAuthorName(exampleTweet)).toBe(
+          'そばこんぶ。'
+        );
+      });
+
+      it('returns null for empty content', () => {
+        expect(customMatchers.tetra_moon.getWorldName('')).toBeNull();
+        expect(customMatchers.tetra_moon.getAuthorName('')).toBeNull();
+      });
+
+      it('returns null when lines do not match the label pattern', () => {
+        expect(
+          customMatchers.tetra_moon.getWorldName('Plain title\n作者様　x')
+        ).toBeNull();
+        expect(
+          customMatchers.tetra_moon.getAuthorName('ワールド　x\nPlain line')
+        ).toBeNull();
+      });
+    });
+
+    describe('jhn_takashi2020', () => {
+      const exampleTweet =
+        '#tags\n\nWorldInfo:\n' +
+        '虚拟数码博物馆V1․1 Virtual Digital Product Museum by Con11';
+
+      it('getWorldName parses WorldInfo line before " by "', () => {
+        expect(customMatchers.jhn_takashi2020.getWorldName(exampleTweet)).toBe(
+          '虚拟数码博物馆V1․1 Virtual Digital Product Museum'
+        );
+      });
+
+      it('getAuthorName parses WorldInfo line after " by "', () => {
+        expect(customMatchers.jhn_takashi2020.getAuthorName(exampleTweet)).toBe(
+          'Con11'
+        );
+      });
+
+      it('supports WorldInfo on same line as payload', () => {
+        const content = 'WorldInfo: Some World Name by SomeAuthor\n#tag';
+        expect(customMatchers.jhn_takashi2020.getWorldName(content)).toBe(
+          'Some World Name'
+        );
+        expect(customMatchers.jhn_takashi2020.getAuthorName(content)).toBe(
+          'SomeAuthor'
+        );
+      });
+
+      it('returns null for empty content', () => {
+        expect(customMatchers.jhn_takashi2020.getWorldName('')).toBeNull();
+        expect(customMatchers.jhn_takashi2020.getAuthorName('')).toBeNull();
+      });
+
+      it('returns null when WorldInfo or " by " is missing', () => {
+        expect(
+          customMatchers.jhn_takashi2020.getWorldName('No block here')
+        ).toBeNull();
+        expect(
+          customMatchers.jhn_takashi2020.getAuthorName('WorldInfo:\nNo by')
+        ).toBeNull();
+      });
+    });
+
+    describe('yonesuke2', () => {
+      const exampleTweet =
+        'Valhalla Garden 星屑の庭\n' +
+        'ByCOMA\u2024\n' +
+        '無人の図書館の机に開かれた本を通して辿り着く異世界\n' +
+        '壊れた巨大な鳥かごの前に眠るドラゴンの前には無数の武具が\n' +
+        'いくつかの武器に触れるとワールドの雰囲気を変えるギミックがあり撮影などに\n' +
+        '#VRChat #VRChatワールド紹介 #VRChat_World紹介';
+
+      it('getWorldName extracts line 1 as world name', () => {
+        expect(customMatchers.yonesuke2.getWorldName(exampleTweet)).toBe(
+          'Valhalla Garden 星屑の庭'
+        );
+      });
+
+      it('getAuthorName strips tight "By" prefix from line 2', () => {
+        expect(customMatchers.yonesuke2.getAuthorName(exampleTweet)).toBe(
+          'COMA\u2024'
+        );
+      });
+
+      it('returns null for empty content', () => {
+        expect(customMatchers.yonesuke2.getWorldName('')).toBeNull();
+        expect(customMatchers.yonesuke2.getAuthorName('')).toBeNull();
+      });
+
+      it('returns null when author line is missing', () => {
+        expect(customMatchers.yonesuke2.getAuthorName('Only World')).toBeNull();
+      });
+    });
   });
 
   describe('extractWithCustomMatcher', () => {
@@ -217,6 +327,53 @@ describe('regex', () => {
       expect(result).toEqual({
         worldName: '星灯の丘 -Where the Night Learned to Shine-',
         authorName: '円花_madoka'
+      });
+    });
+
+    it('matches tetra_moon and returns world + author', () => {
+      const tetraTweet =
+        'ワールド　深海トンネルーUndersea Tunnel\n' +
+        '作者様　　そばこんぶ。\n' +
+        '\n' +
+        '海底トンネルのチルワールド\n' +
+        '#VRChat_world紹介 #VRChat';
+      const result = extractWithCustomMatcher(
+        'https://x.com/tetra_moon/status/123',
+        tetraTweet
+      );
+      expect(result).toEqual({
+        worldName: '深海トンネルーUndersea Tunnel',
+        authorName: 'そばこんぶ。'
+      });
+    });
+
+    it('matches yonesuke2 and returns world + author', () => {
+      const yonesukeTweet =
+        'Valhalla Garden 星屑の庭\n' +
+        'ByCOMA\u2024\n' +
+        '無人の図書館の机に開かれた本を通して辿り着く異世界\n' +
+        '#VRChat #VRChatワールド紹介 #VRChat_World紹介';
+      const result = extractWithCustomMatcher(
+        'https://x.com/yonesuke2/status/123',
+        yonesukeTweet
+      );
+      expect(result).toEqual({
+        worldName: 'Valhalla Garden 星屑の庭',
+        authorName: 'COMA\u2024'
+      });
+    });
+
+    it('matches jhn_takashi2020 and returns world + author', () => {
+      const jhnTweet =
+        '#愛すべきクセすごツアー\n\nWorldInfo:\n' +
+        '虚拟数码博物馆V1․1 Virtual Digital Product Museum by Con11';
+      const result = extractWithCustomMatcher(
+        'https://x.com/jhn_takashi2020/status/123',
+        jhnTweet
+      );
+      expect(result).toEqual({
+        worldName: '虚拟数码博物馆V1․1 Virtual Digital Product Museum',
+        authorName: 'Con11'
       });
     });
 

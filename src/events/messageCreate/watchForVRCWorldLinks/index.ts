@@ -2,6 +2,10 @@ import { Message } from 'discord.js';
 import logger from '../../../utils/logger';
 import { getSupportedPlatforms } from '../../../utils/helpers';
 import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
+import {
+  getValue,
+  setValue
+} from '../../../utils/jsonAsDb/handlers/persistentKvp';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import { extractWorldIdFromMessage } from './worldExtraction';
 import { fetchWorldData, calculatePackageSizes } from './worldData';
@@ -116,6 +120,25 @@ export const forceRefetchWorldFromMessage = async (
   }
 
   if (!worldId) return false;
+
+  const guildId = message.guildId;
+  if (guildId) {
+    const kvpKey = `${worldId}-${guildId}`;
+    const existingOriginal = await getValue(
+      kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
+      kvpKey
+    );
+    if (!existingOriginal) {
+      await setValue(
+        kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
+        kvpKey,
+        message.id
+      );
+      logger.info(
+        `Saving original message ID for world ${kvpKey} (force refetch): ${message.id}`
+      );
+    }
+  }
 
   await processWorldId(message, worldId, sourceContent, {
     skipDuplicateCheck: true

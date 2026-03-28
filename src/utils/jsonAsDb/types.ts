@@ -23,7 +23,9 @@ export enum kvKeys {
   /** Message IDs that have already been forwarded via reaction (one forward per message) */
   REACTION_FORWARDED_MESSAGE_IDS = 'REACTION_FORWARDED_MESSAGE_IDS',
   /** Message IDs that have already been force-refetched via recycle reaction (one refetch per message) */
-  FORCE_REFETCHED_MESSAGE_IDS = 'FORCE_REFETCHED_MESSAGE_IDS'
+  FORCE_REFETCHED_MESSAGE_IDS = 'FORCE_REFETCHED_MESSAGE_IDS',
+  /** Emoji keys that delete the bot's own messages when reacted (in .watchReacts channels) */
+  REACT_TO_DELETE_EMOJIS = 'REACT_TO_DELETE_EMOJIS'
 }
 
 /**
