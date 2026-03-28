@@ -10,6 +10,7 @@ import {
 import Config from './assets/config';
 import messageCreate from './events/messageCreate';
 import { onReactionForward } from './events/messageReactionAdd/onReactionForward';
+import { onReactionToDelete } from './events/messageReactionAdd/onReactionToDelete';
 import { onReactionForceRefetch } from './events/messageReactionAdd/onReactionForceRefetch';
 import logger from './utils/logger';
 import { isCurrentUser, vrchat } from './utils/externalApi/vrchat';
@@ -34,6 +35,7 @@ client.on(
   async (reaction: MessageReaction, user: User) => {
     try {
       await onReactionForward(reaction, user);
+      await onReactionToDelete(reaction, user);
       await onReactionForceRefetch(reaction, user);
     } catch (error) {
       logger.error('Error in MessageReactionAdd handler:', error);
