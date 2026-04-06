@@ -3,6 +3,7 @@ import logger from '../../utils/logger';
 import { add, has } from '../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 import { emojiMap } from '../../assets/media';
+import { shouldIgnoreOwnBotMessage } from '../../botFilters';
 import { forceRefetchWorldFromMessage } from '../messageCreate/watchForVRCWorldLinks';
 
 export const onReactionForceRefetch = async (
@@ -24,8 +25,15 @@ export const onReactionForceRefetch = async (
     return;
   }
 
-  // Only refetch for original user messages, not bot replies/embeds.
-  if (message.author?.bot) return;
+  // Skip this bot's own replies; allow webhooks and other bots (original link posts).
+  if (
+    shouldIgnoreOwnBotMessage(
+      message.author.id,
+      reaction.client.user?.id
+    )
+  ) {
+    return;
+  }
 
   const isWatched = await has(kvKeys.WATCHED_CHANNELS, message.channelId);
   if (!isWatched) return;
