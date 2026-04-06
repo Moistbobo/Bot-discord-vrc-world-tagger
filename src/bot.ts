@@ -16,6 +16,9 @@ import logger from './utils/logger';
 import { isCurrentUser, vrchat } from './utils/externalApi/vrchat';
 import { shouldIgnoreOwnBotMessage } from './botFilters';
 
+// Message and reaction flows share policy (e.g. webhook vs self-bot). If you change
+// message handling filters or world-link behavior, review src/events/messageReactionAdd/
+// — see .cursor/rules/message-processing-and-reactions.mdc.
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
