@@ -1,145 +1,184 @@
 # Message Create Commands
 
-This directory contains all the commands that can be triggered by messages in Discord channels.
+This directory contains handlers for messages in Discord channels. Routing lives in [`index.ts`](index.ts): lines that start with documented dot-commands invoke the matching handler; everything else is passed to [`watchForVRCWorldLinks`](watchForVRCWorldLinks/index.ts).
+
+**User-facing reference with diagrams:** [World link processing](../../../manual/world-link-processing.md) · [Reaction forwarding](../../../manual/reaction-forwarding.md) · [Root README commands](../../../README.md#commands)
 
 ## Available Commands
 
-### `.watch <#channel>`
-- **Description**: Start watching a channel for VRChat world links
-- **Usage**: `.watch #channel-name`
-- **Admin Only**: Yes
-- **Example**: `.watch #vrchat-worlds`
+Unless noted, commands use [`withProtection`](wrappers/withProtection.ts) (Discord user ID must be in `ADMIN_ID`). Most channel-targeting commands use the **first channel mention** in the message (`message.mentions.channels.first()`).
 
-### `.unwatch <#channel>`
-- **Description**: Stop watching a channel for VRChat world links
-- **Usage**: `.unwatch #channel-name`
-- **Admin Only**: Yes
-- **Example**: `.unwatch #vrchat-worlds`
+### Channel watching
 
-### `.forwardAndroid <#channel>`
-- **Description**: Set a channel to forward Android support messages
-- **Usage**: `.forwardAndroid #channel-name`
-- **Admin Only**: Yes
-- **Example**: `.forwardAndroid #android-support`
+#### `.watch`
 
-### `.forwardMaxSlots <#channel>`
-- **Description**: Set a channel to forward player count updates
-- **Usage**: `.forwardMaxSlots #channel-name`
-- **Admin Only**: Yes
-- **Example**: `.forwardMaxSlots #player-counts`
+- **Description:** Add a channel to `WATCHED_CHANNELS` so world links there get embeds, duplicate handling, and automatic forwarding.
+- **Usage:** `.watch #channel`
+- **Admin:** Yes
+- **Example:** `.watch #vrchat-worlds`
+- **Handler:** [`watchChannel.ts`](watchChannel.ts)
 
-### `.forwardReact <emoji> <#channel>`
-- **Description**: Map a reaction emoji to a forwarding channel for future \"react to forward\" behavior
-- **Usage**: `.forwardReact 😀 #channel-name`
-- **Admin Only**: Yes
-- **Example**: `.forwardReact 😀 #vrchat-worlds-forwarded`
+#### `.unwatch`
 
-### `.clearForwardingChannels`
-- **Description**: Clear all forwarding channel configurations
-- **Usage**: `.clearForwardingChannels`
-- **Admin Only**: Yes
-- **Example**: `.clearForwardingChannels`
+- **Description:** Remove a channel from `WATCHED_CHANNELS`.
+- **Usage:** `.unwatch #channel`
+- **Admin:** Yes
+- **Example:** `.unwatch #vrchat-worlds`
+- **Handler:** [`unWatchChannel.ts`](unWatchChannel.ts)
 
-### `.remove <#channel>`
-- **Description**: Remove a channel from being watched
-- **Usage**: `.remove #channel-name`
-- **Admin Only**: Yes
-- **Example**: `.remove #vrchat-worlds`
+### Automatic forwarding (world criteria)
 
-### `.die`
-- **Description**: Shutdown the bot gracefully
-- **Usage**: `.die`
-- **Admin Only**: Yes
-- **Example**: `.die`
+Each handler updates one forwarding destination via [`setForwardingChannel`](forwarding/setForwardingChannel.ts). Multiple rules can match a single world; see [`getForwardingChannels`](watchForVRCWorldLinks/forwarding/index.ts).
 
-### `.export`
-- **Description**: Export a simple list of all processed world IDs in CSV format
-- **Usage**: `.export`
-- **Admin Only**: No (available to all users)
-- **Example**: `.export`
-- **Features**:
-  - Fast execution (no API calls required)
-  - CSV columns: Index, World ID, World URL
-  - Direct VRChat world links for easy access
-  - Instant results for quick access to world IDs
-  - Useful for bulk operations or quick reference
+#### `.forwardAndroid`
 
-### `.exportFull`
-- **Description**: Export comprehensive world information with detailed data from VRChat API
-- **Usage**: `.exportFull`
-- **Admin Only**: Yes
-- **Example**: `.exportFull`
-- **Features**:
-  - Detailed CSV with world names, authors, capacity, platforms, and status
-  - CSV columns: Index, World ID, World URL, World Name, Author Name, Capacity, Platform, Status
-  - Direct VRChat world links for easy access
-  - Fetches live data from VRChat API for each world
-  - Rate-limited to respect VRChat API limits
-  - Progress updates during export process
-  - Cancellable with reaction (❌)
-  - Error collection and reporting
-  - Separate error text file when API errors occur
-  - **Note**: Only one full export can run at a time to prevent API overload
+- **Description:** Set the Android-support forwarding destination.
+- **Usage:** `.forwardAndroid #channel`
+- **Admin:** Yes
+- **Example:** `.forwardAndroid #android-worlds`
+- **Handler:** [`forwarding/androidSupport.ts`](forwarding/androidSupport.ts)
 
-### `.crawlHistory <#channel>`
-- **Description**: Crawl through the entire channel history to discover all VRChat world links
-- **Usage**: `.crawlHistory #channel-name`
-- **Admin Only**: Yes
-- **Example**: `.crawlHistory #vrchat-worlds`
-- **Features**:
-  - Scans entire channel history for world links
-  - Processes messages in batches with rate limiting
-  - Stores historical world data with timestamps
-  - Progress tracking and cancellation support
-  - Discovers worlds from before the bot was active
-  - **Note**: Only one crawl can run per channel at a time
+#### `.forwardMaxSlots`
 
-### `.crawlStatus <#channel>`
-- **Description**: Check the status of a channel history crawl
-- **Usage**: `.crawlStatus #channel-name`
-- **Admin Only**: No (available to all users)
-- **Example**: `.crawlStatus #vrchat-worlds`
-- **Features**:
-  - Shows crawl progress and statistics
-  - Displays messages processed and worlds discovered
-  - Shows start time and last update
-  - Reports any errors that occurred
+- **Description:** Set the high-capacity forwarding destination (capacity ≥ `FORWARD_PLAYER_COUNT_THRESHOLD`).
+- **Usage:** `.forwardMaxSlots #channel`
+- **Admin:** Yes
+- **Example:** `.forwardMaxSlots #big-worlds`
+- **Handler:** [`forwarding/maxSlots.ts`](forwarding/maxSlots.ts)
 
-### `.stats`
-- **Description**: Display comprehensive bot statistics and activity information
-- **Usage**: `.stats`
-- **Admin Only**: No (available to all users)
-- **Channel Restriction**: Only works in channels being watched with `.watch`
-- **Example**: `.stats`
-- **Features**:
-  - Worlds processed count
-  - Channels being watched
-  - Forwarding channel configuration
-  - Bot uptime and memory usage
-  - System information (Node.js version, platform)
-  - Last processed world
-  - Total activity summary
+#### `.forwardLowCap`
+
+- **Description:** Set the low-capacity forwarding destination (capacity ≤ `LOW_CAPACITY_THRESHOLD`).
+- **Usage:** `.forwardLowCap #channel`
+- **Admin:** Yes
+- **Example:** `.forwardLowCap #small-worlds`
+- **Handler:** [`forwarding/lowCapacity.ts`](forwarding/lowCapacity.ts)
+
+#### `.clearForwardingChannels`
+
+- **Description:** Clear Android, high-cap, and low-cap forwarding keys only (not watched channels or reaction config).
+- **Usage:** `.clearForwardingChannels`
+- **Admin:** Yes
+- **Handler:** [`forwarding/clearForwardingChannels.ts`](forwarding/clearForwardingChannels.ts)
+
+### Reaction forwarding and cleanup
+
+#### `.watchReacts`
+
+- **Description:** Add a channel to `WATCHED_REACTION_CHANNELS` for emoji-triggered forwards and react-to-delete.
+- **Usage:** `.watchReacts #channel`
+- **Admin:** Yes
+- **Example:** `.watchReacts #inbox`
+- **Handler:** [`watchReacts.ts`](watchReacts.ts)
+
+#### `.unwatchReacts`
+
+- **Description:** Remove a channel from `WATCHED_REACTION_CHANNELS`.
+- **Usage:** `.unwatchReacts #channel`
+- **Admin:** Yes
+- **Handler:** [`unwatchReacts.ts`](unwatchReacts.ts)
+
+#### `.forwardReact`
+
+- **Description:** Map an emoji string to a destination channel ID in `REACTION_FORWARD_CHANNELS`.
+- **Usage:** `.forwardReact <emoji> #channel`
+- **Admin:** Yes
+- **Handler:** [`forwarding/forwardReact.ts`](forwarding/forwardReact.ts)
+
+#### `.listReacts`
+
+- **Description:** Embed listing forward mappings and `REACT_TO_DELETE_EMOJIS` with indices.
+- **Usage:** `.listReacts`
+- **Admin:** Yes
+- **Handler:** [`forwarding/listReacts.ts`](forwarding/listReacts.ts)
+
+#### `.removeReact`
+
+- **Description:** Remove a forward mapping by emoji key or 1-based index (forward list order).
+- **Usage:** `.removeReact <emoji or index>`
+- **Admin:** Yes
+- **Handler:** [`forwarding/removeReact.ts`](forwarding/removeReact.ts)
+
+#### `.addDeleteReact`
+
+- **Description:** Append an emoji to `REACT_TO_DELETE_EMOJIS` (react-to-delete on bot messages in watched react channels).
+- **Usage:** `.addDeleteReact <emoji>`
+- **Admin:** Yes
+- **Handler:** [`addDeleteReact.ts`](addDeleteReact.ts)
+
+#### `.removeDeleteReact`
+
+- **Description:** Remove a react-to-delete emoji by exact stored string or 1-based index into the delete list.
+- **Usage:** `.removeDeleteReact <emoji or index>`
+- **Admin:** Yes
+- **Handler:** [`removeDeleteReact.ts`](removeDeleteReact.ts)
+
+### World data and history
+
+#### `.export`
+
+- **Description:** CSV export of processed worlds without per-world API calls.
+- **Usage:** `.export`
+- **Admin:** No
+- **Handler:** [`export.ts`](export.ts)
+
+#### `.exportFull`
+
+- **Description:** Rich CSV with VRChat API lookups and progress messaging.
+- **Usage:** `.exportFull`
+- **Admin:** Yes
+- **Handler:** [`export.ts`](export.ts)
+
+#### `.crawlHistory`
+
+- **Description:** Historical scan of a text channel for world links.
+- **Usage:** `.crawlHistory #channel`
+- **Admin:** Yes
+- **Handler:** [`crawlHistory.ts`](crawlHistory.ts)
+
+#### `.crawlStatus`
+
+- **Description:** Read `CHANNEL_HISTORY_CRAWL_STATUS` for a mentioned channel.
+- **Usage:** `.crawlStatus #channel`
+- **Admin:** No
+- **Handler:** [`crawlHistory.ts`](crawlHistory.ts) (`getCrawlStatus`)
+
+### Maintenance
+
+#### `.stats`
+
+- **Description:** Guild/channel stats; only responds in watched channels (see [`stats.ts`](stats.ts)).
+- **Usage:** `.stats`
+- **Admin:** No
+- **Handler:** [`stats.ts`](stats.ts)
+
+#### `.remove`
+
+- **Description:** In a **watched** channel, parses a world ID from `message.content` and removes the `PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID` entry for `{worldId}-{guildId}`. Does not unwatch the channel or remove forwarded messages.
+- **Usage:** `.remove …` with a world URL or parsable world reference in the same message
+- **Admin:** Yes
+- **Example:** `.remove https://vrchat.com/home/world/wrld_abc123`
+- **Handler:** [`remove.ts`](remove.ts)
+
+#### `.die`
+
+- **Description:** Acknowledge and `process.exit(0)`.
+- **Usage:** `.die`
+- **Admin:** Yes
+- **Handler:** [`die.ts`](die.ts)
 
 ## Manual testing for `.forwardReact`
 
-To verify that `.forwardReact` works as expected:
-- **Set a mapping**: Run `.forwardReact 😀 #target-channel` from an admin user. You should see a confirmation message indicating the emoji and channel.
-- **Override a mapping**: Run `.forwardReact 😀 #other-channel` and confirm the confirmation message now references the new channel.
-- **Check stored data**: Inspect `REACTION_FORWARD_CHANNELS` in `db.json` and verify it contains a key for `😀` with the correct channel ID.
+- Set a mapping: `.forwardReact 😀 #target-channel` and confirm the bot’s confirmation text.
+- Override: run the same emoji with another channel and confirm the update message.
+- Inspect `REACTION_FORWARD_CHANNELS` in `db.json` for the stored emoji key and channel ID.
 
+## Command protection
 
+[`withProtection`](wrappers/withProtection.ts) silently ignores non-admin authors for protected commands.
 
-## Command Protection
+**Unprotected (by design):** `.stats`, `.export`, `.crawlStatus` — read-oriented or low-risk. **Protected:** `.exportFull`, `.crawlHistory`, and all other admin configuration commands above.
 
-Most commands are protected by the `withProtection` wrapper, which restricts access to users whose Discord IDs are listed in the `ADMIN_ID` environment variable.
+## Automatic processing
 
-The following commands are available to all users as they only provide read-only information or export functionality:
-- `.stats` - Bot statistics and activity information
-- `.export` - Simple world ID export
-- `.crawlStatus` - Crawl status information
-
-**Note**: `.exportFull` and `.crawlHistory` require admin privileges as they make API calls and can be resource-intensive.
-
-## Automatic Processing
-
-When no command is detected, the bot automatically processes the message for VRChat world links using the `watchForVRCWorldLinks` function.
+When no command prefix matches, [`watchForVRCWorldLinks`](watchForVRCWorldLinks/index.ts) runs: watched channel check, content extraction (including forward snapshots), world ID extraction, duplicate handling, embed reply, and optional forwards per [`getForwardingChannels`](watchForVRCWorldLinks/forwarding/index.ts).
