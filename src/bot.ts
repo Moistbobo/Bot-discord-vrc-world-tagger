@@ -14,6 +14,7 @@ import { onReactionToDelete } from './events/messageReactionAdd/onReactionToDele
 import { onReactionForceRefetch } from './events/messageReactionAdd/onReactionForceRefetch';
 import logger from './utils/logger';
 import { isCurrentUser, vrchat } from './utils/externalApi/vrchat';
+import { shouldIgnoreOwnBotMessage } from './botFilters';
 
 const client = new Client({
   intents: [
@@ -26,7 +27,7 @@ const client = new Client({
 });
 
 client.on(Events.MessageCreate, (message: Message) => {
-  if (message.author.bot || message.author.id === client.user.id) return;
+  if (shouldIgnoreOwnBotMessage(message.author.id, client.user?.id)) return;
   return messageCreate(message);
 });
 
