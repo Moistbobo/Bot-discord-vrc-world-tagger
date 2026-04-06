@@ -21,6 +21,8 @@ jest.mock('../../assets/media', () => ({
   }
 }));
 
+const OUR_BOT_ID = 'our-bot-id';
+
 const { has, add } = jest.requireMock(
   '../../utils/jsonAsDb/handlers/persistentList'
 ) as {
@@ -34,20 +36,31 @@ const { forceRefetchWorldFromMessage } = jest.requireMock(
   forceRefetchWorldFromMessage: jest.Mock;
 };
 
-const makeReaction = (overrides: Partial<any> = {}) =>
-  ({
-    emoji: { name: '♻', ...overrides.emoji },
+const makeReaction = (overrides: Partial<any> = {}) => {
+  const {
+    emoji: emojiOverride,
+    message: messageOverride,
+    client: clientOverride,
+    ...rest
+  } = overrides;
+
+  return {
+    emoji: { name: '♻', ...emojiOverride },
+    client: {
+      user: { id: OUR_BOT_ID, ...clientOverride?.user }
+    },
     message: {
       id: 'msg123',
       partial: false,
       fetch: jest.fn(),
       channelId: 'chan1',
-      author: { bot: false },
+      author: { id: 'human-1', bot: false },
       react: jest.fn(),
-      ...overrides.message
+      ...messageOverride
     },
-    ...overrides
-  }) as any;
+    ...rest
+  } as any;
+};
 
 describe('onReactionForceRefetch', () => {
   beforeEach(() => {
@@ -66,14 +79,34 @@ describe('onReactionForceRefetch', () => {
     expect(forceRefetchWorldFromMessage).not.toHaveBeenCalled();
   });
 
-  it('ignores bot-authored messages', async () => {
-    const reaction = makeReaction({ message: { author: { bot: true } } });
+  it('ignores messages authored by this bot', async () => {
+    const reaction = makeReaction({
+      message: { author: { id: OUR_BOT_ID, bot: true } }
+    });
     const user = { bot: false } as any;
 
     await onReactionForceRefetch(reaction, user);
 
     expect(has).not.toHaveBeenCalled();
     expect(forceRefetchWorldFromMessage).not.toHaveBeenCalled();
+  });
+
+  it('refetches when message author is another bot (e.g. webhook)', async () => {
+    has.mockImplementation((key: string) =>
+      Promise.resolve(key === 'WATCHED_CHANNELS')
+    );
+    add.mockResolvedValue({ success: true });
+    forceRefetchWorldFromMessage.mockResolvedValue(true);
+
+    const reaction = makeReaction({
+      message: { author: { id: 'other-bot-id', bot: true } }
+    });
+    const user = { bot: false } as any;
+
+    await onReactionForceRefetch(reaction, user);
+
+    expect(forceRefetchWorldFromMessage).toHaveBeenCalledWith(reaction.message);
+    expect(reaction.message.react).toHaveBeenCalledWith('✅');
   });
 
   it('only refetches in watched channels', async () => {

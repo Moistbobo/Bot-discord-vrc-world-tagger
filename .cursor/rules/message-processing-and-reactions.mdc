@@ -1,0 +1,16 @@
+---
+description: Keep Discord message and reaction handling consistent when changing filters or world-link behavior
+globs:
+  - src/bot.ts
+  - src/botFilters.ts
+  - src/events/messageCreate/**/*.ts
+  - src/events/messageReactionAdd/**/*.ts
+alwaysApply: false
+---
+
+When you change **message processing** (who may trigger handlers, what counts as an “original” post, webhook vs bot authors, watched channels, or world-link / duplicate behavior), also review **`src/events/messageReactionAdd/`** handlers. They act on **`reaction.message`** and often duplicate similar assumptions (e.g. author filtering, channel watch lists).
+
+- **Message entry:** `Events.MessageCreate` in `src/bot.ts` → `src/events/messageCreate/`.
+- **Reaction entry:** `Events.MessageReactionAdd` in `src/bot.ts` → `onReactionForward`, `onReactionToDelete`, `onReactionForceRefetch`, etc.
+
+If you introduce or adjust a rule like “ignore our bot but allow webhooks,” apply it in both paths where relevant. Reuse **`shouldIgnoreOwnBotMessage`** from `src/botFilters.ts` when the same self-vs-other logic is needed.
