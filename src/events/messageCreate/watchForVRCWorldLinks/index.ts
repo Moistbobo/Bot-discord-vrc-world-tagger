@@ -75,11 +75,9 @@ const processWorldId = async (
   sourceContent: string,
   options?: {
     skipDuplicateCheck?: boolean;
-    reactWithUndoOnReply?: boolean;
   }
 ): Promise<void> => {
   const skipDuplicateCheck = options?.skipDuplicateCheck ?? false;
-  const reactWithUndoOnReply = options?.reactWithUndoOnReply ?? false;
 
   if (!skipDuplicateCheck && !Config.DEV_MODE) {
     const isDuplicate = await checkAndHandleDuplicate(message, worldId);
@@ -105,9 +103,7 @@ const processWorldId = async (
     supportedPlatforms
   );
 
-  const responseMsg = await sendResponse(message, embed, worldData.id, {
-    reactWithUndo: reactWithUndoOnReply
-  });
+  const responseMsg = await sendResponse(message, embed, worldData.id);
 
   if (responseMsg) {
     for (const channel of forwardingChannels) {
@@ -127,7 +123,7 @@ export const forceRefetchWorldFromMessage = async (
 ): Promise<boolean> => {
   const match = await findFirstWorldMatch(message);
   if (!match) return false;
-  const { worldId, sourceContent, fromDirectUserContent } = match;
+  const { worldId, sourceContent } = match;
 
   const guildId = message.guildId;
   if (guildId) {
@@ -149,8 +145,7 @@ export const forceRefetchWorldFromMessage = async (
   }
 
   await processWorldId(message, worldId, sourceContent, {
-    skipDuplicateCheck: true,
-    reactWithUndoOnReply: fromDirectUserContent
+    skipDuplicateCheck: true
   });
   return true;
 };
@@ -183,9 +178,7 @@ const watchForVRCWorldLinks = async (message: Message): Promise<void> => {
       }`
     );
 
-    await processWorldId(message, worldId, sourceContent, {
-      reactWithUndoOnReply: fromDirectUserContent
-    });
+    await processWorldId(message, worldId, sourceContent);
   } catch (error) {
     logger.error('Error processing VRC world link:', error);
   }
