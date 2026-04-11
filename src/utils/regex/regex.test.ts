@@ -293,6 +293,42 @@ describe('regex', () => {
         expect(customMatchers.yonesuke2.getAuthorName('Only World')).toBeNull();
       });
     });
+
+    describe('fox_yata9', () => {
+      const exampleTweet =
+        'World:Speed Puzzler （jigsaws done right）(QUEST対応)\n' +
+        'By:PlayerBush001\n' +
+        '\n' +
+        '皆で協力してジグソーパズルを完成させよう\n' +
+        '#VRChat_world紹介\n' +
+        '#ヤタノの漫遊記';
+
+      it('getWorldName strips World: and (QUEST対応)', () => {
+        expect(customMatchers.fox_yata9.getWorldName(exampleTweet)).toBe(
+          'Speed Puzzler （jigsaws done right）'
+        );
+      });
+
+      it('getAuthorName strips By: prefix', () => {
+        expect(customMatchers.fox_yata9.getAuthorName(exampleTweet)).toBe(
+          'PlayerBush001'
+        );
+      });
+
+      it('returns null for empty content', () => {
+        expect(customMatchers.fox_yata9.getWorldName('')).toBeNull();
+        expect(customMatchers.fox_yata9.getAuthorName('')).toBeNull();
+      });
+
+      it('returns null when World or By line is missing', () => {
+        expect(
+          customMatchers.fox_yata9.getWorldName('By:OnlyAuthor\n')
+        ).toBeNull();
+        expect(
+          customMatchers.fox_yata9.getAuthorName('World:OnlyWorld\n')
+        ).toBeNull();
+      });
+    });
   });
 
   describe('extractWithCustomMatcher', () => {
@@ -374,6 +410,23 @@ describe('regex', () => {
       expect(result).toEqual({
         worldName: '虚拟数码博物馆V1․1 Virtual Digital Product Museum',
         authorName: 'Con11'
+      });
+    });
+
+    it('matches fox_yata9 and returns world + author', () => {
+      const foxTweet =
+        'World:Speed Puzzler （jigsaws done right）(QUEST対応)\n' +
+        'By:PlayerBush001\n' +
+        '\n' +
+        '皆で協力してジグソーパズルを完成させよう\n' +
+        '#VRChat_world紹介';
+      const result = extractWithCustomMatcher(
+        'https://x.com/fox_yata9/status/123',
+        foxTweet
+      );
+      expect(result).toEqual({
+        worldName: 'Speed Puzzler （jigsaws done right）',
+        authorName: 'PlayerBush001'
       });
     });
 
