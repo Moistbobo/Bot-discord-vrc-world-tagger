@@ -12,6 +12,7 @@ import messageCreate from './events/messageCreate';
 import { onReactionForward } from './events/messageReactionAdd/onReactionForward';
 import { onReactionToDelete } from './events/messageReactionAdd/onReactionToDelete';
 import { onReactionForceRefetch } from './events/messageReactionAdd/onReactionForceRefetch';
+import { onReactionUndoWorldTag } from './events/messageReactionAdd/onReactionUndoWorldTag';
 import logger from './utils/logger';
 import { isCurrentUser, vrchat } from './utils/externalApi/vrchat';
 import { shouldIgnoreOwnBotMessage } from './botFilters';
@@ -41,6 +42,7 @@ client.on(
       await onReactionForward(reaction, user);
       await onReactionToDelete(reaction, user);
       await onReactionForceRefetch(reaction, user);
+      await onReactionUndoWorldTag(reaction, user);
     } catch (error) {
       logger.error('Error in MessageReactionAdd handler:', error);
     }

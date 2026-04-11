@@ -81,6 +81,35 @@ export const customMatchers = {
       const afterBy = line.replace(/^By\s*[:：]?\s*/i, '').trim();
       return afterBy || null;
     }
+  },
+  fox_yata9: {
+    getWorldName: (content: string) => {
+      if (!content) return null;
+      for (const raw of content.split('\n')) {
+        const line = raw.trim();
+        const m = line.match(/^World\s*[:：]\s*(.+)$/i);
+        if (m) {
+          const name = m[1]
+            .trim()
+            .replace(/\s*\(QUEST対応\)/g, '')
+            .trim();
+          return name || null;
+        }
+      }
+      return null;
+    },
+    getAuthorName: (content: string) => {
+      if (!content) return null;
+      for (const raw of content.split('\n')) {
+        const line = raw.trim();
+        const m = line.match(/^By\s*[:：]\s*(.+)$/i);
+        if (m) {
+          const name = m[1].trim();
+          return name || null;
+        }
+      }
+      return null;
+    }
   }
 };
 

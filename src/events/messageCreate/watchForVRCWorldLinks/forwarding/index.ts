@@ -119,13 +119,19 @@ export const getForwardingChannels = async (
   return channels;
 };
 
+export type SendWorldResponseOptions = {
+  /** When true, react on the bot reply with the undo emoji (direct user content only). */
+  reactWithUndo?: boolean;
+};
+
 /**
  * Sends response to the original message
  */
 export const sendResponse = async (
   message: Message,
   embed: EmbedBuilder,
-  worldId: string
+  worldId: string,
+  options?: SendWorldResponseOptions
 ): Promise<OmitPartialGroupDMChannel<Message<boolean>> | undefined> => {
   if (!message.channel.isSendable()) {
     return;
@@ -135,10 +141,20 @@ export const sendResponse = async (
     await message.react(emojiMap.checkmark);
     await markWorldAsProcessed(worldId);
 
-    return message.reply({
+    const responseMsg = await message.reply({
       allowedMentions: { repliedUser: false },
       embeds: [embed]
     });
+
+    if (options?.reactWithUndo) {
+      try {
+        await responseMsg.react(emojiMap.undo);
+      } catch (err) {
+        logger.debug('Failed to react with undo on world reply:', err);
+      }
+    }
+
+    return responseMsg;
   } catch (error) {
     logger.error('Failed to send response to original message:', error);
   }
