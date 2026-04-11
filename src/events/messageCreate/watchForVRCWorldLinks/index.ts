@@ -19,38 +19,51 @@ import { checkAndHandleDuplicate } from './duplicateHandler';
 import Config from '../../../assets/config';
 
 /**
- * Extracts content from a message, handling both regular and forwarded messages
- * @param message - The Discord message to extract content from
- * @returns Array of content strings to check for VRChat world links
+ * Finds a world link in the message body first, then in forwarded snapshots.
+ * `fromDirectUserContent` is true only when the match came from `message.content`, not snapshots.
  */
-const extractMessageContent = (message: Message): string[] => {
-  const contentArray: string[] = [];
-
-  // Add the current message content
+const findFirstWorldMatch = async (
+  message: Message
+): Promise<{
+  worldId: string;
+  sourceContent: string;
+  fromDirectUserContent: boolean;
+} | null> => {
   if (message.content) {
-    contentArray.push(message.content);
     logger.debug(
-      `Added current message content: ${message.content.substring(0, 100)}...`
+      `Checking direct message content: ${message.content.substring(0, 100)}...`
     );
+    const fromBody = await extractWorldIdFromMessage(message.content);
+    if (fromBody) {
+      return {
+        worldId: fromBody,
+        sourceContent: message.content,
+        fromDirectUserContent: true
+      };
+    }
   }
 
-  // Add content from forwarded message snapshots
   if (message.messageSnapshots && message.messageSnapshots.size > 0) {
     logger.debug(
       `Found ${message.messageSnapshots.size} forwarded message snapshots`
     );
     for (const [, snapshot] of message.messageSnapshots) {
-      if (snapshot.content) {
-        contentArray.push(snapshot.content);
-        logger.debug(
-          `Added forwarded message content: ${snapshot.content.substring(0, 100)}...`
-        );
+      if (!snapshot.content) continue;
+      logger.debug(
+        `Checking forwarded snapshot content: ${snapshot.content.substring(0, 100)}...`
+      );
+      const fromSnapshot = await extractWorldIdFromMessage(snapshot.content);
+      if (fromSnapshot) {
+        return {
+          worldId: fromSnapshot,
+          sourceContent: snapshot.content,
+          fromDirectUserContent: false
+        };
       }
     }
   }
 
-  logger.debug(`Total content entries to check: ${contentArray.length}`);
-  return contentArray;
+  return null;
 };
 
 /**
@@ -60,9 +73,13 @@ const processWorldId = async (
   message: Message,
   worldId: string,
   sourceContent: string,
-  options?: { skipDuplicateCheck?: boolean }
+  options?: {
+    skipDuplicateCheck?: boolean;
+    reactWithUndoOnReply?: boolean;
+  }
 ): Promise<void> => {
   const skipDuplicateCheck = options?.skipDuplicateCheck ?? false;
+  const reactWithUndoOnReply = options?.reactWithUndoOnReply ?? false;
 
   if (!skipDuplicateCheck && !Config.DEV_MODE) {
     const isDuplicate = await checkAndHandleDuplicate(message, worldId);
@@ -88,7 +105,9 @@ const processWorldId = async (
     supportedPlatforms
   );
 
-  const responseMsg = await sendResponse(message, embed, worldData.id);
+  const responseMsg = await sendResponse(message, embed, worldData.id, {
+    reactWithUndo: reactWithUndoOnReply
+  });
 
   if (responseMsg) {
     for (const channel of forwardingChannels) {
@@ -106,20 +125,9 @@ const processWorldId = async (
 export const forceRefetchWorldFromMessage = async (
   message: Message
 ): Promise<boolean> => {
-  const contentArray = extractMessageContent(message);
-
-  let worldId: string | null = null;
-  let sourceContent = '';
-
-  for (const content of contentArray) {
-    worldId = await extractWorldIdFromMessage(content);
-    if (worldId) {
-      sourceContent = content;
-      break;
-    }
-  }
-
-  if (!worldId) return false;
+  const match = await findFirstWorldMatch(message);
+  if (!match) return false;
+  const { worldId, sourceContent, fromDirectUserContent } = match;
 
   const guildId = message.guildId;
   if (guildId) {
@@ -141,7 +149,8 @@ export const forceRefetchWorldFromMessage = async (
   }
 
   await processWorldId(message, worldId, sourceContent, {
-    skipDuplicateCheck: true
+    skipDuplicateCheck: true,
+    reactWithUndoOnReply: fromDirectUserContent
   });
   return true;
 };
@@ -161,32 +170,22 @@ const watchForVRCWorldLinks = async (message: Message): Promise<void> => {
   }
 
   try {
-    const contentArray = extractMessageContent(message);
-
-    let worldId: string | null = null;
-    let sourceContent = '';
-
-    for (const content of contentArray) {
-      worldId = await extractWorldIdFromMessage(content);
-      if (worldId) {
-        sourceContent = content;
-        break;
-      }
-    }
-
-    if (!worldId) {
+    const match = await findFirstWorldMatch(message);
+    if (!match) {
       return;
     }
 
+    const { worldId, sourceContent, fromDirectUserContent } = match;
+
     logger.info(
       `Processing VRC World link: ${worldId} from ${
-        message.messageSnapshots?.size > 0
-          ? 'forwarded message'
-          : 'direct message'
+        fromDirectUserContent ? 'direct message' : 'forwarded message'
       }`
     );
 
-    await processWorldId(message, worldId, sourceContent);
+    await processWorldId(message, worldId, sourceContent, {
+      reactWithUndoOnReply: fromDirectUserContent
+    });
   } catch (error) {
     logger.error('Error processing VRC world link:', error);
   }
