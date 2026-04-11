@@ -5,7 +5,8 @@ export const emojiMap = {
   actually: '<:actually:1402298773517893684>',
   recycle: '♻',
   checkmark: '✅',
-  crossError: '❌'
+  crossError: '❌',
+  undo: '↩️'
 };
 
 export const images = {
