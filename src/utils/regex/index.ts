@@ -92,6 +92,7 @@ export const customMatchers = {
           const name = m[1]
             .trim()
             .replace(/\s*\(QUEST対応\)/g, '')
+            .replace(/\s*\(iOS対応\)/g, '')
             .trim();
           return name || null;
         }
