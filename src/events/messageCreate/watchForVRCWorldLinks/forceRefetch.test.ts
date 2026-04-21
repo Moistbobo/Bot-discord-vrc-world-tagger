@@ -1,9 +1,13 @@
-import { Message } from 'discord.js';
+import { Attachment, Message } from 'discord.js';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 
 jest.mock('../../../utils/jsonAsDb/handlers/persistentKvp', () => ({
   getValue: jest.fn(),
   setValue: jest.fn()
+}));
+
+jest.mock('../../../utils/jsonAsDb/handlers/persistentList', () => ({
+  has: jest.fn()
 }));
 
 jest.mock('./worldExtraction', () => ({
@@ -56,6 +60,7 @@ import {
   getValue,
   setValue
 } from '../../../utils/jsonAsDb/handlers/persistentKvp';
+import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { extractWorldIdFromMessage } from './worldExtraction';
 import { fetchWorldData, calculatePackageSizes } from './worldData';
 import { forceRefetchWorldFromMessage } from './index';
@@ -76,6 +81,7 @@ describe('forceRefetchWorldFromMessage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (has as jest.Mock).mockResolvedValue(true);
     (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(WRLD);
     (fetchWorldData as jest.Mock).mockResolvedValue({
       id: WRLD,
@@ -131,5 +137,48 @@ describe('forceRefetchWorldFromMessage', () => {
 
     expect(result).toBe(false);
     expect(getValue).not.toHaveBeenCalled();
+  });
+
+  it('returns false when channel is not watched (including attachment filenames)', async () => {
+    (has as jest.Mock).mockResolvedValue(false);
+    (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(null);
+
+    const att = { name: `capture-${WRLD}.png` } as Attachment;
+    const message = {
+      ...makeMessage(),
+      content: '',
+      attachments: {
+        values: () => [att].values() as IterableIterator<Attachment>
+      }
+    } as unknown as Message;
+
+    const result = await forceRefetchWorldFromMessage(message);
+
+    expect(result).toBe(false);
+    expect(has).toHaveBeenCalledWith(kvKeys.WATCHED_CHANNELS, 'chan-1');
+    expect(getValue).not.toHaveBeenCalled();
+  });
+
+  it('refetches world id from attachment filename when message text has none', async () => {
+    (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(null);
+    (getValue as jest.Mock).mockResolvedValue(undefined);
+    (setValue as jest.Mock).mockResolvedValue(true);
+
+    const att = { name: `capture-${WRLD}.png` } as Attachment;
+    const message = {
+      ...makeMessage(),
+      content: '',
+      attachments: {
+        values: () => [att].values() as IterableIterator<Attachment>
+      }
+    } as unknown as Message;
+
+    const result = await forceRefetchWorldFromMessage(message);
+
+    expect(result).toBe(true);
+    expect(getValue).toHaveBeenCalledWith(
+      kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
+      `${WRLD}-guild-1`
+    );
   });
 });
