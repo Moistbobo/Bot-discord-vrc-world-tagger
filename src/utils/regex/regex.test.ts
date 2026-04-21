@@ -309,6 +309,21 @@ describe('regex', () => {
         );
       });
 
+      it('getWorldName strips (iOS対応)', () => {
+        const tweet = 'World:Some World Name(iOS対応)\n' + 'By:AuthorName\n';
+        expect(customMatchers.fox_yata9.getWorldName(tweet)).toBe(
+          'Some World Name'
+        );
+      });
+
+      it('getWorldName strips (QUEST対応) and (iOS対応) when both present', () => {
+        const tweet =
+          'World:Hybrid World(QUEST対応)(iOS対応)\n' + 'By:AuthorName\n';
+        expect(customMatchers.fox_yata9.getWorldName(tweet)).toBe(
+          'Hybrid World'
+        );
+      });
+
       it('getAuthorName strips By: prefix', () => {
         expect(customMatchers.fox_yata9.getAuthorName(exampleTweet)).toBe(
           'PlayerBush001'
