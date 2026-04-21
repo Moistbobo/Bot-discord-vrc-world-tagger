@@ -92,6 +92,7 @@ export const customMatchers = {
           const name = m[1]
             .trim()
             .replace(/\s*\(QUEST対応\)/g, '')
+            .replace(/\s*\(iOS対応\)/g, '')
             .trim();
           return name || null;
         }
@@ -117,6 +118,25 @@ export function extractWorldId(message: string): string | null {
   if (!message) return null;
   const match = message.match(VRCHAT_WORLD_ID_REGEX);
   return match?.[0] ?? null;
+}
+
+/**
+ * Returns every unique VRChat world id found in `text`, in order of first appearance.
+ */
+export function extractAllWorldIds(text: string): string[] {
+  if (!text) return [];
+  const re = new RegExp(VRCHAT_WORLD_ID_REGEX.source, 'g');
+  const matches = text.match(re);
+  if (!matches?.length) return [];
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const id of matches) {
+    if (!seen.has(id)) {
+      seen.add(id);
+      ordered.push(id);
+    }
+  }
+  return ordered;
 }
 
 export function getLinkFromMessage(message: string): string | null {

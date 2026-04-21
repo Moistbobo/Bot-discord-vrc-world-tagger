@@ -4,7 +4,8 @@ import {
   extractWorldAndAuthorByLines,
   extractWorldAndAuthor,
   customMatchers,
-  extractWithCustomMatcher
+  extractWithCustomMatcher,
+  extractAllWorldIds
 } from './index';
 
 // Mock the config to avoid environment variable dependencies
@@ -309,6 +310,21 @@ describe('regex', () => {
         );
       });
 
+      it('getWorldName strips (iOS対応)', () => {
+        const tweet = 'World:Some World Name(iOS対応)\n' + 'By:AuthorName\n';
+        expect(customMatchers.fox_yata9.getWorldName(tweet)).toBe(
+          'Some World Name'
+        );
+      });
+
+      it('getWorldName strips (QUEST対応) and (iOS対応) when both present', () => {
+        const tweet =
+          'World:Hybrid World(QUEST対応)(iOS対応)\n' + 'By:AuthorName\n';
+        expect(customMatchers.fox_yata9.getWorldName(tweet)).toBe(
+          'Hybrid World'
+        );
+      });
+
       it('getAuthorName strips By: prefix', () => {
         expect(customMatchers.fox_yata9.getAuthorName(exampleTweet)).toBe(
           'PlayerBush001'
@@ -604,6 +620,27 @@ describe('regex', () => {
       const noWorldData = `Just some random text\n#VRChat`;
       const result = extractWorldAndAuthor(noWorldData);
       expect(result).toBeNull();
+    });
+  });
+
+  describe('extractAllWorldIds', () => {
+    const id1 = 'wrld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    const id2 = 'wrld_bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee';
+
+    it('returns empty for empty or non-matching text', () => {
+      expect(extractAllWorldIds('')).toEqual([]);
+      expect(extractAllWorldIds('no id here')).toEqual([]);
+    });
+
+    it('returns unique ids in first-appearance order', () => {
+      expect(extractAllWorldIds(`${id2} foo ${id1} bar ${id2}`)).toEqual([
+        id2,
+        id1
+      ]);
+    });
+
+    it('finds an id embedded in a filename', () => {
+      expect(extractAllWorldIds(`screenshot-${id1}.png`)).toEqual([id1]);
     });
   });
 });
