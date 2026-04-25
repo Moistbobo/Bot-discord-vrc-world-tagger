@@ -25,8 +25,29 @@ import { crawlChannelHistory, getCrawlStatus } from './crawlHistory';
 import lowCapacity from './forwarding/lowCapacity';
 import addDeleteReact from './addDeleteReact';
 import removeDeleteReact from './removeDeleteReact';
+import { isUserOnIgnoreList } from '../../utils/ignoreList';
+import { ignoreMe } from './ignoreMe';
+import { unignoreMe } from './unignoreMe';
 
 const messageCreate = async (message: Message) => {
+  const trimmed = message.content.trim();
+
+  if (await isUserOnIgnoreList(message.author.id)) {
+    if (trimmed === '.unignoreme' && !message.author.bot) {
+      return unignoreMe(message);
+    }
+    return;
+  }
+
+  if (!message.author.bot) {
+    if (trimmed === '.ignoreme') {
+      return ignoreMe(message);
+    }
+    if (trimmed === '.unignoreme') {
+      return unignoreMe(message);
+    }
+  }
+
   if (message.content.startsWith('.watchReacts')) {
     return withProtection(watchReacts)(message);
   } else if (message.content.startsWith('.unwatchReacts')) {
