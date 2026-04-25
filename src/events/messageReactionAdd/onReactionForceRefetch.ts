@@ -26,12 +26,7 @@ export const onReactionForceRefetch = async (
   }
 
   // Skip this bot's own replies; allow webhooks and other bots (original link posts).
-  if (
-    shouldIgnoreOwnBotMessage(
-      message.author.id,
-      reaction.client.user?.id
-    )
-  ) {
+  if (shouldIgnoreOwnBotMessage(message.author.id, reaction.client.user?.id)) {
     return;
   }
 

@@ -25,7 +25,9 @@ export enum kvKeys {
   /** Message IDs that have already been force-refetched via recycle reaction (one refetch per message) */
   FORCE_REFETCHED_MESSAGE_IDS = 'FORCE_REFETCHED_MESSAGE_IDS',
   /** Emoji keys that delete the bot's own messages when reacted (in .watchReacts channels) */
-  REACT_TO_DELETE_EMOJIS = 'REACT_TO_DELETE_EMOJIS'
+  REACT_TO_DELETE_EMOJIS = 'REACT_TO_DELETE_EMOJIS',
+  /** Discord user IDs that opted out of message and reaction processing */
+  IGNORED_USERS = 'IGNORED_USERS'
 }
 
 /**

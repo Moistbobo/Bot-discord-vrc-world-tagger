@@ -119,10 +119,7 @@ describe('onReactionUndoWorldTag', () => {
     const reaction = makeReaction();
     await onReactionUndoWorldTag(reaction, { bot: false } as any);
 
-    expect(remove).toHaveBeenCalledWith(
-      'PROCESSED_WORLDS',
-      WORLD_ID
-    );
+    expect(remove).toHaveBeenCalledWith('PROCESSED_WORLDS', WORLD_ID);
     expect(removeValue).toHaveBeenCalledWith(
       'PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID',
       `${WORLD_ID}-guild1`

@@ -16,6 +16,7 @@ import { onReactionUndoWorldTag } from './events/messageReactionAdd/onReactionUn
 import logger from './utils/logger';
 import { isCurrentUser, vrchat } from './utils/externalApi/vrchat';
 import { shouldIgnoreOwnBotMessage } from './botFilters';
+import { isUserOnIgnoreList } from './utils/ignoreList';
 
 // Message and reaction flows share policy (e.g. webhook vs self-bot). If you change
 // message handling filters or world-link behavior, review src/events/messageReactionAdd/
@@ -39,6 +40,8 @@ client.on(
   Events.MessageReactionAdd,
   async (reaction: MessageReaction, user: User) => {
     try {
+      if (user.bot) return;
+      if (await isUserOnIgnoreList(user.id)) return;
       await onReactionForward(reaction, user);
       await onReactionToDelete(reaction, user);
       await onReactionForceRefetch(reaction, user);
