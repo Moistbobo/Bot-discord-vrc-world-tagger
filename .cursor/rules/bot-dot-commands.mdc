@@ -1,0 +1,23 @@
+---
+description: Dot-command docs and camelCase triggers when adding or changing Discord text commands
+globs:
+  - src/events/messageCreate/**/*.ts
+alwaysApply: false
+---
+
+# Bot dot-commands
+
+## Keep the manual in sync
+
+User-facing dot-commands are routed from `src/events/messageCreate/index.ts`. When you **add** a command, **change** its name, arguments, admin requirement, or behavior:
+
+- Update **`manual/commands.md`** (command tables, examples, routing notes such as order-sensitive prefixes).
+- If the same command is duplicated elsewhere for users (e.g. `README.md` or `src/events/messageCreate/README.md`), align those sections when the change is user-visible.
+
+## Trigger naming (camelCase)
+
+The token after the leading `.` must be **camelCase**: one lowercase word or several words with **no** separators—capitalize each segment after the first (e.g. `.watch`, `.exportFull`, `.forwardMaxSlots`, `.unwatchReacts`, `.ignoreMe`).
+
+Do **not** use snake_case, kebab-case, or PascalCase for the trigger (e.g. avoid `.forward_max_slots`, `.ForwardAndroid`).
+
+When ordering `startsWith` checks, longer prefixes must still be matched before shorter ones if they share a prefix (same as existing `.exportFull` before `.export`).

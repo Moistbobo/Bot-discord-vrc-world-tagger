@@ -27,7 +27,7 @@ export const ignoreMe = async (message: Message): Promise<void> => {
   logger.info(`User ${authorId} added themselves to the ignore list`);
   if (message.channel.isSendable()) {
     await message.channel.send(
-      'You are now on the ignore list. This bot will not process your messages or reactions. Send `.unignoreme` to opt back in.'
+      'You are now on the ignore list. This bot will not process your messages or reactions. Send `.unignoreMe` to opt back in.'
     );
   }
 };

@@ -33,17 +33,17 @@ const messageCreate = async (message: Message) => {
   const trimmed = message.content.trim();
 
   if (await isUserOnIgnoreList(message.author.id)) {
-    if (trimmed === '.unignoreme' && !message.author.bot) {
+    if (trimmed === '.unignoreMe' && !message.author.bot) {
       return unignoreMe(message);
     }
     return;
   }
 
   if (!message.author.bot) {
-    if (trimmed === '.ignoreme') {
+    if (trimmed === '.ignoreMe') {
       return ignoreMe(message);
     }
-    if (trimmed === '.unignoreme') {
+    if (trimmed === '.unignoreMe') {
       return unignoreMe(message);
     }
   }
