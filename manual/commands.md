@@ -20,8 +20,8 @@ This folder holds deeper documentation for how the bot behaves. This page is a *
 
 | Command | Admin | Description | Example |
 |--------|-------|-------------|---------|
-| `.ignoreme` | No | Adds you to the ignore list; the bot stops processing your messages and reactions until you opt back in. | `.ignoreme` |
-| `.unignoreme` | No | Removes you from the ignore list. While ignored, this is the **only** command the bot still handles for you. | `.unignoreme` |
+| `.ignoreMe` | No | Adds you to the ignore list; the bot stops processing your messages and reactions until you opt back in. | `.ignoreMe` |
+| `.unignoreMe` | No | Removes you from the ignore list. While ignored, this is the **only** command the bot still handles for you. | `.unignoreMe` |
 
 ### Channel watching
 
@@ -50,7 +50,7 @@ See [reaction-forwarding.md](reaction-forwarding.md) for setup and behavior deta
 | `.watchReacts` | Yes | Allow reactions in a channel to trigger emoji→channel forwarding (after mapping with `.forwardReact`). | `.watchReacts #channel` | `.watchReacts #inbox` |
 | `.unwatchReacts` | Yes | Stop watching a channel for reaction-based forwarding. | `.unwatchReacts #channel` | `.unwatchReacts #inbox` |
 | `.forwardReact` | Yes | Map an emoji to a destination; in watched react channels, that reaction forwards the message (once per message). | `.forwardReact <emoji> #channel` | `.forwardReact 📌 #saved` |
-| `.listReacts` | Yes | List emoji→channel mappings and react-to-delete emojis (with indices for removal). | `.listReacts` | `.listReacts` |
+| `.listReacts` | Yes | List channels with `.watchReacts`, emoji→channel mappings, and react-to-delete emojis (with indices for removal). | `.listReacts` | `.listReacts` |
 | `.removeReact` | Yes | Remove a forward mapping by emoji or by **1-based** index from `.listReacts`. | `.removeReact <emoji>` or `.removeReact <index>` | `.removeReact 1` |
 | `.addDeleteReact` | Yes | Register an emoji so reacting with it on **the bot’s messages** deletes them (in `.watchReacts` channels). | `.addDeleteReact <emoji>` | `.addDeleteReact 🗑️` |
 | `.removeDeleteReact` | Yes | Remove a react-to-delete emoji by emoji or **1-based** index (indices under **React to delete** in `.listReacts`). | `.removeDeleteReact <emoji>` or `.removeDeleteReact <index>` | `.removeDeleteReact 🗑️` |

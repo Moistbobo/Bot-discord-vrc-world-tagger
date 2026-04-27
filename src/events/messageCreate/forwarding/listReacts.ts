@@ -38,9 +38,7 @@ const listReacts = async (message: Message) => {
       ? [
           '_No channels — use `.watchReacts #channel` (mention the channel) to enable reaction handling there._'
         ]
-      : watchLinesShown.map(
-          (id, i) => `${i + 1}. ${channelMention(id)}`
-        );
+      : watchLinesShown.map((id, i) => `${i + 1}. ${channelMention(id)}`);
   if (watchedChannelIds.length > MAX_WATCHED_LINES) {
     watchFieldLines.push(
       `_…and ${watchedChannelIds.length - MAX_WATCHED_LINES} more._`
