@@ -1,0 +1,14 @@
+---
+description: Use the repo PR template when creating or drafting pull requests
+alwaysApply: true
+---
+
+# Pull requests
+
+When you are **asked to create a pull request** (including via `gh pr create`, drafting the PR body, or preparing text for the user to paste):
+
+1. Read **`.github/PULL_REQUEST_TEMPLATE.md`** and structure the description to match it.
+2. Fill **Issue** (`Closes #…` when there is a linked issue; otherwise state clearly that there is no tracking issue instead of leaving a placeholder like `#XX`).
+3. Complete **Description**, **Type of change** (check the right box or equivalent), and **Checklist** (only check items you have actually verified—run tests/lint when the checklist requires it).
+
+Do not submit or recommend a bare title-only PR body when the template expects these sections.
