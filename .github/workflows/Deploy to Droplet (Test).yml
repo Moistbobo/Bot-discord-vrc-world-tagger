@@ -45,9 +45,9 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             set -e
-            cd ~/Bot-discord-vrc-world-tagger
+            cd ~/test/Bot-discord-vrc-world-tagger
             git fetch origin release
             git checkout origin/release
             pnpm install
             pnpm exec tsc
-            pm2 restart ecosystem.config.js
+            pm2 restart ecosystem.test.config.js
