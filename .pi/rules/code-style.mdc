@@ -1,0 +1,22 @@
+---
+description: Use the shared logger for runtime diagnostics; never use console.* in src/
+globs:
+  - src/**/*.ts
+alwaysApply: true
+---
+
+# Code style
+
+## Logging
+
+- Use the shared `logger` from `src/utils/logger.ts` (default export) for all runtime diagnostics.
+- Never use `console.log`, `console.error`, `console.warn`, `console.info`, or `console.debug` anywhere under `src/`.
+- Reasoning: the project pipes `logger` output to a rotating log file (`tslog.log`) and applies consistent pretty-print styles. `console.*` bypasses both, so messages are lost on rotation and look out of place alongside the rest of the log stream.
+
+Import as:
+
+```ts
+import logger from '<path-to>/utils/logger';
+// ...
+logger.error('Something went wrong:', error);
+```
