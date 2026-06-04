@@ -3,6 +3,7 @@ name: Deploy to Droplet
 on:
   push:
     branches: [release]
+  workflow_dispatch:
 
 jobs:
   ci:

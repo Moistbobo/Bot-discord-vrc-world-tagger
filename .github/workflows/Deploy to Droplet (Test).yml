@@ -1,8 +1,9 @@
-name: Deploy to Droplet
+name: Deploy to Droplet (TEST)
 
 on:
   push:
     branches: [release]
+  workflow_dispatch:
 
 jobs:
   ci:
