@@ -8,7 +8,10 @@ import {
   setValue
 } from '../../../utils/jsonAsDb/handlers/persistentKvp';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
-import { extractWorldIdFromMessage, extractAllWorldIdsFromMessage } from './worldExtraction';
+import {
+  extractWorldIdFromMessage,
+  extractAllWorldIdsFromMessage
+} from './worldExtraction';
 import { fetchWorldData, calculatePackageSizes } from './worldData';
 import { createWorldEmbed } from './embedBuilder';
 import {
@@ -29,32 +32,6 @@ type WorldMatch = {
 
 const eachAttachment = (message: Message) =>
   message.attachments?.values() ?? [][Symbol.iterator]();
-
-const attachmentWorldIdsInOrder = (message: Message): string[] => {
-  const ordered: string[] = [];
-  const seen = new Set<string>();
-  for (const attachment of eachAttachment(message)) {
-    for (const id of extractAllWorldIds(attachment.name ?? '')) {
-      if (!seen.has(id)) {
-        seen.add(id);
-        ordered.push(id);
-      }
-    }
-  }
-  return ordered;
-};
-
-const attachmentDisplayNameForWorldId = (
-  message: Message,
-  worldId: string
-): string => {
-  for (const attachment of eachAttachment(message)) {
-    if (extractAllWorldIds(attachment.name ?? '').includes(worldId)) {
-      return attachment.name ?? worldId;
-    }
-  }
-  return worldId;
-};
 
 /**
  * Finds a world link in the message body first, then in forwarded snapshots.
@@ -152,7 +129,9 @@ const findAllWorldMatches = async (
       logger.debug(
         `Checking forwarded snapshot content: ${snapshot.content.substring(0, 100)}...`
       );
-      const fromSnapshot = await extractAllWorldIdsFromMessage(snapshot.content);
+      const fromSnapshot = await extractAllWorldIdsFromMessage(
+        snapshot.content
+      );
       for (const { worldId, sourceContent } of fromSnapshot) {
         if (!seen.has(worldId)) {
           seen.add(worldId);
