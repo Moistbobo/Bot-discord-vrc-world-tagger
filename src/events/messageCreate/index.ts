@@ -1,7 +1,7 @@
 /**
  * Incoming commands and world-link handling. If you change message filters or link
  * processing, review reaction handlers under `src/events/messageReactionAdd/` for the
- * same assumptions (see `.cursor/rules/message-processing-and-reactions.mdc`).
+ * same assumptions (see `.pi/rules/message-processing-and-reactions.mdc`).
  */
 import { Message } from 'discord.js';
 

@@ -1,4 +1,5 @@
 import Config from '../../assets/config';
+import logger from '../logger';
 
 const VRCHAT_WORLD_ID_REGEX = /wrld_[a-f0-9-]{36}/;
 const GENERIC_LINK_REGEX = /https?:\/\/\S+/;
@@ -213,7 +214,7 @@ export function extractWorldName(
     const match = message.match(worldNameRegex);
     return match?.[1]?.trim() ?? null;
   } catch (error) {
-    console.error('Error in extractWorldName:', error);
+    logger.error('Error in extractWorldName:', error);
     return null;
   }
 }
@@ -342,12 +343,12 @@ export function extractWithCustomMatcher(
         }
       } catch (matcherError) {
         // Log error for specific matcher but continue with others
-        console.error(`Error in custom matcher ${matcherKey}:`, matcherError);
+        logger.error(`Error in custom matcher ${matcherKey}:`, matcherError);
         continue;
       }
     }
   } catch (error) {
-    console.error('Error in extractWithCustomMatcher:', error);
+    logger.error('Error in extractWithCustomMatcher:', error);
   }
 
   return null;
@@ -381,7 +382,7 @@ export function removeLinksFromTweet(content: string): string {
     return cleanedContent.trim();
   } catch (error) {
     // Log error for debugging but don't crash the application
-    console.error('Error in removeLinksFromTweet:', error);
+    logger.error('Error in removeLinksFromTweet:', error);
 
     // Return original content if cleaning fails, or empty string if content is invalid
     return typeof content === 'string' ? content.trim() : '';

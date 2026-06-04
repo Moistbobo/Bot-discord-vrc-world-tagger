@@ -20,7 +20,7 @@ import { isUserOnIgnoreList } from './utils/ignoreList';
 
 // Message and reaction flows share policy (e.g. webhook vs self-bot). If you change
 // message handling filters or world-link behavior, review src/events/messageReactionAdd/
-// — see .cursor/rules/message-processing-and-reactions.mdc.
+// — see .pi/rules/message-processing-and-reactions.mdc.
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
