@@ -145,6 +145,24 @@ export function getLinkFromMessage(message: string): string | null {
   return match?.[0] ?? null;
 }
 
+/**
+ * Returns every HTTP(S) link found in `text`, in order of first appearance.
+ */
+export function extractAllLinks(text: string): string[] {
+  if (!text) return [];
+  const re = new RegExp(GENERIC_LINK_REGEX.source, 'g');
+  const matches = text.match(re);
+  return matches ?? [];
+}
+
+/**
+ * Checks whether a link points to a known Twitter/X domain.
+ */
+export function isTwitterLink(link: string): boolean {
+  if (!link) return false;
+  return TWITTER_LINK_REGEX.test(link);
+}
+
 export function removeTwitterLink(link: string): string | null {
   if (!link) return null;
   const match = link.match(TWITTER_LINK_REGEX);
