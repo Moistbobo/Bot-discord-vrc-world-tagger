@@ -46,6 +46,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             set -e
+            export PATH="$HOME/.npm-global/bin:$PATH" 
             cd ~/test/Bot-discord-vrc-world-tagger
             git fetch origin release
             git checkout origin/release
