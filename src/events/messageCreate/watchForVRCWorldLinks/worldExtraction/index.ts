@@ -1,8 +1,6 @@
 import {
   extractAuthorName,
-  extractWorldId,
   extractWorldName,
-  getLinkFromMessage,
   extractWithCustomMatcher,
   removeLinksFromTweet,
   extractWorldAndAuthor,
@@ -56,7 +54,10 @@ export const extractAllWorldIdsFromMessage = async (
     }
 
     // Fall back to parsing world name/author from tweet
-    const worldIdFromText = await parseWorldInfoFromPlainText(link, tweetContent);
+    const worldIdFromText = await parseWorldInfoFromPlainText(
+      link,
+      tweetContent
+    );
     if (worldIdFromText && !seen.has(worldIdFromText)) {
       seen.add(worldIdFromText);
       results.push({ worldId: worldIdFromText, sourceContent: tweetContent });

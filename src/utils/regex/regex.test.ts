@@ -639,9 +639,7 @@ describe('regex', () => {
 
     it('finds multiple twitter/x links', () => {
       expect(
-        extractAllLinks(
-          'https://x.com/a/status/1 https://x.com/b/status/2'
-        )
+        extractAllLinks('https://x.com/a/status/1 https://x.com/b/status/2')
       ).toEqual(['https://x.com/a/status/1', 'https://x.com/b/status/2']);
     });
   });
