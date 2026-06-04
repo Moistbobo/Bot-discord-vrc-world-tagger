@@ -5,7 +5,10 @@ import {
   getLinkFromMessage,
   extractWithCustomMatcher,
   removeLinksFromTweet,
-  extractWorldAndAuthor
+  extractWorldAndAuthor,
+  extractAllWorldIds,
+  extractAllLinks,
+  isTwitterLink
 } from '../../../../utils/regex';
 import { searchByWorldName } from '../../../../utils/externalApi/vrchat';
 import getTweetContent from '../../../../utils/externalApi/vxtwitter';
@@ -14,27 +17,63 @@ import { closest, distance } from 'fastest-levenshtein';
 import logger from '../../../../utils/logger';
 
 /**
- * Extracts world ID from message content or Twitter links
+ * Extracts all world IDs from message content, including resolving Twitter links.
+ * Returns world IDs in order of first appearance, deduplicated.
+ */
+export const extractAllWorldIdsFromMessage = async (
+  content: string
+): Promise<{ worldId: string; sourceContent: string }[]> => {
+  const results: { worldId: string; sourceContent: string }[] = [];
+  const seen = new Set<string>();
+
+  // 1. Direct world IDs
+  const directIds = extractAllWorldIds(content);
+  for (const worldId of directIds) {
+    if (!seen.has(worldId)) {
+      seen.add(worldId);
+      results.push({ worldId, sourceContent: content });
+    }
+  }
+
+  // 2. Twitter links
+  const links = extractAllLinks(content);
+  for (const link of links) {
+    if (!isTwitterLink(link)) continue;
+
+    const tweetContent = await getTweetContent(link);
+    if (!tweetContent) continue;
+
+    // Try direct world ID(s) in tweet first
+    const tweetWorldIds = extractAllWorldIds(tweetContent);
+    if (tweetWorldIds.length > 0) {
+      for (const worldId of tweetWorldIds) {
+        if (!seen.has(worldId)) {
+          seen.add(worldId);
+          results.push({ worldId, sourceContent: tweetContent });
+        }
+      }
+      continue;
+    }
+
+    // Fall back to parsing world name/author from tweet
+    const worldIdFromText = await parseWorldInfoFromPlainText(link, tweetContent);
+    if (worldIdFromText && !seen.has(worldIdFromText)) {
+      seen.add(worldIdFromText);
+      results.push({ worldId: worldIdFromText, sourceContent: tweetContent });
+    }
+  }
+
+  return results;
+};
+
+/**
+ * Extracts world ID from message content or Twitter links (first match only)
  */
 export const extractWorldIdFromMessage = async (
   content: string
 ): Promise<string | null> => {
-  const directWorldId = extractWorldId(content);
-  if (directWorldId) {
-    return directWorldId;
-  }
-
-  const twitterLink = getLinkFromMessage(content);
-  if (twitterLink) {
-    const tweetContent = await getTweetContent(twitterLink);
-    const worldIdFromTwitterLink = extractWorldId(tweetContent);
-
-    if (worldIdFromTwitterLink) return worldIdFromTwitterLink;
-
-    // Try to parse the world data from the tweet content
-    return parseWorldInfoFromPlainText(twitterLink, tweetContent);
-  }
-  return null;
+  const all = await extractAllWorldIdsFromMessage(content);
+  return all[0]?.worldId ?? null;
 };
 
 /**
