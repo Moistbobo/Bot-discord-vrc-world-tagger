@@ -1,9 +1,9 @@
 module.exports = {
   apps: [
     {
-      name: 'world-tagger-man',
+      name: 'world-tagger-man-test',
       script: 'dist/index.js',
-      cwd: '/home/chonation/Bot-discord-vrc-world-tagger',
+      cwd: '/home/chonation/test/Bot-discord-vrc-world-tagger',
       instances: 1,
       autorestart: true,
       watch: false,
