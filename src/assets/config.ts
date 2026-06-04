@@ -9,8 +9,12 @@ const Config = {
   VRC_PASSWORD: process.env.VRC_PASSWORD,
   VRC_TOTP_KEY: process.env.VRC_TOTP_KEY,
   DEV_MODE: process.env?.DEV === 'true',
-  WORLD_NAME_MATCHERS: process.env.WORLD_NAME_MATCHERS.split(','),
-  AUTHOR_NAME_MATCHERS: process.env.AUTHOR_NAME_MATCHERS.split(','),
+  WORLD_NAME_MATCHERS: process.env?.WORLD_NAME_MATCHERS
+    ? process.env.WORLD_NAME_MATCHERS.split(',')
+    : [],
+  AUTHOR_NAME_MATCHERS: process.env?.AUTHOR_NAME_MATCHERS
+    ? process.env.AUTHOR_NAME_MATCHERS.split(',')
+    : [],
   EXPORT_RATE_LIMIT: Number(process.env.EXPORT_RATE_LIMIT) || 1500,
   FORWARD_PLAYER_COUNT_THRESHOLD:
     Number(process.env.FORWARD_PLAYER_COUNT_THRESHOLD) || 40,
