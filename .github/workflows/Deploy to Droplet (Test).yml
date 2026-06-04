@@ -45,7 +45,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             set -e
-            cd ~/Bot-discord-vrc-world-tagger
+            cd ~/test/Bot-discord-vrc-world-tagger
             git fetch origin release
             git checkout origin/release
             pnpm install
