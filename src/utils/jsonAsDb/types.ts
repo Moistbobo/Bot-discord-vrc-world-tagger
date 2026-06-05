@@ -27,7 +27,11 @@ export enum kvKeys {
   /** Emoji keys that delete the bot's own messages when reacted (in .watchReacts channels) */
   REACT_TO_DELETE_EMOJIS = 'REACT_TO_DELETE_EMOJIS',
   /** Discord user IDs that opted out of message and reaction processing */
-  IGNORED_USERS = 'IGNORED_USERS'
+  IGNORED_USERS = 'IGNORED_USERS',
+  /** Channel for forwarding "good" quality maps */
+  QUALITY_GOOD_FORWARDING_CHANNEL = 'QUALITY_GOOD_FORWARDING_CHANNEL',
+  /** Channel for forwarding "bad" quality maps */
+  QUALITY_BAD_FORWARDING_CHANNEL = 'QUALITY_BAD_FORWARDING_CHANNEL'
 }
 
 /**

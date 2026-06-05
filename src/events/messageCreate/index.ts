@@ -23,6 +23,8 @@ import { crawlChannelHistory, getCrawlStatus } from './crawlHistory';
 import lowCapacity from './forwarding/lowCapacity';
 import addDeleteReact from './addDeleteReact';
 import removeDeleteReact from './removeDeleteReact';
+import setQualityChannel from './setQualityChannel';
+import clearQualityChannel from './clearQualityChannel';
 import { isUserOnIgnoreList } from '../../utils/ignoreList';
 import { ignoreMe } from './ignoreMe';
 import { unignoreMe } from './unignoreMe';
@@ -72,6 +74,10 @@ const messageCreate = async (message: Message) => {
     return withProtection(lowCapacity)(message);
   } else if (message.content.startsWith('.clearForwardingChannels')) {
     return withProtection(clearForwardingChannels)(message);
+  } else if (message.content.startsWith('.setQualityChannel')) {
+    return withProtection(setQualityChannel)(message);
+  } else if (message.content.startsWith('.clearQualityChannel')) {
+    return withProtection(clearQualityChannel)(message);
   } else if (message.content.startsWith('.die')) {
     return withProtection(die)(message);
   } else if (message.content.startsWith('.stats')) {

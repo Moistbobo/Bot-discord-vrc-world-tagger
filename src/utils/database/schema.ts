@@ -16,6 +16,7 @@ const MIGRATIONS: string[] = [
     image_url      TEXT,
     source_content TEXT,
     vrchat_data    TEXT,   -- Full VRChat API response as JSON blob
+    quality        TEXT    CHECK(quality IN ('good', 'bad')),
     created_at     INTEGER NOT NULL DEFAULT (strftime('%s','now')),
     updated_at     INTEGER NOT NULL DEFAULT (strftime('%s','now')),
 
