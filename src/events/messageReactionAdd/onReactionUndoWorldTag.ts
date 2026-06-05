@@ -4,8 +4,8 @@ import logger from '../../utils/logger';
 import { buildWorldUrl } from '../../utils/helpers';
 import { extractWorldId } from '../../utils/regex';
 import { has, remove } from '../../utils/jsonAsDb/handlers/persistentList';
-import { removeValue } from '../../utils/jsonAsDb/handlers/persistentKvp';
 import { kvKeys } from '../../utils/jsonAsDb/types';
+import { deleteWorldForGuild } from '../../utils/worldActions';
 import { getEmojiKey } from '../../utils/discord/reactionEmoji';
 import { fetchWorldData } from '../messageCreate/watchForVRCWorldLinks/worldData';
 
@@ -77,13 +77,15 @@ export const onReactionUndoWorldTag = async (
     );
   }
 
-  const kvpKey = `${worldId}-${guildId}`;
-  const channel = message.channel;
+  // Delete the world from our SQLite repository (shared helper used by both
+  // reaction shortcut and text-based `.remove`).
+  await deleteWorldForGuild(worldId, guildId);
 
-  await remove(kvKeys.PROCESSED_WORLDS, worldId);
-  await removeValue(kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID, kvpKey);
+  // Remove the forwarded-message tracking entry (still stored in keyv-file
+  // because it tracks bot-forwarded message IDs, not world metadata).
   await remove(kvKeys.REACTION_FORWARDED_MESSAGE_IDS, message.id);
 
+  // Delete the bot's own reply embed
   try {
     await message.delete();
   } catch (error) {
@@ -93,7 +95,8 @@ export const onReactionUndoWorldTag = async (
     );
   }
 
-  if (channel.isSendable()) {
+  // Send a stylish confirmation embed in the same channel
+  if (message.channel.isSendable()) {
     const embed = new EmbedBuilder()
       .setColor(UNDO_CONFIRM_EMBED_COLOR)
       .setTitle(
@@ -110,7 +113,7 @@ export const onReactionUndoWorldTag = async (
       embed.setThumbnail(worldData.imageUrl);
     }
     try {
-      await channel.send({ embeds: [embed] });
+      await message.channel.send({ embeds: [embed] });
     } catch (error) {
       logger.error('Failed to send undo confirmation embed:', error);
     }
