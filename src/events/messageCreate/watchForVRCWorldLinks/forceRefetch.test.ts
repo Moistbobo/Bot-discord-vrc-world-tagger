@@ -114,9 +114,8 @@ describe('forceRefetchWorldFromMessage', () => {
   });
 
   it('does not call getValue or setValue (legacy KVP removed)', async () => {
-    const { getValue, setValue } = await import(
-      '../../../utils/jsonAsDb/handlers/persistentKvp'
-    );
+    const { getValue, setValue } =
+      await import('../../../utils/jsonAsDb/handlers/persistentKvp');
 
     await forceRefetchWorldFromMessage(makeMessage());
 
