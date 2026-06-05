@@ -19,7 +19,9 @@ const Config = {
   FORWARD_PLAYER_COUNT_THRESHOLD:
     Number(process.env.FORWARD_PLAYER_COUNT_THRESHOLD) || 40,
   LOW_CAPACITY_THRESHOLD: Number(process.env.LOW_CAPACITY_THRESHOLD) || 20,
-  DATABASE_PATH: process.env.DATABASE_PATH || './worlds.db'
+  DATABASE_PATH: process.env.DATABASE_PATH || './worlds.db',
+  API_PORT: Number(process.env.API_PORT) || 3000,
+  API_TOKEN: process.env.API_TOKEN || process.env.EXPORT_API_TOKEN || ''
 };
 
 export default Config;

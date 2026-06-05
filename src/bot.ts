@@ -17,6 +17,7 @@ import logger from './utils/logger';
 import { isCurrentUser, vrchat } from './utils/externalApi/vrchat';
 import { shouldIgnoreOwnBotMessage } from './botFilters';
 import { isUserOnIgnoreList } from './utils/ignoreList';
+import { startApiServer } from './apiServer';
 
 // Message and reaction flows share policy (e.g. webhook vs self-bot). If you change
 // message handling filters or world-link behavior, review src/events/messageReactionAdd/
@@ -54,6 +55,9 @@ client.on(
 
 client.once(Events.ClientReady, async () => {
   logger.info('Client ready with config');
+
+  // Start the Fastify API server alongside the bot
+  await startApiServer();
 
   try {
     const { data } = await vrchat.getCurrentUser({ throwOnError: true });
