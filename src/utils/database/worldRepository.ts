@@ -66,7 +66,6 @@ export class WorldRepository {
       VALUES
         (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, strftime('%s','now')), strftime('%s','now'))
       ON CONFLICT(world_id, guild_id) DO UPDATE SET
-        message_id = excluded.message_id,
         name = excluded.name,
         author_name = excluded.author_name,
         capacity = excluded.capacity,
