@@ -68,6 +68,7 @@ describe('WorldRepository', () => {
       expect(second.id).toBe(originalId);
       expect(second.name).toBe('Updated World');
       expect(second.createdAt).toBe(originalCreatedAt);
+      expect(second.messageId).toBe(record.messageId); // original message_id preserved
       expect(second.updatedAt).toBeGreaterThanOrEqual(originalCreatedAt!);
     });
 
