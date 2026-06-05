@@ -21,7 +21,11 @@ const Config = {
   LOW_CAPACITY_THRESHOLD: Number(process.env.LOW_CAPACITY_THRESHOLD) || 20,
   DATABASE_PATH: process.env.DATABASE_PATH || './worlds.db',
   API_PORT: Number(process.env.API_PORT) || 3000,
-  API_TOKEN: process.env.API_TOKEN || process.env.EXPORT_API_TOKEN || ''
+  API_TOKEN: process.env.API_TOKEN
+    ? process.env.API_TOKEN.split(',')
+    : process.env.EXPORT_API_TOKEN
+      ? [process.env.EXPORT_API_TOKEN]
+      : []
 };
 
 export default Config;
