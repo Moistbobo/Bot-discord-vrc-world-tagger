@@ -11,9 +11,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production'
       },
-      log_file: '/home/world-tagger/.pm2/logs/world-tagger-man.log',
-      out_file: '/home/world-tagger/.pm2/logs/world-tagger-man.log',
-      error_file: '/home/world-tagger/.pm2/logs/world-tagger-man.log',
+      log_file: '/home/world-tagger/.pm2/logs/world-tagger-man-test.log',
+      out_file: '/home/world-tagger/.pm2/logs/world-tagger-man-test.log',
+      error_file: '/home/world-tagger/.pm2/logs/world-tagger-man-test.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       merge_logs: true,
       time: true

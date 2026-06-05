@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'world-tagger-man',
       script: 'dist/index.js',
-      cwd: '/home/world-tagger/Bot-discord-vrc-world-tagger',
+      cwd: '/home/world-tagger/release/Bot-discord-vrc-world-tagger',
       instances: 1,
       autorestart: true,
       watch: false,
