@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import logger from '../utils/logger';
 import Config from '../assets/config';
@@ -37,12 +37,30 @@ export function createApiServer() {
   return fastify;
 }
 
+let apiServerInstance: FastifyInstance | null = null;
+let isApiRunning = false;
+
+export function isApiServerRunning(): boolean {
+  return isApiRunning;
+}
+
+export async function stopApiServer(): Promise<void> {
+  if (apiServerInstance) {
+    await apiServerInstance.close();
+    apiServerInstance = null;
+    isApiRunning = false;
+    logger.info('🛑 API server stopped');
+  }
+}
+
 export async function startApiServer() {
   const fastify = createApiServer();
   const port = Config.API_PORT;
 
   try {
     await fastify.listen({ port, host: '0.0.0.0' });
+    apiServerInstance = fastify;
+    isApiRunning = true;
     logger.info(`🚀 API server listening on http://0.0.0.0:${port}`);
   } catch (error) {
     logger.error('Failed to start API server:', error);
