@@ -126,17 +126,34 @@ export class WorldRepository {
   }
 
   /**
-   * Delete a specific world record.
+   * Move a world record to the deleted_world_records archive table,
+   * then remove it from the live table. Returns true if a row existed.
    */
   deleteByWorldAndGuild(worldId: string, guildId: string): boolean {
-    const sql = 'DELETE FROM world_records WHERE world_id = ? AND guild_id = ?';
-    const stmt = this.db.prepare(sql);
-    const result = stmt.run(worldId, guildId);
-    const didDelete = result.changes > 0;
-    if (didDelete) {
-      logger.info(`Deleted world record ${worldId} from guild ${guildId}`);
+    const archiveSql = `
+      INSERT INTO deleted_world_records
+        (world_id, guild_id, message_id, name, author_name, capacity, platforms, tags, image_url, source_content, vrchat_data, created_at, updated_at)
+      SELECT world_id, guild_id, message_id, name, author_name, capacity, platforms, tags, image_url, source_content, vrchat_data, created_at, updated_at
+      FROM world_records
+      WHERE world_id = ? AND guild_id = ?
+    `;
+    const deleteSql =
+      'DELETE FROM world_records WHERE world_id = ? AND guild_id = ?';
+
+    const result = this.db.transaction(() => {
+      const archiveStmt = this.db.prepare(archiveSql);
+      archiveStmt.run(worldId, guildId);
+      const deleteStmt = this.db.prepare(deleteSql);
+      return deleteStmt.run(worldId, guildId);
+    })();
+
+    const didArchive = result.changes > 0;
+    if (didArchive) {
+      logger.info(
+        `Archived world record ${worldId} from guild ${guildId} into deleted_world_records`
+      );
     }
-    return didDelete;
+    return didArchive;
   }
 
   /**

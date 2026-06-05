@@ -25,6 +25,28 @@ const MIGRATIONS: string[] = [
   CREATE INDEX IF NOT EXISTS idx_worlds_world_id   ON world_records(world_id);
   CREATE INDEX IF NOT EXISTS idx_worlds_guild_id   ON world_records(guild_id);
   CREATE INDEX IF NOT EXISTS idx_worlds_created_at ON world_records(created_at);
+  `,
+  `
+  CREATE TABLE IF NOT EXISTS deleted_world_records (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    world_id       TEXT    NOT NULL,
+    guild_id       TEXT    NOT NULL,
+    message_id     TEXT    NOT NULL,
+    name           TEXT,
+    author_name    TEXT,
+    capacity       INTEGER,
+    platforms      TEXT,
+    tags           TEXT,
+    image_url      TEXT,
+    source_content TEXT,
+    vrchat_data    TEXT,
+    created_at     INTEGER NOT NULL,
+    updated_at     INTEGER NOT NULL,
+    deleted_at     INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_deleted_worlds_world_id ON deleted_world_records(world_id);
+  CREATE INDEX IF NOT EXISTS idx_deleted_worlds_guild_id ON deleted_world_records(guild_id);
   `
 ];
 
