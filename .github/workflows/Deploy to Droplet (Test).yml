@@ -2,7 +2,7 @@ name: Deploy to Droplet (TEST)
 
 on:
   push:
-    branches: [release]
+    branches: [test]
   workflow_dispatch:
 
 jobs:
