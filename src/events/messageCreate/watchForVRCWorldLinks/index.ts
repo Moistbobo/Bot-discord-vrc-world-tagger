@@ -8,7 +8,10 @@ import {
   setValue
 } from '../../../utils/jsonAsDb/handlers/persistentKvp';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
-import { extractWorldIdFromMessage } from './worldExtraction';
+import {
+  extractWorldIdFromMessage,
+  extractAllWorldIdsFromMessage
+} from './worldExtraction';
 import { fetchWorldData, calculatePackageSizes } from './worldData';
 import { createWorldEmbed } from './embedBuilder';
 import {
@@ -29,32 +32,6 @@ type WorldMatch = {
 
 const eachAttachment = (message: Message) =>
   message.attachments?.values() ?? [][Symbol.iterator]();
-
-const attachmentWorldIdsInOrder = (message: Message): string[] => {
-  const ordered: string[] = [];
-  const seen = new Set<string>();
-  for (const attachment of eachAttachment(message)) {
-    for (const id of extractAllWorldIds(attachment.name ?? '')) {
-      if (!seen.has(id)) {
-        seen.add(id);
-        ordered.push(id);
-      }
-    }
-  }
-  return ordered;
-};
-
-const attachmentDisplayNameForWorldId = (
-  message: Message,
-  worldId: string
-): string => {
-  for (const attachment of eachAttachment(message)) {
-    if (extractAllWorldIds(attachment.name ?? '').includes(worldId)) {
-      return attachment.name ?? worldId;
-    }
-  }
-  return worldId;
-};
 
 /**
  * Finds a world link in the message body first, then in forwarded snapshots.
@@ -115,34 +92,83 @@ const findFirstWorldMatch = async (
   return null;
 };
 
+/**
+ * Finds all world links in the message body, forwarded snapshots, and attachments.
+ * When `scanAttachmentFilenames` is true, attachment file names are checked last.
+ */
+const findAllWorldMatches = async (
+  message: Message,
+  scanAttachmentFilenames: boolean
+): Promise<WorldMatch[]> => {
+  const matches: WorldMatch[] = [];
+  const seen = new Set<string>();
+
+  if (message.content) {
+    logger.debug(
+      `Checking direct message content: ${message.content.substring(0, 100)}...`
+    );
+    const fromBody = await extractAllWorldIdsFromMessage(message.content);
+    for (const { worldId, sourceContent } of fromBody) {
+      if (!seen.has(worldId)) {
+        seen.add(worldId);
+        matches.push({
+          worldId,
+          sourceContent,
+          sourceKind: 'body'
+        });
+      }
+    }
+  }
+
+  if (message.messageSnapshots && message.messageSnapshots.size > 0) {
+    logger.debug(
+      `Found ${message.messageSnapshots.size} forwarded message snapshots`
+    );
+    for (const [, snapshot] of message.messageSnapshots) {
+      if (!snapshot.content) continue;
+      logger.debug(
+        `Checking forwarded snapshot content: ${snapshot.content.substring(0, 100)}...`
+      );
+      const fromSnapshot = await extractAllWorldIdsFromMessage(
+        snapshot.content
+      );
+      for (const { worldId, sourceContent } of fromSnapshot) {
+        if (!seen.has(worldId)) {
+          seen.add(worldId);
+          matches.push({
+            worldId,
+            sourceContent,
+            sourceKind: 'snapshot'
+          });
+        }
+      }
+    }
+  }
+
+  if (scanAttachmentFilenames) {
+    for (const attachment of eachAttachment(message)) {
+      const ids = extractAllWorldIds(attachment.name ?? '');
+      for (const worldId of ids) {
+        if (!seen.has(worldId)) {
+          seen.add(worldId);
+          matches.push({
+            worldId,
+            sourceContent: attachment.name ?? worldId,
+            sourceKind: 'attachment'
+          });
+        }
+      }
+    }
+  }
+
+  return matches;
+};
+
 const buildWorldProcessQueue = async (
   message: Message,
   scanAttachmentFilenames: boolean
 ): Promise<WorldMatch[]> => {
-  const primary = await findFirstWorldMatch(message, scanAttachmentFilenames);
-  const fromFilenames = scanAttachmentFilenames
-    ? attachmentWorldIdsInOrder(message)
-    : [];
-  const seen = new Set<string>();
-  const queue: WorldMatch[] = [];
-
-  if (primary) {
-    queue.push(primary);
-    seen.add(primary.worldId);
-  }
-
-  for (const worldId of fromFilenames) {
-    if (!seen.has(worldId)) {
-      seen.add(worldId);
-      queue.push({
-        worldId,
-        sourceContent: attachmentDisplayNameForWorldId(message, worldId),
-        sourceKind: 'attachment'
-      });
-    }
-  }
-
-  return queue;
+  return findAllWorldMatches(message, scanAttachmentFilenames);
 };
 
 /**

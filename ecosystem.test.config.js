@@ -1,0 +1,22 @@
+module.exports = {
+  apps: [
+    {
+      name: 'world-tagger-man-test',
+      script: 'dist/index.js',
+      cwd: '/home/world-tagger/test/Bot-discord-vrc-world-tagger',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '300M',
+      env: {
+        NODE_ENV: 'production'
+      },
+      log_file: '/home/world-tagger/.pm2/logs/world-tagger-man-test.log',
+      out_file: '/home/world-tagger/.pm2/logs/world-tagger-man-test.log',
+      error_file: '/home/world-tagger/.pm2/logs/world-tagger-man-test.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      time: true
+    }
+  ]
+};

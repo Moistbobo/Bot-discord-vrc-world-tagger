@@ -5,7 +5,9 @@ import {
   extractWorldAndAuthor,
   customMatchers,
   extractWithCustomMatcher,
-  extractAllWorldIds
+  extractAllWorldIds,
+  extractAllLinks,
+  isTwitterLink
 } from './index';
 
 // Mock the config to avoid environment variable dependencies
@@ -620,6 +622,40 @@ describe('regex', () => {
       const noWorldData = `Just some random text\n#VRChat`;
       const result = extractWorldAndAuthor(noWorldData);
       expect(result).toBeNull();
+    });
+  });
+
+  describe('extractAllLinks', () => {
+    it('returns empty for empty or non-matching text', () => {
+      expect(extractAllLinks('')).toEqual([]);
+      expect(extractAllLinks('no links here')).toEqual([]);
+    });
+
+    it('returns all links in first-appearance order', () => {
+      expect(
+        extractAllLinks('check https://a.com and https://b.com/foo')
+      ).toEqual(['https://a.com', 'https://b.com/foo']);
+    });
+
+    it('finds multiple twitter/x links', () => {
+      expect(
+        extractAllLinks('https://x.com/a/status/1 https://x.com/b/status/2')
+      ).toEqual(['https://x.com/a/status/1', 'https://x.com/b/status/2']);
+    });
+  });
+
+  describe('isTwitterLink', () => {
+    it('returns true for twitter/x domains', () => {
+      expect(isTwitterLink('https://twitter.com/user/status/1')).toBe(true);
+      expect(isTwitterLink('https://x.com/user/status/1')).toBe(true);
+      expect(isTwitterLink('https://fixupx.com/user/status/1')).toBe(true);
+      expect(isTwitterLink('https://vxtwitter.com/user/status/1')).toBe(true);
+    });
+
+    it('returns false for non-twitter domains', () => {
+      expect(isTwitterLink('https://example.com')).toBe(false);
+      expect(isTwitterLink('https://vrchat.com')).toBe(false);
+      expect(isTwitterLink('')).toBe(false);
     });
   });
 

@@ -1,7 +1,7 @@
 /**
  * Incoming commands and world-link handling. If you change message filters or link
  * processing, review reaction handlers under `src/events/messageReactionAdd/` for the
- * same assumptions (see `.cursor/rules/message-processing-and-reactions.mdc`).
+ * same assumptions (see `.pi/rules/message-processing-and-reactions.mdc`).
  */
 import { Message } from 'discord.js';
 
@@ -25,8 +25,29 @@ import { crawlChannelHistory, getCrawlStatus } from './crawlHistory';
 import lowCapacity from './forwarding/lowCapacity';
 import addDeleteReact from './addDeleteReact';
 import removeDeleteReact from './removeDeleteReact';
+import { isUserOnIgnoreList } from '../../utils/ignoreList';
+import { ignoreMe } from './ignoreMe';
+import { unignoreMe } from './unignoreMe';
 
 const messageCreate = async (message: Message) => {
+  const trimmed = message.content.trim();
+
+  if (await isUserOnIgnoreList(message.author.id)) {
+    if (trimmed === '.unignoreMe' && !message.author.bot) {
+      return unignoreMe(message);
+    }
+    return;
+  }
+
+  if (!message.author.bot) {
+    if (trimmed === '.ignoreMe') {
+      return ignoreMe(message);
+    }
+    if (trimmed === '.unignoreMe') {
+      return unignoreMe(message);
+    }
+  }
+
   if (message.content.startsWith('.watchReacts')) {
     return withProtection(watchReacts)(message);
   } else if (message.content.startsWith('.unwatchReacts')) {
