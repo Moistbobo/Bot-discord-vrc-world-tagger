@@ -1,94 +1,38 @@
 import { EmbedBuilder, Message } from 'discord.js';
 import logger from '../../utils/logger';
 import { has } from '../../utils/jsonAsDb/handlers/persistentList';
-import { get } from '../../utils/jsonAsDb';
+import { getWorldRepository } from '../../utils/database/worldRepository';
 import { kvKeys } from '../../utils/jsonAsDb/types';
 import packageJson from '../../../package.json';
 
-// Helper function to get unique world IDs from PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID
-const getUniqueWorldIds = async (): Promise<string[]> => {
-  try {
-    const processedWorldsData = await get<Record<string, string>>(
-      kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID
-    );
-
-    if (!processedWorldsData) {
-      return [];
-    }
-
-    // Extract unique world IDs from keys
-    const worldIds = new Set<string>();
-    for (const key of Object.keys(processedWorldsData)) {
-      // Handle both formats:
-      // 1. Simple world ID: "wrld_abc123-def4-5678-90ab-cdefghijklmn"
-      // 2. World ID with guild: "wrld_abc123-def4-5678-90ab-cdefghijklmn-123456789"
-      if (key.startsWith('wrld_')) {
-        // If key contains a hyphen, check if it's worldId-guildId format
-        if (key.includes('-')) {
-          const parts = key.split('-');
-          // If we have more than 5 parts, the last one is likely the guild ID
-          // World IDs have format: wrld_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (5 parts)
-          if (parts.length > 5) {
-            // Take everything except the last part (guild ID)
-            const worldId = parts.slice(0, -1).join('-');
-            if (worldId.startsWith('wrld_')) {
-              worldIds.add(worldId);
-            }
-          } else {
-            // Simple world ID format (no guild ID appended)
-            worldIds.add(key);
-          }
-        } else {
-          // Simple world ID format without hyphens (shouldn't happen, but just in case)
-          worldIds.add(key);
-        }
-      }
-    }
-
-    return Array.from(worldIds);
-  } catch (error) {
-    logger.error('Error getting unique world IDs:', error);
-    return [];
-  }
-};
-
 export const stats = async (message: Message) => {
   try {
-    // Check if the current channel is being watched
     const isChannelWatched = await has(
       kvKeys.WATCHED_CHANNELS,
       message.channelId
     );
+    if (!isChannelWatched) return;
 
-    if (!isChannelWatched) {
-      return;
-    }
+    const repo = getWorldRepository();
 
-    // Get various statistics from the database
-    const processedWorlds = await getUniqueWorldIds();
-    const processedWorldsCount = processedWorlds.length;
+    const totalWorlds = repo.count();
+    const lastRecord = repo.getLastProcessed();
+    const tagDistribution = repo.getUniqueTags();
 
-    // Get bot uptime
+    // Top 5 tags by count
+    const topTags = tagDistribution
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
     const uptime = process.uptime();
     const uptimeHours = Math.floor(uptime / 3600);
     const uptimeMinutes = Math.floor((uptime % 3600) / 60);
+    const memoryUsageMB = Math.round(
+      process.memoryUsage().heapUsed / 1024 / 1024
+    );
 
-    // Get memory usage
-    const memoryUsage = process.memoryUsage();
-    const memoryUsageMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
-
-    // Get system information
-    const platform = process.platform;
-
-    // Get last processed world (if any)
-    const lastProcessedWorld =
-      processedWorlds.length > 0
-        ? processedWorlds[processedWorlds.length - 1]
-        : 'None';
-
-    // Create a Discord embed with comprehensive statistics
     const embed = new EmbedBuilder()
-      .setColor(0x0099ff) // Blue color
+      .setColor(0x0099ff)
       .setTitle('🤖 VRC World Tagger Bot Statistics')
       .setDescription(
         'Comprehensive overview of bot activity and configuration:'
@@ -96,7 +40,7 @@ export const stats = async (message: Message) => {
       .addFields(
         {
           name: '🌍 Worlds Processed',
-          value: `**${processedWorldsCount}** worlds`,
+          value: `**${totalWorlds}** worlds`,
           inline: true
         },
         {
@@ -111,32 +55,41 @@ export const stats = async (message: Message) => {
         },
         {
           name: '💻 Platform',
-          value: `**${platform}**`,
+          value: `**${process.platform}**`,
           inline: true
         },
         {
           name: '🏷️ Bot Version',
           value: `**v${packageJson.version}**`,
           inline: true
-        },
-        {
-          name: '🔄 Last Processed World',
-          value:
-            lastProcessedWorld.length > 50
-              ? `${lastProcessedWorld.substring(0, 47)}...`
-              : lastProcessedWorld,
-          inline: false
-        },
-        {
-          name: '📈 Total Activity',
-          value: `The bot has successfully processed **${processedWorldsCount}** VRChat worlds to date!`,
-          inline: false
         }
       )
       .setTimestamp()
       .setFooter({
         text: 'VRC World Tagger Bot • Use .stats to view this again'
       });
+
+    if (lastRecord) {
+      embed.addFields({
+        name: '🔄 Last Processed World',
+        value: `[${lastRecord.name}](https://vrchat.com/home/world/${lastRecord.worldId}) by ${lastRecord.authorName}`,
+        inline: false
+      });
+    }
+
+    if (topTags.length > 0) {
+      embed.addFields({
+        name: '📊 Top Tags',
+        value: topTags.map((t) => `\`${t.tag}\` — **${t.count}**`).join(' | '),
+        inline: false
+      });
+    }
+
+    embed.addFields({
+      name: '📈 Total Activity',
+      value: `The bot has successfully processed **${totalWorlds}** VRChat worlds to date!`,
+      inline: false
+    });
 
     if (message.channel.isSendable()) {
       await message.channel.send({ embeds: [embed] });
