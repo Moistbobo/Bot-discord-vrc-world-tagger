@@ -373,6 +373,19 @@ export function extractWithCustomMatcher(
 }
 
 /**
+ * Removes all URLs and VRChat world IDs from content, leaving only user-typed text.
+ * Useful for tag extraction from Discord message content.
+ */
+export function cleanContentForTagExtraction(content: string): string {
+  if (!content || typeof content !== 'string') return '';
+  return content
+    .replace(/https?:\/\/[^\s]+|www\.[^\s]+/gi, ' ')
+    .replace(/wrld_[a-f0-9-]{36}/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Cleans tweet content by removing all URLs/links
  * @param content - The tweet content to clean
  * @returns Cleaned content with all links removed, or empty string if error occurs

@@ -1,7 +1,7 @@
 import { Message } from 'discord.js';
 import logger from '../../../utils/logger';
 import { getSupportedPlatforms } from '../../../utils/helpers';
-import { extractAllWorldIds } from '../../../utils/regex';
+import { extractAllWorldIds, cleanContentForTagExtraction } from '../../../utils/regex';
 import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
 import { extractTags } from '../../../utils/tagExtractor';
@@ -200,7 +200,8 @@ const processWorldId = async (
   const supportedPlatforms = getSupportedPlatforms(worldData.unityPackages);
   const packageSizes = await calculatePackageSizes(worldData);
 
-  const tags = extractTags(sourceContent);
+  const tagSource = cleanContentForTagExtraction(message.content || '');
+  const tags = extractTags(tagSource);
 
   const record: WorldRecord = {
     worldId,
