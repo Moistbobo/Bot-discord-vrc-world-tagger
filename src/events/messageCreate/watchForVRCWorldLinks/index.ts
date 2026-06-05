@@ -34,6 +34,9 @@ type WorldMatch = {
 const eachAttachment = (message: Message) =>
   message.attachments?.values() ?? [][Symbol.iterator]();
 
+const safeJsonStringify = (value: unknown): string =>
+  JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? v.toString() : v));
+
 /**
  * Finds a world link in the message body first, then in forwarded snapshots.
  * When `scanAttachmentFilenames` is true, attachment file names are checked last
@@ -210,7 +213,7 @@ const processWorldId = async (
     tags,
     imageUrl: worldData.imageUrl,
     sourceContent,
-    vrchatData: JSON.stringify(worldData)
+    vrchatData: safeJsonStringify(worldData)
   };
 
   getWorldRepository().upsert(record);
