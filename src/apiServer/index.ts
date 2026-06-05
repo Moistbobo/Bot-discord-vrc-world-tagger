@@ -24,7 +24,7 @@ export function createApiServer() {
     }
 
     const token = auth.slice(7).trim();
-    if (token !== Config.API_TOKEN) {
+    if (!Config.API_TOKEN.includes(token)) {
       return reply.code(401).send({ error: 'Unauthorized' });
     }
   });
