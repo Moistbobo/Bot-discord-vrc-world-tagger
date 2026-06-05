@@ -15,6 +15,7 @@ export interface WorldRecord {
   imageUrl: string | null;
   sourceContent: string | null;
   vrchatData: string | null;
+  quality?: 'good' | 'bad' | null;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -33,6 +34,7 @@ function rowToRecord(row: Record<string, unknown>): WorldRecord {
     imageUrl: row.image_url as string | null,
     sourceContent: row.source_content as string | null,
     vrchatData: row.vrchat_data as string | null,
+    quality: (row.quality as 'good' | 'bad' | null) ?? null,
     createdAt: row.created_at as number,
     updatedAt: row.updated_at as number
   };
@@ -154,6 +156,31 @@ export class WorldRepository {
       );
     }
     return didArchive;
+  }
+
+  /**
+   * Set the quality ('good' | 'bad') on a specific world record.
+   * Preserves existing fields; only updates quality and updated_at.
+   */
+  updateQuality(
+    worldId: string,
+    guildId: string,
+    quality: 'good' | 'bad'
+  ): boolean {
+    const sql = `
+      UPDATE world_records
+      SET quality = ?, updated_at = strftime('%s','now')
+      WHERE world_id = ? AND guild_id = ?
+    `;
+    const stmt = this.db.prepare(sql);
+    const result = stmt.run(quality, worldId, guildId);
+    const didUpdate = result.changes > 0;
+    if (didUpdate) {
+      logger.info(
+        `Set quality to "${quality}" for world ${worldId} in guild ${guildId}`
+      );
+    }
+    return didUpdate;
   }
 
   /**
