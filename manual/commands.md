@@ -54,6 +54,8 @@ See [reaction-forwarding.md](reaction-forwarding.md) for setup and behavior deta
 | `.removeReact` | Yes | Remove a forward mapping by emoji or by **1-based** index from `.listReacts`. | `.removeReact <emoji>` or `.removeReact <index>` | `.removeReact 1` |
 | `.addDeleteReact` | Yes | Register an emoji so reacting with it on **the bot’s messages** deletes them (in `.watchReacts` channels). | `.addDeleteReact <emoji>` | `.addDeleteReact 🗑️` |
 | `.removeDeleteReact` | Yes | Remove a react-to-delete emoji by emoji or **1-based** index (indices under **React to delete** in `.listReacts`). | `.removeDeleteReact <emoji>` or `.removeDeleteReact <index>` | `.removeDeleteReact 🗑️` |
+| `.setQualityChannel` | Yes | Mark a channel as a quality-tracking destination. When a world is reaction-forwarded to that channel, the bot records its quality (`good` or `bad`) in the database. Only one channel per quality at a time. | `.setQualityChannel <good|bad> #channel` | `.setQualityChannel good #good-maps` |
+| `.clearQualityChannel` | Yes | Clear the quality-channel assignment for `good` or `bad`. After clearing, worlds forwarded to that channel won't have quality recorded. | `.clearQualityChannel <good|bad>` | `.clearQualityChannel bad` |
 
 ### World data and history
 
