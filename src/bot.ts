@@ -17,7 +17,7 @@ import logger from './utils/logger';
 import { isCurrentUser, vrchat } from './utils/externalApi/vrchat';
 import { shouldIgnoreOwnBotMessage } from './botFilters';
 import { isUserOnIgnoreList } from './utils/ignoreList';
-import { startApiServer } from './apiServer';
+import { startApiServer, stopApiServer } from './apiServer';
 
 // Message and reaction flows share policy (e.g. webhook vs self-bot). If you change
 // message handling filters or world-link behavior, review src/events/messageReactionAdd/
@@ -75,3 +75,22 @@ client
   .login(Config.TOKEN)
   .then(() => logger.info('Bot logged in'))
   .catch((err) => logger.error('Failed to login:', err));
+
+// Graceful shutdown: close API server and Discord client on SIGINT / SIGTERM
+function handleShutdown(signal: string) {
+  return async () => {
+    logger.info(`Received ${signal}. Shutting down gracefully...`);
+    try {
+      await stopApiServer();
+      await client.destroy();
+      logger.info('Shutdown complete.');
+    } catch (error) {
+      logger.error('Error during graceful shutdown:', error);
+    } finally {
+      process.exit(0);
+    }
+  };
+}
+
+process.on('SIGINT', handleShutdown('SIGINT'));
+process.on('SIGTERM', handleShutdown('SIGTERM'));
