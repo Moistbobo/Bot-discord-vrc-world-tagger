@@ -140,6 +140,121 @@ describe('WorldRepository', () => {
     });
   });
 
+  describe('updateTags', () => {
+    it('returns false when record does not exist', () => {
+      expect(
+        repo.updateTags('missing', 'missing', ['tag'], 'content')
+      ).toBe(false);
+    });
+
+    it('returns false when tags and sourceContent are unchanged', () => {
+      const record = createTestRecord({
+        tags: ['horror', 'game'],
+        sourceContent: 'original'
+      });
+      repo.upsert(record);
+
+      const before = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
+      const result = repo.updateTags(
+        record.worldId,
+        record.guildId,
+        ['horror', 'game'],
+        'original'
+      );
+      const after = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
+
+      expect(result).toBe(false);
+      expect(after.updatedAt).toBe(before.updatedAt);
+    });
+
+    it('returns true when tags change', () => {
+      const record = createTestRecord({ tags: ['horror'] });
+      repo.upsert(record);
+
+      const result = repo.updateTags(
+        record.worldId,
+        record.guildId,
+        ['horror', 'puzzle'],
+        record.sourceContent
+      );
+      expect(result).toBe(true);
+
+      const updated = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
+      expect(updated.tags).toEqual(['horror', 'puzzle']);
+    });
+
+    it('returns true when sourceContent changes', () => {
+      const record = createTestRecord({ sourceContent: 'old content' });
+      repo.upsert(record);
+
+      const result = repo.updateTags(
+        record.worldId,
+        record.guildId,
+        record.tags,
+        'new content'
+      );
+      expect(result).toBe(true);
+
+      const updated = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
+      expect(updated.sourceContent).toBe('new content');
+    });
+  });
+
+  describe('updateQuality', () => {
+    it('returns false when record does not exist', () => {
+      expect(repo.updateQuality('missing', 'missing', 'good')).toBe(false);
+    });
+
+    it('returns false when quality is unchanged', () => {
+      const record = createTestRecord();
+      repo.upsert(record);
+      repo.updateQuality(record.worldId, record.guildId, 'good');
+
+      const before = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
+      const result = repo.updateQuality(
+        record.worldId,
+        record.guildId,
+        'good'
+      );
+      const after = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
+
+      expect(result).toBe(false);
+      expect(after.quality).toBe('good');
+      expect(after.updatedAt).toBe(before.updatedAt);
+    });
+
+    it('returns true when quality changes from null', () => {
+      const record = createTestRecord();
+      repo.upsert(record);
+
+      const result = repo.updateQuality(
+        record.worldId,
+        record.guildId,
+        'bad'
+      );
+      expect(result).toBe(true);
+
+      const updated = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
+      expect(updated.quality).toBe('bad');
+    });
+
+    it('returns true when quality changes from one value to another', () => {
+      const record = createTestRecord();
+      repo.upsert(record);
+      repo.updateQuality(record.worldId, record.guildId, 'good');
+
+      const result = repo.updateQuality(
+        record.worldId,
+        record.guildId,
+        'bad'
+      );
+      expect(result).toBe(true);
+
+      const updated = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
+      expect(updated.quality).toBe('bad');
+    });
+  });
+
   describe('getAllPaginated', () => {
     beforeEach(() => {
       for (let i = 0; i < 5; i++) {
