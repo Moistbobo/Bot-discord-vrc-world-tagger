@@ -228,12 +228,16 @@ export class WorldRepository {
    * Paginated list of world records with optional filters.
    * @param limit   Max rows to return
    * @param offset  Rows to skip
-   * @param filters Optional filters (tag array = AND logic, guildId)
+   * @param filters Optional filters (tag array = AND logic, guildId, quality)
    */
   getAllPaginated(
     limit: number,
     offset: number,
-    filters?: { tags?: string[]; guildId?: string }
+    filters?: {
+      tags?: string[];
+      guildId?: string;
+      quality?: ('good' | 'bad')[];
+    }
   ): { rows: WorldRecord[]; total: number } {
     const whereParts: string[] = [];
     const params: (string | number)[] = [];
@@ -241,6 +245,12 @@ export class WorldRepository {
     if (filters?.guildId) {
       whereParts.push('guild_id = ?');
       params.push(filters.guildId);
+    }
+
+    if (filters?.quality && filters.quality.length > 0) {
+      const placeholders = filters.quality.map(() => '?').join(', ');
+      whereParts.push(`quality IN (${placeholders})`);
+      params.push(...filters.quality);
     }
 
     if (filters?.tags && filters.tags.length > 0) {
