@@ -115,6 +115,16 @@ flowchart TD
 
 If the emoji is **not** used for forwarding, `alsoFwd` is effectively false and the bot message is deleted as soon as the emoji matches the delete list (still only in watched react channels, still only bot messages).
 
+## Quality channel tracking
+
+When a destination channel is registered with `.setQualityChannel good #channel` or `.setQualityChannel bad #channel`, the bot automatically records the world's **quality** in the database whenever a message is reaction-forwarded to that channel.
+
+- **Use case**: Separate a world-review workflow into "good maps" and "bad maps" channels. When a user reacts to forward a world link to either channel, the bot marks that world's quality, making it queryable later (e.g. for stats or export).
+- **One per quality**: Setting a new quality channel replaces the previous one for that quality. There is at most one `good` channel and one `bad` channel at any time.
+- **Clearing**: Use `.clearQualityChannel good` or `.clearQualityChannel bad` to stop tracking.
+
+See [commands.md](commands.md) for `.setQualityChannel` and `.clearQualityChannel` usage.
+
 ## How it works
 
 - **Watched channels only** — A forward triggers only when the message is in a channel that has been added with `.watchReacts`. Reactions in other channels are ignored.
