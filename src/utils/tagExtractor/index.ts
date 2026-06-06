@@ -35,7 +35,7 @@ const CANONICAL_MAP: Record<string, string> = {
 const ALL_PREFIXES = [
   /^tags?\s*[:：]\s*/i,
   /^tag\(s\)\s*[:：]\s*/i,
-  /^categories?\s*[:：]\s*/i,
+  /^categor(?:y|ies)\s*[:：]\s*/i,
   /^types?\s*[:：]\s*/i,
   /^map types?\s*[:：]\s*/i,
   /^タグ\s*[:：]\s*/i,
@@ -62,6 +62,19 @@ function extractStructuredTags(content: string): string[] {
 
       const afterPrefix = line.slice(match[0].length).trim();
       if (!afterPrefix) continue;
+
+      // Try the entire post-prefix string as a single tag first
+      // (handles multi-word tags like "particle live" before splitting)
+      const whole = afterPrefix
+        .toLowerCase()
+        .replace(/^[([{'"`]+/, '')
+        .replace(/[)\]}'"`]+$/, '');
+      const wholeValidated = validate(whole);
+      if (wholeValidated && !seen.has(wholeValidated)) {
+        seen.add(wholeValidated);
+        result.push(wholeValidated);
+        break;
+      }
 
       const tokens = afterPrefix
         .split(/[,，、\s]+/)
