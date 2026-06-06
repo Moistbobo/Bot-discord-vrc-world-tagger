@@ -1,13 +1,17 @@
-import { Message, TextChannel } from 'discord.js';
+import { Message, GuildTextBasedChannel } from 'discord.js';
 import logger from '../../utils/logger';
 import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
 import { set, get as getValue } from '../../utils/jsonAsDb/index';
-import { getValue as getKvpValue } from '../../utils/jsonAsDb/handlers/persistentKvp';
 import { kvKeys, CrawlStatus } from '../../utils/jsonAsDb/types';
-import { extractWorldIdFromMessage } from './watchForVRCWorldLinks/worldExtraction';
+import {
+  extractAllWorldIdsFromMessage,
+  extractWorldIdFromMessage
+} from './watchForVRCWorldLinks/worldExtraction';
 import { extractWorldId } from '../../utils/regex';
 import { checkAndHandleDuplicate } from './watchForVRCWorldLinks/duplicateHandler';
 import { emojiMap } from '../../assets/media';
+import { getWorldRepository } from '../../utils/database/worldRepository';
+import { extractTags } from '../../utils/tagExtractor';
 
 // Global state to prevent concurrent crawls on the same channel
 const activeCrawls = new Map<string, boolean>();
@@ -15,32 +19,113 @@ const activeCrawls = new Map<string, boolean>();
 const RATE_LIMIT_DELAY = 250;
 const BATCH_SIZE = 100;
 
+type CrawlMode = 'discover' | 'tags' | 'quality';
+
+interface ParsedCrawlCommand {
+  channel: GuildTextBasedChannel;
+  mode: CrawlMode;
+  qualityValue?: 'good' | 'bad';
+}
+
 // Helper function to delay execution
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Parse .crawlHistory command into mode and options.
+ * Syntax: .crawlHistory #channel [--tags | --quality good|bad]
+ */
+function parseCrawlCommand(message: Message): ParsedCrawlCommand | null {
+  const mentioned = message.mentions.channels.first();
+
+  if (!mentioned || !mentioned.isTextBased()) {
+    return null;
+  }
+
+  const channel = mentioned as GuildTextBasedChannel;
+
+  const content = message.content;
+  let mode: CrawlMode = 'discover';
+  let qualityValue: 'good' | 'bad' | undefined;
+
+  if (content.includes('--tags')) {
+    mode = 'tags';
+  } else if (content.includes('--quality')) {
+    mode = 'quality';
+    const match = content.match(/--quality\s+(good|bad)/i);
+    if (match) {
+      qualityValue = match[1].toLowerCase() as 'good' | 'bad';
+    }
+    if (!qualityValue) {
+      return null; // invalid quality argument
+    }
+  }
+
+  return { channel, mode, qualityValue };
+}
+
+/**
+ * Extract the first world ID from a message, checking raw content,
+ * embed URLs/descriptions, and Discord native message snapshots (forwards).
+ */
+function extractWorldIdFromAnywhere(msg: Message): string | null {
+  // 1. Try raw message content
+  const fromContent = extractWorldId(msg.content);
+  if (fromContent) return fromContent;
+
+  // 2. Try embed URLs and descriptions
+  for (const embed of msg.embeds) {
+    const fromUrl = embed.url ? extractWorldId(embed.url) : null;
+    if (fromUrl) return fromUrl;
+
+    const fromDesc = embed.description
+      ? extractWorldId(embed.description)
+      : null;
+    if (fromDesc) return fromDesc;
+  }
+
+  // 3. Try Discord native message snapshots (forwarded messages)
+  if (msg.messageSnapshots) {
+    for (const snapshot of msg.messageSnapshots.values()) {
+      const fromSnapContent = snapshot.content
+        ? extractWorldId(snapshot.content)
+        : null;
+      if (fromSnapContent) return fromSnapContent;
+
+      for (const embed of snapshot.embeds || []) {
+        const fromSnapUrl = embed.url ? extractWorldId(embed.url) : null;
+        if (fromSnapUrl) return fromSnapUrl;
+
+        const fromSnapDesc = embed.description
+          ? extractWorldId(embed.description)
+          : null;
+        if (fromSnapDesc) return fromSnapDesc;
+      }
+    }
+  }
+
+  return null;
+}
 
 /**
  * Start crawling channel history for VRChat world links
  */
 export const crawlChannelHistory = async (message: Message) => {
-  const channel = message.mentions.channels.first();
+  const parsed = parseCrawlCommand(message);
 
-  if (!channel) {
+  if (!parsed) {
     if (message.channel.isSendable()) {
       await message.channel.send(
-        `${emojiMap.crossError} Please mention a channel to crawl (e.g., \`.crawlHistory #channel-name\`)`
+        `${emojiMap.crossError} Please mention a text channel to crawl.\n` +
+          `**Usage:**\n` +
+          `\`.crawlHistory #channel\` — discover new worlds (default)\n` +
+          `\`.crawlHistory #channel --tags\` — rebuild tags & source_content\n` +
+          `\`.crawlHistory #channel --quality good|bad\` — assign quality`
       );
     }
     return;
   }
 
-  if (!(channel instanceof TextChannel)) {
-    if (message.channel.isSendable()) {
-      await message.channel.send(
-        `${emojiMap.crossError} Can only crawl text channels`
-      );
-    }
-    return;
-  }
+  const { channel, mode, qualityValue } = parsed;
 
   // Check if channel is already being crawled
   if (activeCrawls.get(channel.id)) {
@@ -52,22 +137,24 @@ export const crawlChannelHistory = async (message: Message) => {
     return;
   }
 
-  // Check if channel is being watched
-  const watchedChannels = await getAll(kvKeys.WATCHED_CHANNELS);
-  if (!watchedChannels.includes(channel.id)) {
-    if (message.channel.isSendable()) {
-      await message.channel.send(
-        `${emojiMap.crossError} Channel ${channel} is not being watched. Use \`.watch ${channel}\` first.`
-      );
+  // Only enforce watched-channel restriction for discover mode
+  if (mode === 'discover') {
+    const watchedChannels = await getAll(kvKeys.WATCHED_CHANNELS);
+    if (!watchedChannels.includes(channel.id)) {
+      if (message.channel.isSendable()) {
+        await message.channel.send(
+          `${emojiMap.crossError} Channel ${channel} is not being watched. Use \`.watch ${channel}\` first.`
+        );
+      }
+      return;
     }
-    return;
   }
 
   // Start the crawl
   activeCrawls.set(channel.id, true);
 
   try {
-    await startCrawl(message, channel);
+    await startCrawl(message, channel, mode, qualityValue);
   } finally {
     activeCrawls.delete(channel.id);
   }
@@ -76,7 +163,12 @@ export const crawlChannelHistory = async (message: Message) => {
 /**
  * Start the actual crawling process
  */
-const startCrawl = async (message: Message, channel: TextChannel) => {
+const startCrawl = async (
+  message: Message,
+  channel: GuildTextBasedChannel,
+  mode: CrawlMode,
+  qualityValue?: 'good' | 'bad'
+) => {
   // Start timing the crawl operation
   const crawlStartTime = Date.now();
 
@@ -122,16 +214,31 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
     [channel.id]: crawlStatus
   });
 
+  // Mode-specific counters (local, not persisted in CrawlStatus)
+  let recordsUpdated = 0;
+  let recordsNotFound = 0;
+
   // Send initial message
   let progressMessage: Message | null = null;
   if (message.channel.isSendable()) {
+    const modeLabel =
+      mode === 'discover'
+        ? '🔍 Discover'
+        : mode === 'tags'
+          ? '🏷️ Rebuild Tags'
+          : `⭐ Quality (${qualityValue})`;
+
     const statusText = isResuming ? 'Resuming...' : 'Initializing...';
     const descriptionText = isResuming
       ? `Resuming crawl from message ${crawlStatus.lastMessageId || 'beginning'}`
-      : 'This will scan the entire channel history for VRChat world links.';
+      : mode === 'discover'
+        ? 'Scanning channel history for VRChat world links.'
+        : mode === 'tags'
+          ? 'Rebuilding tags and source_content from message history.'
+          : `Assigning "${qualityValue}" quality to worlds in this channel.`;
 
     progressMessage = await message.channel.send(
-      `🔄 **${isResuming ? 'Resuming' : 'Starting'} Channel History Crawl**\n\n` +
+      `🔄 **${isResuming ? 'Resuming' : 'Starting'} ${modeLabel} Crawl**\n\n` +
         `**📺 Channel:** ${channel}\n` +
         `**📊 Status:** ${statusText}\n` +
         `**⏱️ Started:** <t:${Math.floor(new Date(crawlStatus.startTime).getTime() / 1000)}:F>\n` +
@@ -161,7 +268,6 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
     reactionCollector.on('collect', async () => {
       cancellationState.isCancelled = true;
       if (progressMessage && progressMessage.channel.isSendable()) {
-        // Calculate duration up to cancellation
         const cancelDuration = Date.now() - crawlStartTime;
         const cancelMinutes = Math.floor(cancelDuration / 60000);
         const cancelSeconds = Math.floor((cancelDuration % 60000) / 1000);
@@ -171,18 +277,18 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
             : `${cancelSeconds}s`;
 
         await progressMessage.edit(
-          `${emojiMap.crossError} **Channel History Crawl Cancelled**\n\n` +
+          `${emojiMap.crossError} **${mode === 'discover' ? 'Channel History Crawl' : mode === 'tags' ? 'Tag Rebuild' : 'Quality Assignment'} Cancelled**\n\n` +
             `**📺 Channel:** ${channel}\n` +
             `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
-            `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n` +
+            (mode === 'discover'
+              ? `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n`
+              : `**✅ Records Updated:** ${recordsUpdated}\n`) +
             `**⏱️ Duration:** ${cancelDurationText}\n\n` +
             `Crawl was cancelled by ${message.author.toString()}.\n\n` +
             `**💡 Tip:** Run the command again to resume from where you left off.`
         );
       }
-      logger.info(
-        `Channel history crawl cancelled by ${message.author.tag} for ${channel.id}`
-      );
+      logger.info(`Crawl cancelled by ${message.author.tag} for ${channel.id}`);
     });
   }
 
@@ -192,7 +298,13 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
       channel,
       crawlStatus,
       progressMessage,
-      cancellationState
+      cancellationState,
+      mode,
+      qualityValue,
+      (updated, notFound) => {
+        recordsUpdated = updated;
+        recordsNotFound = notFound;
+      }
     );
 
     if (cancellationState.isCancelled) {
@@ -217,22 +329,34 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
 
     // Send completion message
     if (message.channel.isSendable()) {
+      const modeLabel =
+        mode === 'discover'
+          ? 'Channel History Crawl'
+          : mode === 'tags'
+            ? 'Tag Rebuild'
+            : 'Quality Assignment';
+
+      const statsLine =
+        mode === 'discover'
+          ? `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered}`
+          : `**✅ Records Updated:** ${recordsUpdated}\n**⚠️ Not Found:** ${recordsNotFound}`;
+
       await message.channel.send({
         content:
-          `✅ **Channel History Crawl Complete!**\n\n` +
+          `✅ **${modeLabel} Complete!**\n\n` +
           `**📺 Channel:** ${channel}\n` +
           `**📊 Messages Processed:** ${crawlStatus.messagesProcessed}\n` +
-          `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered}\n` +
-          `**⏱️ Duration:** ${durationText}\n\n`,
+          statsLine +
+          `\n**⏱️ Duration:** ${durationText}\n\n`,
         files: []
       });
     }
 
     logger.info(
-      `Channel history crawl completed for ${channel.id}: ${crawlStatus.messagesProcessed} messages, ${crawlStatus.worldsDiscovered} worlds in ${durationText}`
+      `Crawl completed for ${channel.id}: ${crawlStatus.messagesProcessed} messages in ${durationText}`
     );
   } catch (error) {
-    logger.error(`Channel history crawl failed for ${channel.id}:`, error);
+    logger.error(`Crawl failed for ${channel.id}:`, error);
 
     // Update status with error
     crawlStatus.isRunning = false;
@@ -243,8 +367,14 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
     });
 
     if (message.channel.isSendable()) {
+      const modeLabel =
+        mode === 'discover'
+          ? 'Channel History Crawl'
+          : mode === 'tags'
+            ? 'Tag Rebuild'
+            : 'Quality Assignment';
       await message.channel.send(
-        `${emojiMap.crossError} **Channel History Crawl Failed**\n\n` +
+        `${emojiMap.crossError} **${modeLabel} Failed**\n\n` +
           `**📺 Channel:** ${channel}\n` +
           `**${emojiMap.crossError} Error:** ${error.message}\n\n` +
           `Please try again later or contact an administrator.`
@@ -261,39 +391,29 @@ const startCrawl = async (message: Message, channel: TextChannel) => {
  * Crawl messages in batches
  */
 const crawlMessages = async (
-  channel: TextChannel,
+  channel: GuildTextBasedChannel,
   crawlStatus: CrawlStatus,
   progressMessage: Message | null,
-  cancellationState: { isCancelled: boolean }
+  cancellationState: { isCancelled: boolean },
+  mode: CrawlMode,
+  qualityValue: 'good' | 'bad' | undefined,
+  onProgress: (updated: number, notFound: number) => void
 ): Promise<void> => {
   let lastMessageId: string | undefined = crawlStatus.lastMessageId;
   let totalMessages = crawlStatus.messagesProcessed;
+  let recordsUpdated = 0;
+  let recordsNotFound = 0;
+
+  const repo = getWorldRepository();
 
   // Load all processed worlds into memory for fast cache lookups
-  logger.info('Loading processed worlds cache for optimization...');
-  const processedWorldsData = await getValue(
-    kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID
+  logger.info('Loading processed worlds cache from SQLite...');
+  const processedWorldsCache = repo.getAllWorldGuildPairs();
+  logger.info(
+    `Loaded ${processedWorldsCache.size} processed worlds into cache`
   );
-  const processedWorldsCache = new Set<string>();
-
-  if (processedWorldsData && typeof processedWorldsData === 'object') {
-    // Extract all world-guild combinations that have already been processed
-    for (const key of Object.keys(processedWorldsData)) {
-      if (key.startsWith('wrld_')) {
-        processedWorldsCache.add(key);
-      }
-    }
-    logger.info(
-      `Loaded ${processedWorldsCache.size} processed worlds into cache`
-    );
-  } else {
-    logger.info(
-      'No previously processed worlds found, starting with empty cache'
-    );
-  }
 
   // If resuming, we need to get the existing discovered worlds count
-  // The duplicate detection system will handle tracking unique worlds
   if (crawlStatus.worldsDiscovered > 0) {
     logger.info(
       `Resuming crawl with ${crawlStatus.worldsDiscovered} previously discovered worlds`
@@ -336,81 +456,52 @@ const crawlMessages = async (
         totalMessages++;
         crawlStatus.messagesProcessed = totalMessages;
 
-        // Log message being processed
         logger.info(
           `Crawling message ${totalMessages}: ${msg.id} at ${msg.createdAt.toISOString()}`
         );
 
-        // Quick cache check: if this message contains a world ID that's already been processed,
-        // we can skip the expensive regex extraction
-        const potentialWorldId = extractWorldId(msg.content);
-        if (potentialWorldId) {
-          const cacheKey = `${potentialWorldId}-${msg.guildId}`;
-          if (processedWorldsCache.has(cacheKey)) {
-            // This world has already been processed, skip expensive operations
-            logger.debug(
-              `Skipping message ${msg.id}: world ${potentialWorldId} already processed (cache hit)`
-            );
-            continue; // Skip to next message
-          }
+        // ── DISCOVER MODE ──
+        if (mode === 'discover') {
+          await handleDiscoverMode(msg, processedWorldsCache, crawlStatus);
         }
 
-        // Check if this message has already been processed by looking for any world IDs
-        const worldId = await extractWorldIdFromMessage(msg.content);
-        if (worldId) {
-          // Check if this world has already been processed in this guild
-          const originalMessageId = await getKvpValue(
-            kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
-            `${worldId}-${msg.guildId}`
-          );
-
-          if (originalMessageId && originalMessageId !== msg.id) {
-            // This world has already been processed in another message, skip it
-            logger.info(
-              `Skipping already processed world in message ${msg.id}: ${worldId} (already processed in message ${originalMessageId})`
-            );
-            continue; // Skip to next message
-          }
-
-          // Use the existing duplicate detection system in silent mode for crawl operations
-          const isDuplicate = await checkAndHandleDuplicate(msg, worldId, true);
-
-          if (!isDuplicate) {
-            // This is a new world, count it
-            crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
-            logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
-
-            // Add to cache to avoid processing this world again in the same crawl session
-            const cacheKey = `${worldId}-${msg.guildId}`;
-            processedWorldsCache.add(cacheKey);
-          } else {
-            logger.info(
-              `World found in message ${msg.id}: ${worldId} (DUPLICATE)`
-            );
-          }
-
-          // Add delay only when a world is successfully extracted to prevent rate limiting
-          await delay(RATE_LIMIT_DELAY);
-        } else {
-          // Log when no world is found
-          logger.debug(
-            `No world found in message ${msg.id}: "${msg.content.substring(0, 100)}..."`
-          );
+        // ── TAGS MODE ──
+        else if (mode === 'tags') {
+          const result = await handleTagsMode(msg, processedWorldsCache, repo);
+          if (result.updated) recordsUpdated++;
+          if (result.notFound) recordsNotFound++;
         }
 
-        // Update progress message every 25 messages (batch size) for more frequent updates
+        // ── QUALITY MODE ──
+        else if (mode === 'quality' && qualityValue) {
+          const result = await handleQualityMode(
+            msg,
+            processedWorldsCache,
+            repo,
+            qualityValue
+          );
+          if (result.updated) recordsUpdated++;
+          if (result.notFound) recordsNotFound++;
+        }
+
+        // Update progress message every 25 messages
         if (
           totalMessages % 25 === 0 &&
           progressMessage &&
           progressMessage.channel.isSendable() &&
           !cancellationState.isCancelled
         ) {
+          const progressText =
+            mode === 'discover'
+              ? `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered.toLocaleString()}`
+              : `**✅ Records Updated:** ${recordsUpdated.toLocaleString()}\n**⚠️ Not Found:** ${recordsNotFound.toLocaleString()}`;
+
           await progressMessage.edit(
-            `🔄 **Channel History Crawl in Progress**\n\n` +
+            `🔄 **${mode === 'discover' ? 'Channel History Crawl' : mode === 'tags' ? 'Tag Rebuild' : 'Quality Assignment'} in Progress**\n\n` +
               `**📺 Channel:** ${channel}\n` +
               `**📊 Messages Processed:** ${totalMessages.toLocaleString()}\n` +
-              `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered.toLocaleString()}\n` +
-              `**⏱️ Started:** <t:${Math.floor(new Date(crawlStatus.startTime).getTime() / 1000)}:F>\n\n` +
+              progressText +
+              `\n**⏱️ Started:** <t:${Math.floor(new Date(crawlStatus.startTime).getTime() / 1000)}:F>\n\n` +
               `**React with ${emojiMap.crossError} to cancel the crawl.**`
           );
         }
@@ -418,19 +509,16 @@ const crawlMessages = async (
 
       // Log batch completion
       logger.info(
-        `Completed batch processing. Total messages: ${totalMessages}, Unique worlds: ${crawlStatus.worldsDiscovered}`
+        `Completed batch processing. Total messages: ${totalMessages}`
       );
 
       // Update last message ID for next batch
       let lastMessage: Message | undefined;
       if (messages instanceof Map || (messages as any).last) {
-        // Use last() method if available
         lastMessage = (messages as any).last();
       } else if (Array.isArray(messages)) {
-        // Use array indexing
         lastMessage = messages[messages.length - 1];
       } else {
-        // Single message case
         lastMessage = messages as Message;
       }
 
@@ -445,12 +533,17 @@ const crawlMessages = async (
         progressMessage.channel.isSendable() &&
         !cancellationState.isCancelled
       ) {
+        const progressText =
+          mode === 'discover'
+            ? `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered.toLocaleString()}`
+            : `**✅ Records Updated:** ${recordsUpdated.toLocaleString()}\n**⚠️ Not Found:** ${recordsNotFound.toLocaleString()}`;
+
         await progressMessage.edit(
-          `🔄 **Channel History Crawl in Progress**\n\n` +
+          `🔄 **${mode === 'discover' ? 'Channel History Crawl' : mode === 'tags' ? 'Tag Rebuild' : 'Quality Assignment'} in Progress**\n\n` +
             `**📺 Channel:** ${channel}\n` +
             `**📊 Messages Processed:** ${totalMessages.toLocaleString()}\n` +
-            `**🌍 New Worlds Discovered:** ${crawlStatus.worldsDiscovered.toLocaleString()}\n` +
-            `**⏱️ Started:** <t:${Math.floor(new Date(crawlStatus.startTime).getTime() / 1000)}:F>\n\n` +
+            progressText +
+            `\n**⏱️ Started:** <t:${Math.floor(new Date(crawlStatus.startTime).getTime() / 1000)}:F>\n\n` +
             `**React with ${emojiMap.crossError} to cancel the crawl.**`
         );
       }
@@ -461,15 +554,150 @@ const crawlMessages = async (
         await set(kvKeys.CHANNEL_HISTORY_CRAWL_STATUS, {
           [channel.id]: crawlStatus
         });
-
-        // No delay needed - only local database operations
       }
+
+      onProgress(recordsUpdated, recordsNotFound);
     } catch (error) {
       logger.error(`Error fetching messages for ${channel.id}:`, error);
       throw error;
     }
   }
 };
+
+/**
+ * Handle a single message in discover mode.
+ */
+async function handleDiscoverMode(
+  msg: Message,
+  processedWorldsCache: Set<string>,
+  crawlStatus: CrawlStatus
+): Promise<void> {
+  // Quick cache check
+  const potentialWorldId = extractWorldId(msg.content);
+  if (potentialWorldId) {
+    const cacheKey = `${potentialWorldId}-${msg.guildId}`;
+    if (processedWorldsCache.has(cacheKey)) {
+      logger.debug(
+        `Skipping message ${msg.id}: world ${potentialWorldId} already processed (cache hit)`
+      );
+      return;
+    }
+  }
+
+  const worldId = await extractWorldIdFromMessage(msg.content);
+  if (!worldId) {
+    logger.debug(
+      `No world found in message ${msg.id}: "${msg.content.substring(0, 100)}..."`
+    );
+    return;
+  }
+
+  // Use the existing duplicate detection system in silent mode
+  const isDuplicate = await checkAndHandleDuplicate(msg, worldId, true);
+
+  if (!isDuplicate) {
+    crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
+    logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
+
+    const cacheKey = `${worldId}-${msg.guildId}`;
+    processedWorldsCache.add(cacheKey);
+  } else {
+    logger.info(`World found in message ${msg.id}: ${worldId} (DUPLICATE)`);
+  }
+
+  await delay(RATE_LIMIT_DELAY);
+}
+
+/**
+ * Handle a single message in tags mode.
+ * Returns whether the record was updated and whether it was not found.
+ */
+async function handleTagsMode(
+  msg: Message,
+  processedWorldsCache: Set<string>,
+  repo: ReturnType<typeof getWorldRepository>
+): Promise<{ updated: boolean; notFound: boolean }> {
+  // Extract world ID + source content (resolves Twitter links)
+  let allResults = await extractAllWorldIdsFromMessage(msg.content);
+
+  // Fallback: check Discord native message snapshots (forwards)
+  if (allResults.length === 0 && msg.messageSnapshots) {
+    for (const snapshot of msg.messageSnapshots.values()) {
+      if (snapshot.content) {
+        allResults = await extractAllWorldIdsFromMessage(snapshot.content);
+        if (allResults.length > 0) break;
+      }
+    }
+  }
+
+  const firstResult = allResults[0];
+
+  if (!firstResult) {
+    logger.debug(`No world found in message ${msg.id} for tag rebuild`);
+    return { updated: false, notFound: false };
+  }
+
+  const { worldId, sourceContent } = firstResult;
+  const cacheKey = `${worldId}-${msg.guildId}`;
+
+  if (!processedWorldsCache.has(cacheKey)) {
+    logger.warn(
+      `Skipping message ${msg.id}: world ${worldId} not in database (tags mode)`
+    );
+    return { updated: false, notFound: true };
+  }
+
+  const tags = extractTags(sourceContent);
+  const didUpdate = repo.updateTags(worldId, msg.guildId!, tags, sourceContent);
+
+  if (didUpdate) {
+    logger.info(
+      `Rebuilt tags for ${worldId}: [${tags.join(', ')}] from message ${msg.id}`
+    );
+  }
+
+  await delay(RATE_LIMIT_DELAY);
+  return { updated: didUpdate, notFound: false };
+}
+
+/**
+ * Handle a single message in quality mode.
+ * Returns whether the record was updated and whether it was not found.
+ */
+async function handleQualityMode(
+  msg: Message,
+  processedWorldsCache: Set<string>,
+  repo: ReturnType<typeof getWorldRepository>,
+  qualityValue: 'good' | 'bad'
+): Promise<{ updated: boolean; notFound: boolean }> {
+  // Extract world ID from anywhere (content or embeds)
+  const worldId = extractWorldIdFromAnywhere(msg);
+
+  if (!worldId) {
+    logger.debug(`No world found in message ${msg.id} for quality assignment`);
+    return { updated: false, notFound: false };
+  }
+
+  const cacheKey = `${worldId}-${msg.guildId}`;
+
+  if (!processedWorldsCache.has(cacheKey)) {
+    logger.warn(
+      `Skipping message ${msg.id}: world ${worldId} not in database (quality mode)`
+    );
+    return { updated: false, notFound: true };
+  }
+
+  const didUpdate = repo.updateQuality(worldId, msg.guildId!, qualityValue);
+
+  if (didUpdate) {
+    logger.info(
+      `Assigned ${qualityValue} to ${worldId} from message ${msg.id}`
+    );
+  }
+
+  await delay(RATE_LIMIT_DELAY);
+  return { updated: didUpdate, notFound: false };
+}
 
 /**
  * Check crawl status for a channel

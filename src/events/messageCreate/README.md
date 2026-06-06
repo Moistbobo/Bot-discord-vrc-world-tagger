@@ -131,8 +131,12 @@ Each handler updates one forwarding destination via [`setForwardingChannel`](for
 
 #### `.crawlHistory`
 
-- **Description:** Historical scan of a text channel for world links.
-- **Usage:** `.crawlHistory #channel`
+- **Description:** Historical scan of a text channel for world links. Supports three modes:
+  - **Default (discover):** Finds new worlds and processes them with duplicate logic.
+  - **`--tags`:** Rebuilds tags and `source_content` from message history for already-discovered worlds.
+  - **`--quality good|bad`:** Assigns a quality rating to already-discovered worlds.
+  Crawls are resumable if interrupted, and can be cancelled by reacting with ❌ on the progress message.
+- **Usage:** `.crawlHistory #channel [--tags | --quality good|bad]`
 - **Admin:** Yes
 - **Handler:** [`crawlHistory.ts`](crawlHistory.ts)
 
