@@ -419,7 +419,7 @@ Run **once** on the droplet after deploying the V2 code but **before** starting 
 - `worlds.db` is valid and queryable.
 - Bot starts cleanly after migration.
 - **Test results (dev run):** 89/95 worlds migrated successfully. 6 not found (3 deleted/private worlds + 3 test entries).
-- **Deviation from plan:** Tag extraction from historical Discord messages was skipped. Tags are left empty and will be backfilled via `.updateQuality` or future re-posts.
+- **Deviation from plan:** Tag extraction from historical Discord messages was skipped. Tags are left empty and will be backfilled via `.crawlHistory --tags` or future re-posts.
 
 ---
 
@@ -453,10 +453,15 @@ Run **once** on the droplet after deploying the V2 code but **before** starting 
    - History crawl
    - `.ignoreMe`, `.unignoreMe`
 
-6. **Retroactive quality tagging:** ⏳ Pending
-   - New command: `.updateQuality good|bad #channel [--dry-run]` (admin-only via `withProtection`).
-   - Scans a channel recursively, batching Discord fetches (100 messages per request).
-   - For each message, extracts the first world URL found (good/bad channels are designed to have exactly 1 world per message; if multiple URLs appear, only the first is counted).
+6. **Retroactive quality tagging + tag backfill:** ✅ Done
+   - Re-purposed `.crawlHistory` with three modes:
+     - `.crawlHistory #channel --tags` — rebuilds tags and `source_content` from historical messages
+     - `.crawlHistory #channel --quality good|bad` — assigns quality to worlds in a channel
+   - Scans embed URLs + descriptions for world IDs (forwarded messages have empty `.content`)
+   - Uses `repo.updateTags()` and `repo.updateQuality()` for lightweight writes
+   - Skips worlds not in SQLite with logged warning
+   - Mode-specific progress stats (records updated / not found)
+   - `.updateQuality` standalone command **not needed** — crawl-based approach is sufficient
    - Checks **both** raw message content and bot embed URLs (forwarded embeds may have the world link in the embed description rather than the message text).
    - For each found world: calls `repo.updateQuality(worldId, guildId, quality)`. Worlds not found in SQLite are skipped with a logged warning.
    - `--dry-run` mode: performs the full scan, counts how many worlds would be updated and how many would be skipped, prints a preview report, but writes nothing to the database.
@@ -495,8 +500,8 @@ Run **once** on the droplet after deploying the V2 code but **before** starting 
 ### New files (Phase 5 done)
 - ✅ `scripts/migrate-v1-to-v2.ts`
 
-### New files (Phase 6 pending)
-- `src/events/messageCreate/updateQuality.ts`
+### New files (Phase 6 done)
+- (none — `.updateQuality` standalone command not needed; crawl-based approach is sufficient)
 
 ### Significantly modified files (done)
 - ✅ `src/events/messageCreate/watchForVRCWorldLinks/index.ts`
@@ -504,6 +509,7 @@ Run **once** on the droplet after deploying the V2 code but **before** starting 
 - ✅ `src/events/messageCreate/watchForVRCWorldLinks/forwarding/index.ts`
 - ✅ `src/events/messageReactionAdd/onReactionUndoWorldTag.ts`
 - ✅ `src/events/messageCreate/stats.ts`
+- ✅ `src/events/messageCreate/crawlHistory.ts` — repurposed with discover/tags/quality modes
 - ✅ `src/assets/config.ts`
 - ✅ `src/bot.ts`
 - ✅ `.env.sample`
