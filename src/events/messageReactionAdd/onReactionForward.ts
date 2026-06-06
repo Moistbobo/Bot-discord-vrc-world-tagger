@@ -1,13 +1,45 @@
 import { messageLink, MessageReaction, User } from 'discord.js';
 import logger from '../../utils/logger';
 import { get } from '../../utils/jsonAsDb';
-import { has, add } from '../../utils/jsonAsDb/handlers/persistentList';
+import {
+  has,
+  add,
+  getFirst
+} from '../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../utils/jsonAsDb/types';
+import { getWorldRepository } from '../../utils/database/worldRepository';
+import { extractWorldId } from '../../utils/regex';
 import {
   getEmojiKey,
   resolveForwardTargetChannelId,
   type ReactionForwardConfig
 } from '../../utils/discord/reactionEmoji';
+
+function getWorldIdFromMessageContentOrEmbed(
+  reaction: MessageReaction
+): string | null {
+  const msg = reaction.message;
+  if (msg.embeds?.[0]?.url) {
+    const fromUrl = extractWorldId(msg.embeds[0].url);
+    if (fromUrl) return fromUrl;
+  }
+  if (msg.content) {
+    return extractWorldId(msg.content);
+  }
+  return null;
+}
+
+async function resolveQualityForChannel(
+  targetChannelId: string
+): Promise<'good' | 'bad' | null> {
+  const goodChannel = await getFirst(kvKeys.QUALITY_GOOD_FORWARDING_CHANNEL);
+  if (goodChannel === targetChannelId) return 'good';
+
+  const badChannel = await getFirst(kvKeys.QUALITY_BAD_FORWARDING_CHANNEL);
+  if (badChannel === targetChannelId) return 'bad';
+
+  return null;
+}
 
 export const onReactionForward = async (
   reaction: MessageReaction,
@@ -77,20 +109,42 @@ export const onReactionForward = async (
       });
     } else {
       logger.error(
-        `Failed to forward message ${message.id} to channel ${targetChannelId}:`,
+        `Failed to forward message ${message.id} to channel ${targetChannelId}:\n`,
         error
       );
       return;
     }
   }
 
+  // ── Quality tracking ──────────────────────────────────────────────
+  // If the target channel is configured as a "good" or "bad" quality
+  // channel, mark the world record accordingly.
+  const guildId = message.guildId;
+  const worldId = guildId
+    ? getWorldIdFromMessageContentOrEmbed(reaction)
+    : null;
+  if (worldId && guildId) {
+    const quality = await resolveQualityForChannel(targetChannelId);
+    if (quality) {
+      try {
+        getWorldRepository().updateQuality(worldId, guildId, quality);
+      } catch (err) {
+        logger.error(
+          `Failed to set quality for forwarded world ${worldId}:`,
+          err
+        );
+      }
+    }
+  }
+
+  // ── Record forward so we don't forward the same message twice ────
   const addResult = await add(
     kvKeys.REACTION_FORWARDED_MESSAGE_IDS,
     message.id
   );
   if (!addResult.success) {
     logger.error(
-      `Failed to record forwarded message id ${message.id}:`,
+      `Failed to record forwarded message id ${message.id}:\n`,
       addResult.error
     );
   }
