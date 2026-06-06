@@ -11,7 +11,9 @@ export default function registerErrorHandler(fastify: FastifyInstance) {
 
     // Never leak stack traces or internal details to clients
     const clientMessage =
-      statusCode >= 500 ? 'Internal Server Error' : error.message;
+      statusCode >= 500
+        ? 'Internal Server Error'
+        : (error as Error).message || 'Unknown error';
 
     void reply.code(statusCode).send({ error: clientMessage });
   });
