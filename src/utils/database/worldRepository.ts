@@ -161,12 +161,25 @@ export class WorldRepository {
   /**
    * Set the quality ('good' | 'bad') on a specific world record.
    * Preserves existing fields; only updates quality and updated_at.
+   * Skips the UPDATE if the quality value is unchanged.
    */
   updateQuality(
     worldId: string,
     guildId: string,
     quality: 'good' | 'bad'
   ): boolean {
+    const existing = this.getByWorldAndGuild(worldId, guildId);
+    if (!existing) {
+      return false;
+    }
+
+    if (existing.quality === quality) {
+      logger.debug(
+        `Skipping quality update for world ${worldId} in guild ${guildId}: already "${quality}"`
+      );
+      return false;
+    }
+
     const sql = `
       UPDATE world_records
       SET quality = ?, updated_at = strftime('%s','now')
@@ -186,6 +199,7 @@ export class WorldRepository {
   /**
    * Update tags and source_content on a specific world record.
    * Preserves all other fields.
+   * Skips the UPDATE if both tags and source_content are unchanged.
    */
   updateTags(
     worldId: string,
@@ -193,6 +207,21 @@ export class WorldRepository {
     tags: string[],
     sourceContent: string | null
   ): boolean {
+    const existing = this.getByWorldAndGuild(worldId, guildId);
+    if (!existing) {
+      return false;
+    }
+
+    const tagsChanged = JSON.stringify(existing.tags) !== JSON.stringify(tags);
+    const sourceChanged = existing.sourceContent !== sourceContent;
+
+    if (!tagsChanged && !sourceChanged) {
+      logger.debug(
+        `Skipping tag update for world ${worldId} in guild ${guildId}: no changes`
+      );
+      return false;
+    }
+
     const sql = `
       UPDATE world_records
       SET tags = ?, source_content = ?, updated_at = strftime('%s','now')
