@@ -210,7 +210,7 @@ You should see:
 
 ## Step 5: Clean Up (After Confirming Everything Works)
 
-### 5.1 ⚠️ Delete specific keys inside db.json — do NOT delete the file
+### 5.1 ⚠️ Remove specific keys inside db.json — do NOT delete the file
 
 **Never delete `db.json` entirely.** It contains all your active bot configuration (watched channels, forwarding mappings, ignored users, etc.).
 
@@ -219,7 +219,20 @@ Only these **two keys inside** `db.json` are obsolete after migration:
 - `PROCESSED_WORLDS`
 - `PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID`
 
-You can remove them manually or with a small script when you're confident the migration is stable. Every other key must remain.
+You can remove them automatically with the cleanup script:
+
+```bash
+npx jiti scripts/cleanup-db-json.ts --dry-run   # preview
+npx jiti scripts/cleanup-db-json.ts             # execute
+```
+
+**What the script does:**
+- Backs up `db.json → db.json.pre-cleanup`
+- Removes the two obsolete keys
+- Leaves all other config intact
+- Prints which keys were removed and their byte sizes
+
+**Or do it manually** by editing `db.json` and deleting the two entries from the `cache` array.
 
 **Keys you must keep in db.json:**
 - `WATCHED_CHANNELS`
@@ -290,7 +303,7 @@ Make sure the world IDs in the channel are already in `worlds.db`. If a world wa
 - [ ] Run `.crawlHistory #bad-channel --quality bad`
 - [ ] Run `.stats` to confirm data looks correct
 - [ ] Test `curl /api/health` and `/api/worlds`
-- [ ] (Optional) Remove deprecated world keys from `db.json` **(do NOT delete the file itself)**
+- [ ] (Optional) Remove obsolete world keys from `db.json` via `npx jiti scripts/cleanup-db-json.ts` **(do NOT delete the file itself)**
 - [ ] Start the bot normally
 
 **End of guide.**
