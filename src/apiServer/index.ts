@@ -5,11 +5,14 @@ import Config from '../assets/config';
 import healthRoute from './routes/health';
 import worldsRoute from './routes/worlds';
 import tagsRoute from './routes/tags';
+import registerErrorHandler from './plugins/errorHandler';
 
 export function createApiServer() {
   const fastify = Fastify({
     logger: false // we'll use our own logger
   });
+
+  registerErrorHandler(fastify);
 
   // CORS for GitHub Pages / browser consumers
   void fastify.register(cors, { origin: '*' });
