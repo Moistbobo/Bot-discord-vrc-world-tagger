@@ -188,6 +188,44 @@ describe('API Server', () => {
       );
     });
 
+    it('passes quality filters to repository', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?quality=good',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ quality: ['good'] })
+      );
+    });
+
+    it('combines tag and quality filters', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?tag=horror&quality=bad',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ tags: ['horror'], quality: ['bad'] })
+      );
+    });
+
     it('caps limit at 500', async () => {
       const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
       asMock(getWorldRepository).mockReturnValue(

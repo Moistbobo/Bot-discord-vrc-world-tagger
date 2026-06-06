@@ -40,10 +40,22 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         ? [String(query.tag)]
         : undefined;
 
+    const quality = Array.isArray(query.quality)
+      ? query.quality
+          .map(String)
+          .filter((q): q is 'good' | 'bad' => q === 'good' || q === 'bad')
+      : query.quality && (query.quality === 'good' || query.quality === 'bad')
+        ? [String(query.quality) as 'good' | 'bad']
+        : undefined;
+
+    const filters: { tags?: string[]; quality?: ('good' | 'bad')[] } = {};
+    if (tags) filters.tags = tags;
+    if (quality) filters.quality = quality;
+
     const { rows, total } = getWorldRepository().getAllPaginated(
       limit,
       offset,
-      tags ? { tags } : undefined
+      Object.keys(filters).length > 0 ? filters : undefined
     );
 
     return {
