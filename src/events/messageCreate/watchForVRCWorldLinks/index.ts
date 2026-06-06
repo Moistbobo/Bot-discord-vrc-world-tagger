@@ -203,7 +203,7 @@ const processWorldId = async (
   const supportedPlatforms = getSupportedPlatforms(worldData.unityPackages);
   const packageSizes = await calculatePackageSizes(worldData);
 
-  const tagSource = cleanContentForTagExtraction(message.content || '');
+  const tagSource = cleanContentForTagExtraction(sourceContent || message.content || '');
   const tags = extractTags(tagSource);
 
   const record: WorldRecord = {
