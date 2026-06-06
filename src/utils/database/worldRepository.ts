@@ -184,6 +184,47 @@ export class WorldRepository {
   }
 
   /**
+   * Update tags and source_content on a specific world record.
+   * Preserves all other fields.
+   */
+  updateTags(
+    worldId: string,
+    guildId: string,
+    tags: string[],
+    sourceContent: string | null
+  ): boolean {
+    const sql = `
+      UPDATE world_records
+      SET tags = ?, source_content = ?, updated_at = strftime('%s','now')
+      WHERE world_id = ? AND guild_id = ?
+    `;
+    const stmt = this.db.prepare(sql);
+    const result = stmt.run(
+      JSON.stringify(tags),
+      sourceContent,
+      worldId,
+      guildId
+    );
+    const didUpdate = result.changes > 0;
+    if (didUpdate) {
+      logger.info(
+        `Updated tags for world ${worldId} in guild ${guildId}: [${tags.join(', ')}]`
+      );
+    }
+    return didUpdate;
+  }
+
+  /**
+   * Get all world_id-guild_id pairs for caching.
+   */
+  getAllWorldGuildPairs(): Set<string> {
+    const sql = "SELECT world_id || '-' || guild_id as key FROM world_records";
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all() as { key: string }[];
+    return new Set(rows.map((r) => r.key));
+  }
+
+  /**
    * Paginated list of world records with optional filters.
    * @param limit   Max rows to return
    * @param offset  Rows to skip
