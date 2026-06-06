@@ -97,9 +97,9 @@ describe('tagExtractor', () => {
     });
 
     it('ignores inline prose', () => {
-      expect(
-        extractTags('A chill horror world with puzzle elements')
-      ).toEqual([]);
+      expect(extractTags('A chill horror world with puzzle elements')).toEqual(
+        []
+      );
     });
 
     it('ignores substrings in prose', () => {

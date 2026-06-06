@@ -142,9 +142,9 @@ describe('WorldRepository', () => {
 
   describe('updateTags', () => {
     it('returns false when record does not exist', () => {
-      expect(
-        repo.updateTags('missing', 'missing', ['tag'], 'content')
-      ).toBe(false);
+      expect(repo.updateTags('missing', 'missing', ['tag'], 'content')).toBe(
+        false
+      );
     });
 
     it('returns false when tags and sourceContent are unchanged', () => {
@@ -211,11 +211,7 @@ describe('WorldRepository', () => {
       repo.updateQuality(record.worldId, record.guildId, 'good');
 
       const before = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
-      const result = repo.updateQuality(
-        record.worldId,
-        record.guildId,
-        'good'
-      );
+      const result = repo.updateQuality(record.worldId, record.guildId, 'good');
       const after = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
 
       expect(result).toBe(false);
@@ -227,11 +223,7 @@ describe('WorldRepository', () => {
       const record = createTestRecord();
       repo.upsert(record);
 
-      const result = repo.updateQuality(
-        record.worldId,
-        record.guildId,
-        'bad'
-      );
+      const result = repo.updateQuality(record.worldId, record.guildId, 'bad');
       expect(result).toBe(true);
 
       const updated = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
@@ -243,11 +235,7 @@ describe('WorldRepository', () => {
       repo.upsert(record);
       repo.updateQuality(record.worldId, record.guildId, 'good');
 
-      const result = repo.updateQuality(
-        record.worldId,
-        record.guildId,
-        'bad'
-      );
+      const result = repo.updateQuality(record.worldId, record.guildId, 'bad');
       expect(result).toBe(true);
 
       const updated = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
