@@ -188,6 +188,44 @@ describe('API Server', () => {
       );
     });
 
+    it('accepts comma-separated tags via ?tag=horror,game', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?tag=horror,game',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ tags: ['horror', 'game'] })
+      );
+    });
+
+    it('accepts repeated tag params ?tag=horror&tag=game', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?tag=horror&tag=game',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ tags: ['horror', 'game'] })
+      );
+    });
+
     it('passes quality filters to repository', async () => {
       const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
       asMock(getWorldRepository).mockReturnValue(

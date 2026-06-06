@@ -26,6 +26,25 @@ function sanitizeRecord(raw: WorldRecord) {
   };
 }
 
+function parseTagQuery(raw: unknown): string[] | undefined {
+  if (!raw) return undefined;
+
+  const sources = Array.isArray(raw) ? raw.map(String) : [String(raw)];
+
+  const tags = sources
+    .flatMap((s) => s.split(','))
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // Deduplicate while preserving first-appearance order
+  const seen = new Set<string>();
+  return tags.filter((t) => {
+    if (seen.has(t)) return false;
+    seen.add(t);
+    return true;
+  });
+}
+
 const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // GET /api/worlds
   fastify.get('/api/worlds', async (request) => {
@@ -34,11 +53,7 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const limit = Math.min(Number(query.limit ?? 50), 500);
     const offset = Number(query.offset ?? 0);
 
-    const tags = Array.isArray(query.tag)
-      ? query.tag.map(String)
-      : query.tag
-        ? [String(query.tag)]
-        : undefined;
+    const tags = parseTagQuery(query.tag);
 
     const quality = Array.isArray(query.quality)
       ? query.quality
