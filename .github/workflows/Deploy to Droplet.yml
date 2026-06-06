@@ -60,7 +60,7 @@ jobs:
             export PATH="$HOME/.npm-global/bin:$PATH"
             cd ~/release/Bot-discord-vrc-world-tagger
             git fetch origin release
-            git checkout origin/release
+            git reset --hard origin/release
             pnpm install
             pnpm exec tsc
             pm2 restart ecosystem.config.js
