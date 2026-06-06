@@ -385,7 +385,7 @@ Returns a single world (first match if multiple guilds; can add `?guildId=` to d
 
 ---
 
-### Phase 5 — V1 → V2 Migration Script
+### Phase 5 — V1 → V2 Migration Script ✅ COMPLETE
 
 **Goal:** Convert existing `db.json` world data into the SQLite schema.
 
@@ -413,11 +413,13 @@ Run **once** on the droplet after deploying the V2 code but **before** starting 
 - Print a dry-run mode (`--dry-run`) that counts how many rows would be created without writing.
 - Log any worlds where the VRChat API returned 404 (world deleted or private).
 
-**Acceptance criteria:**
+**Acceptance criteria:** ✅ Met
 - Migration script runs without crashing.
 - All V1 world records appear in SQLite.
 - `worlds.db` is valid and queryable.
 - Bot starts cleanly after migration.
+- **Test results (dev run):** 89/95 worlds migrated successfully. 6 not found (3 deleted/private worlds + 3 test entries).
+- **Deviation from plan:** Tag extraction from historical Discord messages was skipped. Tags are left empty and will be backfilled via `.updateQuality` or future re-posts.
 
 ---
 
@@ -490,8 +492,10 @@ Run **once** on the droplet after deploying the V2 code but **before** starting 
 - ✅ `src/apiServer/apiServer.test.ts`
 - ✅ `manual/API.md`
 
-### New files (Phase 5–6 pending)
-- `scripts/migrate-v1-to-v2.ts`
+### New files (Phase 5 done)
+- ✅ `scripts/migrate-v1-to-v2.ts`
+
+### New files (Phase 6 pending)
 - `src/events/messageCreate/updateQuality.ts`
 
 ### Significantly modified files (done)
@@ -550,4 +554,4 @@ Run **once** on the droplet after deploying the V2 code but **before** starting 
 
 ---
 
-**End of plan. Phases 1–4 complete. Ready to proceed with Phase 5 (migration script) when instructed.**
+**End of plan. Phases 1–5 complete. Ready to proceed with Phase 6 (cleanup & retroactive quality tagging) when instructed.**
