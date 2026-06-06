@@ -181,21 +181,20 @@ async function main(): Promise<void> {
   } else {
     console.log('\n✅ Migration complete.');
 
-    // Rename db.json if all records were processed
     const dbJsonPath = path.join(process.cwd(), 'db.json');
     const backupPath = `${dbJsonPath}.v1-migrated`;
 
-    if (summary.failed === 0) {
-      fs.renameSync(dbJsonPath, backupPath);
-      console.log(`📁 Renamed db.json → ${path.basename(backupPath)}`);
-    } else {
-      console.log(
-        `⚠️  db.json NOT renamed because ${summary.failed} record(s) had unexpected API errors.`
-      );
-      console.log(
-        '   Fix the issues and re-run, or rename manually when ready.'
-      );
-    }
+    // Copy db.json to a backup instead of renaming it.
+    // db.json still contains active config (watched channels, forwarding,
+    // reaction mappings, etc.) that the bot needs. Only the deprecated
+    // PROCESSED_WORLDS* keys are obsolete.
+    fs.copyFileSync(dbJsonPath, backupPath);
+    console.log(`📁 Copied db.json → ${path.basename(backupPath)} (backup)`);
+    console.log(`ℹ️  db.json left in place — it contains active bot config.`);
+    console.log(`   When you're confident the migration is stable, you can`);
+    console.log(`   manually delete these two keys from db.json:`);
+    console.log(`   • PROCESSED_WORLDS`);
+    console.log(`   • PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID`);
   }
 
   db.close();

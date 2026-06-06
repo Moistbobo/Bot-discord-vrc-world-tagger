@@ -67,13 +67,19 @@ Succeeded:        89
 Failed (API err): 0
 Not found (404):  6
 ✅ Migration complete.
-📁 Renamed db.json → db.json.v1-migrated
+📁 Copied db.json → db.json.v1-migrated (backup)
+ℹ️  db.json left in place — it contains active bot config.
+   When you're confident the migration is stable, you can
+   manually delete these two keys from db.json:
+   • PROCESSED_WORLDS
+   • PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID
 ```
 
 **Notes:**
 - Worlds deleted or made private will show "⚠️ not found or inaccessible" — this is expected
 - The script is **idempotent** — re-running it just overwrites existing rows
-- If any unexpected API errors occur, `db.json` is **not** renamed so you can retry
+- `db.json` is **copied** (not renamed) to `db.json.v1-migrated` so your active config stays intact
+- **Do not delete `db.json`** — it still holds all channel/watch/react configuration
 
 ---
 
@@ -204,18 +210,31 @@ You should see:
 
 ## Step 5: Clean Up (After Confirming Everything Works)
 
-### 5.1 Remove deprecated KVP keys from db.json
+### 5.1 ⚠️ Delete specific keys inside db.json — do NOT delete the file
 
-If `db.json.v1-migrated` exists and the bot is running smoothly, the following keys are now obsolete and can be removed from `db.json`:
+**Never delete `db.json` entirely.** It contains all your active bot configuration (watched channels, forwarding mappings, ignored users, etc.).
+
+Only these **two keys inside** `db.json` are obsolete after migration:
 
 - `PROCESSED_WORLDS`
 - `PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID`
 
-**Do NOT remove:**
+You can remove them manually or with a small script when you're confident the migration is stable. Every other key must remain.
+
+**Keys you must keep in db.json:**
 - `WATCHED_CHANNELS`
 - `WATCHED_REACTION_CHANNELS`
 - `REACTION_FORWARD_CHANNELS`
-- Any other channel/config keys
+- `REACTION_FORWARDED_MESSAGE_IDS`
+- `FORCE_REFETCHED_MESSAGE_IDS`
+- `ANDROID_FORWARDING_CHANNEL`
+- `PLAYER_COUNT_FORWARDING_CHANNEL`
+- `LOW_CAPACITY_FORWARDING_CHANNEL`
+- `QUALITY_GOOD_FORWARDING_CHANNEL`
+- `QUALITY_BAD_FORWARDING_CHANNEL`
+- `REACT_TO_DELETE_EMOJIS`
+- `IGNORED_USERS`
+- `CHANNEL_HISTORY_CRAWL_STATUS`
 
 ### 5.2 Verify API is running
 
@@ -271,7 +290,7 @@ Make sure the world IDs in the channel are already in `worlds.db`. If a world wa
 - [ ] Run `.crawlHistory #bad-channel --quality bad`
 - [ ] Run `.stats` to confirm data looks correct
 - [ ] Test `curl /api/health` and `/api/worlds`
-- [ ] (Optional) Remove deprecated world keys from `db.json`
+- [ ] (Optional) Remove deprecated world keys from `db.json` **(do NOT delete the file itself)**
 - [ ] Start the bot normally
 
 **End of guide.**
