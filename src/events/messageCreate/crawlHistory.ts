@@ -1,4 +1,4 @@
-import { Message, TextChannel } from 'discord.js';
+import { Message, GuildTextBasedChannel } from 'discord.js';
 import logger from '../../utils/logger';
 import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
 import { set, get as getValue } from '../../utils/jsonAsDb/index';
@@ -22,7 +22,7 @@ const BATCH_SIZE = 100;
 type CrawlMode = 'discover' | 'tags' | 'quality';
 
 interface ParsedCrawlCommand {
-  channel: TextChannel;
+  channel: GuildTextBasedChannel;
   mode: CrawlMode;
   qualityValue?: 'good' | 'bad';
 }
@@ -35,11 +35,13 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * Syntax: .crawlHistory #channel [--tags | --quality good|bad]
  */
 function parseCrawlCommand(message: Message): ParsedCrawlCommand | null {
-  const channel = message.mentions.channels.first();
+  const mentioned = message.mentions.channels.first();
 
-  if (!channel || !(channel instanceof TextChannel)) {
+  if (!mentioned || !mentioned.isTextBased()) {
     return null;
   }
+
+  const channel = mentioned as GuildTextBasedChannel;
 
   const content = message.content;
   let mode: CrawlMode = 'discover';
@@ -62,8 +64,8 @@ function parseCrawlCommand(message: Message): ParsedCrawlCommand | null {
 }
 
 /**
- * Extract the first world ID from a message, checking both raw content
- * and embed URLs (for forwarded messages).
+ * Extract the first world ID from a message, checking raw content,
+ * embed URLs/descriptions, and Discord native message snapshots (forwards).
  */
 function extractWorldIdFromAnywhere(msg: Message): string | null {
   // 1. Try raw message content
@@ -79,6 +81,26 @@ function extractWorldIdFromAnywhere(msg: Message): string | null {
       ? extractWorldId(embed.description)
       : null;
     if (fromDesc) return fromDesc;
+  }
+
+  // 3. Try Discord native message snapshots (forwarded messages)
+  if (msg.messageSnapshots) {
+    for (const snapshot of msg.messageSnapshots.values()) {
+      const fromSnapContent = snapshot.content
+        ? extractWorldId(snapshot.content)
+        : null;
+      if (fromSnapContent) return fromSnapContent;
+
+      for (const embed of snapshot.embeds || []) {
+        const fromSnapUrl = embed.url ? extractWorldId(embed.url) : null;
+        if (fromSnapUrl) return fromSnapUrl;
+
+        const fromSnapDesc = embed.description
+          ? extractWorldId(embed.description)
+          : null;
+        if (fromSnapDesc) return fromSnapDesc;
+      }
+    }
   }
 
   return null;
@@ -143,7 +165,7 @@ export const crawlChannelHistory = async (message: Message) => {
  */
 const startCrawl = async (
   message: Message,
-  channel: TextChannel,
+  channel: GuildTextBasedChannel,
   mode: CrawlMode,
   qualityValue?: 'good' | 'bad'
 ) => {
@@ -369,7 +391,7 @@ const startCrawl = async (
  * Crawl messages in batches
  */
 const crawlMessages = async (
-  channel: TextChannel,
+  channel: GuildTextBasedChannel,
   crawlStatus: CrawlStatus,
   progressMessage: Message | null,
   cancellationState: { isCancelled: boolean },
@@ -596,7 +618,18 @@ async function handleTagsMode(
   repo: ReturnType<typeof getWorldRepository>
 ): Promise<{ updated: boolean; notFound: boolean }> {
   // Extract world ID + source content (resolves Twitter links)
-  const allResults = await extractAllWorldIdsFromMessage(msg.content);
+  let allResults = await extractAllWorldIdsFromMessage(msg.content);
+
+  // Fallback: check Discord native message snapshots (forwards)
+  if (allResults.length === 0 && msg.messageSnapshots) {
+    for (const snapshot of msg.messageSnapshots.values()) {
+      if (snapshot.content) {
+        allResults = await extractAllWorldIdsFromMessage(snapshot.content);
+        if (allResults.length > 0) break;
+      }
+    }
+  }
+
   const firstResult = allResults[0];
 
   if (!firstResult) {
