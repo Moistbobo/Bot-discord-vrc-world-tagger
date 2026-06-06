@@ -14,9 +14,9 @@ export enum kvKeys {
   LOW_CAPACITY_FORWARDING_CHANNEL = 'LOW_CAPACITY_FORWARDING_CHANNEL',
   /** Mapping of reaction emoji to forwarding channel IDs */
   REACTION_FORWARD_CHANNELS = 'REACTION_FORWARD_CHANNELS',
-  /** Worlds that have been processed to avoid duplicates */
+  /** Worlds that have been processed to avoid duplicates — @deprecated Replaced by SQLite world_records table in V2 */
   PROCESSED_WORLDS = 'PROCESSED_WORLDS',
-  /** Worlds that have been processed to avoid duplicates, with original message ID */
+  /** Worlds that have been processed to avoid duplicates, with original message ID — @deprecated Replaced by SQLite world_records table in V2 */
   PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID = 'PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID',
   /** Channel history crawling status and progress */
   CHANNEL_HISTORY_CRAWL_STATUS = 'CHANNEL_HISTORY_CRAWL_STATUS',
@@ -27,7 +27,11 @@ export enum kvKeys {
   /** Emoji keys that delete the bot's own messages when reacted (in .watchReacts channels) */
   REACT_TO_DELETE_EMOJIS = 'REACT_TO_DELETE_EMOJIS',
   /** Discord user IDs that opted out of message and reaction processing */
-  IGNORED_USERS = 'IGNORED_USERS'
+  IGNORED_USERS = 'IGNORED_USERS',
+  /** Channel for forwarding "good" quality maps */
+  QUALITY_GOOD_FORWARDING_CHANNEL = 'QUALITY_GOOD_FORWARDING_CHANNEL',
+  /** Channel for forwarding "bad" quality maps */
+  QUALITY_BAD_FORWARDING_CHANNEL = 'QUALITY_BAD_FORWARDING_CHANNEL'
 }
 
 /**

@@ -6,10 +6,7 @@ import {
 } from 'discord.js';
 import { World } from 'vrchat';
 import logger from '../../../../utils/logger';
-import {
-  add,
-  getFirst
-} from '../../../../utils/jsonAsDb/handlers/persistentList';
+import { getFirst } from '../../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../../utils/jsonAsDb/types';
 import { hasAndroidSupport } from '../../../../utils/helpers';
 import { emojiMap } from '../../../../assets/media';
@@ -19,24 +16,10 @@ import Config from '../../../../assets/config';
 export const PLAYER_CAPACITY_THRESHOLD = Config.FORWARD_PLAYER_COUNT_THRESHOLD;
 export const LOW_CAPACITY_THRESHOLD = Config.LOW_CAPACITY_THRESHOLD;
 
-// Types
 export interface ForwardingChannel {
   id: string;
   tag: string;
 }
-
-/**
- * Adds world to processed worlds list
- */
-export const markWorldAsProcessed = async (worldId: string): Promise<void> => {
-  const result = await add(kvKeys.PROCESSED_WORLDS, worldId, true);
-  if (!result.success) {
-    logger.error(
-      `Failed to add world ${worldId} to processed worlds:`,
-      result.error
-    );
-  }
-};
 
 /**
  * Forwards world information to a specific channel
@@ -57,8 +40,6 @@ export const forwardToChannel = async (
 
   try {
     logger.info(`[${tag}] Forwarding ${worldId} to ${forwardingChannel.id}`);
-
-    await markWorldAsProcessed(worldId);
 
     await message.forward(forwardingChannel.id);
   } catch (error) {
@@ -124,8 +105,7 @@ export const getForwardingChannels = async (
  */
 export const sendResponse = async (
   message: Message,
-  embed: EmbedBuilder,
-  worldId: string
+  embed: EmbedBuilder
 ): Promise<OmitPartialGroupDMChannel<Message<boolean>> | undefined> => {
   if (!message.channel.isSendable()) {
     return;
@@ -133,7 +113,6 @@ export const sendResponse = async (
 
   try {
     await message.react(emojiMap.checkmark);
-    await markWorldAsProcessed(worldId);
 
     const responseMsg = await message.reply({
       allowedMentions: { repliedUser: false },
