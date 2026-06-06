@@ -550,14 +550,23 @@ Run **once** on the droplet after deploying the V2 code but **before** starting 
 
 - [ ] Merge V2 branch to `main`
 - [ ] Deploy to droplet on a new branch / tag (keep V1 running)
-- [ ] Run `npx ts-node scripts/migrate-v1-to-v2.ts` on the droplet
+- [ ] Run `npx jiti scripts/migrate-v1-to-v2.ts --dry-run` on the droplet
+- [ ] Run `npx jiti scripts/migrate-v1-to-v2.ts` on the droplet
 - [ ] Verify `worlds.db` has expected row count
+- [ ] **Backfill tags and source_content:** Run `.crawlHistory #watched-channel --tags` for each channel that contains original world posts (resolves Twitter links, extracts tags, updates SQLite)
+- [ ] **Assign quality ratings:**
+  - Run `.crawlHistory #good-channel --quality good` for the good maps channel
+  - Run `.crawlHistory #bad-channel --quality bad` for the bad maps channel
+- [ ] Verify tag distribution with `.stats` or `sqlite3 worlds.db "SELECT value, COUNT(*) FROM world_records, json_each(tags) GROUP BY value"`
+- [ ] Verify quality counts with `sqlite3 worlds.db "SELECT quality, COUNT(*) FROM world_records WHERE quality IS NOT NULL GROUP BY quality"`
 - [ ] Update GitHub Actions Pages workflow to hit new Fastify endpoints (`/api/worlds`, `/api/tags`)
 - [ ] Update GitHub Pages site to use tag filtering and richer metadata
-- [ ] Run smoke tests: post a world, verify DB row, check `/api/worlds`, test `.undo`, `.remove`, `.stats`, `.export`
+- [ ] Run smoke tests: post a world, verify DB row, check `/api/worlds`, test `🔁` undo reaction, `.stats`, `.crawlHistory`
 - [ ] Shut down V1 instance once V2 is stable
-- [ ] Delete `db.json` world keys (keep channel/config keys)
+- [ ] Clean up obsolete keys from `db.json`:
+  - `npx jiti scripts/cleanup-db-json.ts --dry-run`
+  - `npx jiti scripts/cleanup-db-json.ts`
 
 ---
 
-**End of plan. Phases 1–5 complete. Ready to proceed with Phase 6 (cleanup & retroactive quality tagging) when instructed.**
+**End of plan. Phases 1–6 complete. All major features implemented.**
