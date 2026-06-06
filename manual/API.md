@@ -77,7 +77,8 @@ Returns a paginated, filterable list of world records.
 |-----------|------------------|---------|-----|----------------------------------------------------|
 | `limit`   | number           | `50`    | 500 | Number of records to return.                       |
 | `offset`  | number           | `0`     | —   | Number of records to skip (for pagination).        |
-| `tag`     | string / string[] | —      | —   | Filter by tag(s). Multiple values use AND logic.   |
+| `tag`     | string / string[] | —      | —   | Filter by tag(s). Comma-separated or repeated. Multiple values use AND logic. |
+| `quality` | string / string[] | —      | —   | Filter by quality. Values: `good`, `bad`.         |
 
 **Response**
 
@@ -105,10 +106,30 @@ Returns a paginated, filterable list of world records.
 
 **Filtering by tags**
 
-To filter worlds that have **all** specified tags, repeat the `tag` parameter:
+To filter worlds that have **all** specified tags, use comma-separated values
+or repeat the `tag` parameter:
 
 ```
-GET /api/worlds?tag=social&tag=hangout
+GET /api/worlds?tag=horror,game
+GET /api/worlds?tag=horror&tag=game
+```
+
+**Filtering by quality**
+
+To filter worlds by manual quality rating:
+
+```
+GET /api/worlds?quality=good
+GET /api/worlds?quality=bad
+GET /api/worlds?quality=good&quality=bad
+```
+
+**Combining filters**
+
+Tag and quality filters work together with AND logic:
+
+```
+GET /api/worlds?tag=horror&quality=good
 ```
 
 **Pagination**
@@ -230,6 +251,10 @@ curl http://localhost:3000/api/health
 # List first 20 worlds tagged "social"
 curl -H "Authorization: Bearer my-token" \
   "http://localhost:3000/api/worlds?limit=20&tag=social"
+
+# List worlds tagged both "horror" and "game", marked as "good"
+curl -H "Authorization: Bearer my-token" \
+  "http://localhost:3000/api/worlds?tag=horror,game&quality=good"
 
 # Get a specific world
 curl -H "Authorization: Bearer my-token" \
