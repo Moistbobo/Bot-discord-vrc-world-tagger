@@ -63,7 +63,13 @@ See [reaction-forwarding.md](reaction-forwarding.md) for setup and behavior deta
 |--------|-------|-------------|-------|---------|
 | `.export` | No | Export a CSV of processed world IDs and URLs (no live VRChat API call per world). | `.export` | `.export` |
 | `.exportFull` | Yes | Export a detailed CSV with live VRChat API data per world; rate-limited and heavier. | `.exportFull` | `.exportFull` |
-| `.crawlHistory` | Yes | Scan a channel’s history for world links and process them with duplicate logic. | `.crawlHistory #channel` | `.crawlHistory #vrchat-worlds` |
+| `.crawlHistory` | Yes | Scan a channel’s history for world links. Supports three modes:
+  - **Default (discover):** Finds new worlds and processes them with duplicate logic.
+  - **`--tags`:** Rebuilds tags and `source_content` from message history for already-discovered worlds.
+  - **`--quality good|bad`:** Assigns a quality rating to already-discovered worlds.
+  Crawls are resumable if interrupted, and can be cancelled by reacting with ❌ on the progress message. | `.crawlHistory #channel [--tags | --quality good|bad]` | `.crawlHistory #vrchat-worlds`
+`.crawlHistory #vrchat-worlds --tags`
+`.crawlHistory #vrchat-worlds --quality good` |
 | `.crawlStatus` | No | Show crawl progress or completion for a channel. | `.crawlStatus #channel` | `.crawlStatus #vrchat-worlds` |
 
 ### Maintenance
