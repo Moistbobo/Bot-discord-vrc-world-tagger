@@ -451,6 +451,16 @@ Run **once** on the droplet after deploying the V2 code but **before** starting 
    - History crawl
    - `.ignoreMe`, `.unignoreMe`
 
+6. **Retroactive quality tagging:** ⏳ Pending
+   - New command: `.updateQuality good|bad #channel [--dry-run]` (admin-only via `withProtection`).
+   - Scans a channel recursively, batching Discord fetches (100 messages per request).
+   - For each message, extracts the first world URL found (good/bad channels are designed to have exactly 1 world per message; if multiple URLs appear, only the first is counted).
+   - Checks **both** raw message content and bot embed URLs (forwarded embeds may have the world link in the embed description rather than the message text).
+   - For each found world: calls `repo.updateQuality(worldId, guildId, quality)`. Worlds not found in SQLite are skipped with a logged warning.
+   - `--dry-run` mode: performs the full scan, counts how many worlds would be updated and how many would be skipped, prints a preview report, but writes nothing to the database.
+   - Shows live progress during the scan (e.g., "Scanned 3,200 messages, updated 87 worlds to 'good'").
+   - Accept an optional `--limit` parameter to cap the number of messages scanned.
+
 **Acceptance criteria:**
 - [x] All existing tests pass (or are updated to pass).
 - [x] New tests cover tag extraction, repository CRUD, and API routes.
@@ -482,6 +492,7 @@ Run **once** on the droplet after deploying the V2 code but **before** starting 
 
 ### New files (Phase 5–6 pending)
 - `scripts/migrate-v1-to-v2.ts`
+- `src/events/messageCreate/updateQuality.ts`
 
 ### Significantly modified files (done)
 - ✅ `src/events/messageCreate/watchForVRCWorldLinks/index.ts`
