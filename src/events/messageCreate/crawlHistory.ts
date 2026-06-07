@@ -9,6 +9,7 @@ import {
   extractAllWorldIdsFromMessage,
   extractWorldIdFromMessage
 } from './watchForVRCWorldLinks/worldExtraction';
+import { buildTagSource } from './watchForVRCWorldLinks';
 import { extractWorldId } from '../../utils/regex';
 import { checkAndHandleDuplicate } from './watchForVRCWorldLinks/duplicateHandler';
 import { emojiMap } from '../../assets/media';
@@ -480,8 +481,8 @@ const crawlMessages = async (
         // ── TAGS MODE ──
         else if (mode === 'tags') {
           const result = await handleTagsMode(msg, processedWorldsCache, repo);
-          if (result.updated) recordsUpdated++;
-          if (result.notFound) recordsNotFound++;
+          recordsUpdated += result.updated;
+          recordsNotFound += result.notFound;
         }
 
         // ── QUALITY MODE ──
@@ -622,13 +623,13 @@ async function handleDiscoverMode(
 
 /**
  * Handle a single message in tags mode.
- * Returns whether the record was updated and whether it was not found.
+ * Returns counts of updated and not-found records.
  */
 async function handleTagsMode(
   msg: Message,
   processedWorldsCache: Set<string>,
   repo: ReturnType<typeof getWorldRepository>
-): Promise<{ updated: boolean; notFound: boolean }> {
+): Promise<{ updated: number; notFound: number }> {
   // Extract world ID + source content (resolves Twitter links)
   let allResults = await extractAllWorldIdsFromMessage(msg.content);
 
@@ -642,34 +643,49 @@ async function handleTagsMode(
     }
   }
 
-  const firstResult = allResults[0];
-
-  if (!firstResult) {
+  if (allResults.length === 0) {
     logger.debug(`No world found in message ${msg.id} for tag rebuild`);
-    return { updated: false, notFound: false };
+    return { updated: 0, notFound: 0 };
   }
 
-  const { worldId, sourceContent } = firstResult;
-  const cacheKey = `${worldId}-${msg.guildId}`;
+  // Build tag source from all message sources, exactly like normal processing
+  const tagSource = buildTagSource(
+    msg,
+    allResults.map((r) => r.sourceContent)
+  );
+  const tags = extractTags(tagSource);
 
-  if (!processedWorldsCache.has(cacheKey)) {
-    logger.warn(
-      `Skipping message ${msg.id}: world ${worldId} not in database (tags mode)`
+  let updated = 0;
+  let notFound = 0;
+
+  for (const { worldId, sourceContent } of allResults) {
+    const cacheKey = `${worldId}-${msg.guildId}`;
+
+    if (!processedWorldsCache.has(cacheKey)) {
+      logger.warn(
+        `Skipping message ${msg.id}: world ${worldId} not in database (tags mode)`
+      );
+      notFound++;
+      continue;
+    }
+
+    const didUpdate = repo.updateTags(
+      worldId,
+      msg.guildId!,
+      tags,
+      sourceContent
     );
-    return { updated: false, notFound: true };
-  }
 
-  const tags = extractTags(sourceContent);
-  const didUpdate = repo.updateTags(worldId, msg.guildId!, tags, sourceContent);
-
-  if (didUpdate) {
-    logger.info(
-      `Rebuilt tags for ${worldId}: [${tags.join(', ')}] from message ${msg.id}`
-    );
+    if (didUpdate) {
+      logger.info(
+        `Rebuilt tags for ${worldId}: [${tags.join(', ')}] from message ${msg.id}`
+      );
+      updated++;
+    }
   }
 
   await delay(RATE_LIMIT_DELAY);
-  return { updated: didUpdate, notFound: false };
+  return { updated, notFound };
 }
 
 /**

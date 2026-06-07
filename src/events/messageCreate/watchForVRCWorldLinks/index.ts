@@ -179,6 +179,29 @@ const buildWorldProcessQueue = async (
 };
 
 /**
+ * Build the combined text source for tag extraction from a Discord message
+ * and any resolved external content (e.g. tweet text). This mirrors the
+ * logic used in normal message processing so that crawlHistory extracts
+ * tags from the same sources.
+ */
+export function buildTagSource(
+  message: Message,
+  extraSources: (string | null | undefined)[]
+): string {
+  const tagParts = new Set<string>();
+  if (message.content) tagParts.add(message.content);
+  if (message.messageSnapshots) {
+    for (const [, snapshot] of message.messageSnapshots) {
+      if (snapshot.content) tagParts.add(snapshot.content);
+    }
+  }
+  for (const source of extraSources) {
+    if (source) tagParts.add(source);
+  }
+  return cleanContentForTagExtraction(Array.from(tagParts).join('\n'));
+}
+
+/**
  * Processes a world ID: fetches data, extracts tags, upserts to repository,
  * creates embed, sends the bot reply, then forwards it.
  */
@@ -203,18 +226,7 @@ const processWorldId = async (
   const supportedPlatforms = getSupportedPlatforms(worldData.unityPackages);
   const packageSizes = await calculatePackageSizes(worldData);
 
-  const tagParts = new Set<string>();
-  if (message.content) tagParts.add(message.content);
-  if (message.messageSnapshots) {
-    for (const [, snapshot] of message.messageSnapshots) {
-      if (snapshot.content) tagParts.add(snapshot.content);
-    }
-  }
-  if (sourceContent) tagParts.add(sourceContent);
-
-  const tagSource = cleanContentForTagExtraction(
-    Array.from(tagParts).join('\n')
-  );
+  const tagSource = buildTagSource(message, [sourceContent]);
   const tags = extractTags(tagSource);
 
   const record: WorldRecord = {
