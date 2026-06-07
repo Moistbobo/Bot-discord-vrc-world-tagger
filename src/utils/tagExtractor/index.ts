@@ -68,7 +68,7 @@ function extractStructuredTags(content: string): string[] {
       const whole = afterPrefix
         .toLowerCase()
         .replace(/^[([{'"`]+/, '')
-        .replace(/[)\]}'"`]+$/, '');
+        .replace(/[)\]}'"`?.!]+$/, '');
       const wholeValidated = validate(whole);
       if (wholeValidated && !seen.has(wholeValidated)) {
         seen.add(wholeValidated);
@@ -79,7 +79,7 @@ function extractStructuredTags(content: string): string[] {
       const tokens = afterPrefix
         .split(/[,，、\s]+/)
         .map((t) => t.trim().toLowerCase())
-        .map((t) => t.replace(/^[([{'"`]+/, '').replace(/[)\]}'"`]+$/, ''))
+        .map((t) => t.replace(/^[([{'"`]+/, '').replace(/[)\]}'"`?.!]+$/, ''))
         .filter((t) => t.length > 0);
 
       for (const token of tokens) {
@@ -110,10 +110,15 @@ function validate(token: string): string | null {
 }
 
 /**
- * Main entry point: extract validated taxonomy tags from structured tag lines.
+ * Main entry point: extract validated taxonomy tags from message content.
  *
- * Looks for lines starting with known prefixes (Tags:, Tag:, Category:, etc.)
- * and validates the comma/space-separated tokens against the taxonomy.
+ * Pass 1 – structured lines: looks for lines starting with known prefixes
+ * (Tags:, Tag:, Category:, etc.) and validates the tokens against the taxonomy.
+ *
+ * Pass 2 – unstructured "pure tag" lines: any line whose tokens are *all*
+ * valid taxonomy terms (after stripping punctuation) is also accepted.
+ * This handles messages like "https://... kino, chill" where the tags
+ * appear inline without a prefix.
  */
 export function extractTags(content: string): string[] {
   if (!content || typeof content !== 'string') {
@@ -123,6 +128,7 @@ export function extractTags(content: string): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
 
+  // ── Pass 1: structured prefix lines ──
   for (const token of extractStructuredTags(content)) {
     const validated = validate(token);
     if (!validated) continue;
@@ -130,6 +136,41 @@ export function extractTags(content: string): string[] {
 
     seen.add(validated);
     result.push(validated);
+  }
+
+  // ── Pass 2: unstructured lines that consist entirely of taxonomy terms ──
+  const lines = content.split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // Skip lines that look like they have a structured prefix (already handled)
+    // by checking if they start with a known prefix pattern.
+    const hasPrefix = ALL_PREFIXES.some((p) => p.test(line));
+    if (hasPrefix) continue;
+
+    const tokens = line
+      .split(/[,，、\s]+/)
+      .map((t) => t.trim().toLowerCase())
+      .map((t) => t.replace(/^[([{'"`]+/, '').replace(/[)\]}'"`?.!]+$/, ''))
+      .filter((t) => t.length > 0);
+
+    if (tokens.length === 0) continue;
+
+    // Only accept lines where a majority of tokens are valid taxonomy terms,
+    // and at least one token is valid. This handles lines like
+    // "meme game (little) horror" where most words are tags but a few
+    // aren't (e.g. descriptors in parentheses).
+    const validTokens = tokens.filter((t) => validate(t) !== null);
+    const validRatio = validTokens.length / tokens.length;
+    if (validTokens.length === 0 || validRatio < 0.5) continue;
+
+    for (const token of validTokens) {
+      const validated = validate(token)!;
+      if (seen.has(validated)) continue;
+      seen.add(validated);
+      result.push(validated);
+    }
   }
 
   logger.debug(`Extracted tags from content: ${JSON.stringify(result)}`);
