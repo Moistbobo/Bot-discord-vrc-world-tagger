@@ -1,5 +1,7 @@
 import { Message, GuildTextBasedChannel } from 'discord.js';
 import logger from '../../utils/logger';
+import { shouldIgnoreOwnBotMessage } from '../../botFilters';
+import { isUserOnIgnoreList } from '../../utils/ignoreList';
 import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
 import { set, get as getValue } from '../../utils/jsonAsDb/index';
 import { kvKeys, CrawlStatus } from '../../utils/jsonAsDb/types';
@@ -459,6 +461,16 @@ const crawlMessages = async (
         logger.info(
           `Crawling message ${totalMessages}: ${msg.id} at ${msg.createdAt.toISOString()}`
         );
+
+        // Skip bot's own messages and ignored users
+        if (shouldIgnoreOwnBotMessage(msg.author.id, msg.client.user?.id)) {
+          logger.debug(`Skipping message ${msg.id}: bot's own message`);
+          continue;
+        }
+        if (await isUserOnIgnoreList(msg.author.id)) {
+          logger.debug(`Skipping message ${msg.id}: author is on ignore list`);
+          continue;
+        }
 
         // ── DISCOVER MODE ──
         if (mode === 'discover') {
