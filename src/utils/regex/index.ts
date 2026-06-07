@@ -381,7 +381,9 @@ export function cleanContentForTagExtraction(content: string): string {
   return content
     .replace(/https?:\/\/[^\s]+|www\.[^\s]+/gi, ' ')
     .replace(/wrld_[a-f0-9-]{36}/gi, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/[ \t]+/g, ' ') // collapse horizontal whitespace only
+    .replace(/\n[ \t]*/g, '\n') // trim leading spaces from each line
+    .replace(/[ \t]*\n/g, '\n') // trim trailing spaces from each line
     .trim();
 }
 
