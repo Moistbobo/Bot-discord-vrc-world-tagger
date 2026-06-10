@@ -47,7 +47,7 @@ export const extractAllWorldIdsFromMessage = async (
       for (const worldId of tweetWorldIds) {
         if (!seen.has(worldId)) {
           seen.add(worldId);
-          results.push({ worldId, sourceContent: tweetContent });
+          results.push({ worldId, sourceContent: content });
         }
       }
       continue;
@@ -60,7 +60,7 @@ export const extractAllWorldIdsFromMessage = async (
     );
     if (worldIdFromText && !seen.has(worldIdFromText)) {
       seen.add(worldIdFromText);
-      results.push({ worldId: worldIdFromText, sourceContent: tweetContent });
+      results.push({ worldId: worldIdFromText, sourceContent: content });
     }
   }
 
