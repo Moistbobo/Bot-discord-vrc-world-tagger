@@ -301,6 +301,192 @@ describe('WorldRepository', () => {
       expect(total).toBe(1);
     });
 
+    it('filters by search term across name, author, source content, world id and tags', () => {
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_match_name',
+          guildId: 'guild-1',
+          name: 'Ghost Forest',
+          authorName: 'SomeAuthor',
+          tags: ['horror']
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_match_author',
+          guildId: 'guild-1',
+          name: 'Mystery Mansion',
+          authorName: 'GhostlyBuilder',
+          tags: ['game']
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_match_tag',
+          guildId: 'guild-1',
+          name: 'Plain World',
+          authorName: 'PlainAuthor',
+          tags: ['ghost']
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_match_source',
+          guildId: 'guild-1',
+          name: 'Source World',
+          authorName: 'SourceAuthor',
+          tags: ['puzzle'],
+          sourceContent: 'ghostly atmosphere'
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_ghost_id',
+          guildId: 'guild-1',
+          name: 'Id World',
+          authorName: 'IdAuthor',
+          tags: ['rpg'],
+          sourceContent: null
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_no_match',
+          guildId: 'guild-1',
+          name: 'Sunny Beach',
+          authorName: 'SunDev',
+          tags: ['relax']
+        })
+      );
+
+      const { rows, total } = repo.getAllPaginated(20, 0, { search: 'ghost' });
+      expect(total).toBe(5);
+      expect(rows.map((r) => r.worldId).sort()).toEqual([
+        'wrld_ghost_id',
+        'wrld_match_author',
+        'wrld_match_name',
+        'wrld_match_source',
+        'wrld_match_tag'
+      ]);
+    });
+
+    it('requires all search terms to match (AND logic)', () => {
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_both_terms',
+          guildId: 'guild-1',
+          name: 'Crystal Cave',
+          authorName: 'CaveAuthor',
+          tags: ['crystal']
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_one_term',
+          guildId: 'guild-1',
+          name: 'Crystal Lake',
+          authorName: 'LakeAuthor',
+          tags: ['water']
+        })
+      );
+
+      const { rows, total } = repo.getAllPaginated(20, 0, {
+        search: 'crystal cave'
+      });
+      expect(total).toBe(1);
+      expect(rows[0].worldId).toBe('wrld_both_terms');
+    });
+
+    it('ignores empty or whitespace-only search', () => {
+      const { rows: empty } = repo.getAllPaginated(10, 0, { search: '' });
+      const { rows: whitespace } = repo.getAllPaginated(10, 0, {
+        search: '   '
+      });
+      const { rows: noSearch } = repo.getAllPaginated(10, 0);
+
+      expect(empty).toHaveLength(5);
+      expect(whitespace).toHaveLength(5);
+      expect(noSearch).toHaveLength(5);
+    });
+
+    it('combines search with tag and quality filters', () => {
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_good_match',
+          guildId: 'guild-1',
+          name: 'Ghost Ship',
+          tags: ['horror']
+        })
+      );
+      repo.updateQuality('wrld_good_match', 'guild-1', 'good');
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_bad_match',
+          guildId: 'guild-1',
+          name: 'Ghost Town',
+          tags: ['horror']
+        })
+      );
+      repo.updateQuality('wrld_bad_match', 'guild-1', 'bad');
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_good_no_match',
+          guildId: 'guild-1',
+          name: 'Sunny Ship',
+          tags: ['horror']
+        })
+      );
+      repo.updateQuality('wrld_good_no_match', 'guild-1', 'good');
+
+      const { rows, total } = repo.getAllPaginated(20, 0, {
+        search: 'ghost',
+        tags: ['horror'],
+        quality: ['good']
+      });
+      expect(total).toBe(1);
+      expect(rows[0].worldId).toBe('wrld_good_match');
+    });
+
+    it('is case-insensitive for ASCII search terms', () => {
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_case',
+          guildId: 'guild-1',
+          name: 'UPPERCASE WORLD'
+        })
+      );
+
+      const { rows, total } = repo.getAllPaginated(20, 0, {
+        search: 'uppercase'
+      });
+      expect(total).toBe(1);
+      expect(rows[0].worldId).toBe('wrld_case');
+    });
+
+    it('respects pagination when searching', () => {
+      for (let i = 0; i < 5; i++) {
+        repo.upsert(
+          createTestRecord({
+            worldId: `wrld_paginated_${i}`,
+            guildId: 'guild-1',
+            name: `Searchable World ${i}`
+          })
+        );
+      }
+
+      const { rows: first, total } = repo.getAllPaginated(2, 0, {
+        search: 'Searchable'
+      });
+      const { rows: second } = repo.getAllPaginated(2, 2, {
+        search: 'Searchable'
+      });
+
+      expect(total).toBe(5);
+      expect(first).toHaveLength(2);
+      expect(second).toHaveLength(2);
+      expect(first[0].worldId).not.toBe(second[0].worldId);
+    });
+
     it('combines guildId and tag filters', () => {
       repo.upsert(
         createTestRecord({
