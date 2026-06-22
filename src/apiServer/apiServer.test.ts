@@ -264,6 +264,63 @@ describe('API Server', () => {
       );
     });
 
+    it('passes search filter to repository', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?search=ghostly',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ search: 'ghostly' })
+      );
+    });
+
+    it('ignores empty or whitespace-only search query', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?search=%20%20',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(50, 0, undefined);
+    });
+
+    it('combines search, tag and quality filters', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?search=spooky&tag=horror&quality=good',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({
+          search: 'spooky',
+          tags: ['horror'],
+          quality: ['good']
+        })
+      );
+    });
+
     it('caps limit at 500', async () => {
       const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
       asMock(getWorldRepository).mockReturnValue(

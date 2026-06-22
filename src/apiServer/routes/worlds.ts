@@ -63,9 +63,17 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         ? [String(query.quality) as 'good' | 'bad']
         : undefined;
 
-    const filters: { tags?: string[]; quality?: ('good' | 'bad')[] } = {};
+    const filters: {
+      tags?: string[];
+      quality?: ('good' | 'bad')[];
+      search?: string;
+    } = {};
     if (tags) filters.tags = tags;
     if (quality) filters.quality = quality;
+
+    const search =
+      typeof query.search === 'string' ? query.search.trim() : undefined;
+    if (search) filters.search = search;
 
     const { rows, total } = getWorldRepository().getAllPaginated(
       limit,

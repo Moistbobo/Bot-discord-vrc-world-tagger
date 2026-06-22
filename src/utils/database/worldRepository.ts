@@ -266,6 +266,7 @@ export class WorldRepository {
       tags?: string[];
       guildId?: string;
       quality?: ('good' | 'bad')[];
+      search?: string;
     }
   ): { rows: WorldRecord[]; total: number } {
     const whereParts: string[] = [];
@@ -288,6 +289,17 @@ export class WorldRepository {
           'EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)'
         );
         params.push(tag);
+      }
+    }
+
+    if (filters?.search) {
+      const terms = filters.search.trim().split(/\s+/).filter(Boolean);
+      for (const term of terms) {
+        const pattern = `%${term}%`;
+        whereParts.push(
+          `(name LIKE ? OR author_name LIKE ? OR source_content LIKE ? OR world_id LIKE ? OR EXISTS (SELECT 1 FROM json_each(tags) WHERE value LIKE ?))`
+        );
+        params.push(pattern, pattern, pattern, pattern, pattern);
       }
     }
 
