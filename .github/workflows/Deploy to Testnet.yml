@@ -1,8 +1,8 @@
-name: Deploy to Droplet (TEST)
+name: Deploy to Testnet
 
 on:
   push:
-    branches: [test]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
