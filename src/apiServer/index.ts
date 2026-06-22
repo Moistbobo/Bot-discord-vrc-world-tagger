@@ -59,12 +59,13 @@ export async function stopApiServer(): Promise<void> {
 export async function startApiServer() {
   const fastify = createApiServer();
   const port = Config.API_PORT;
+  const host = Config.API_HOST;
 
   try {
-    await fastify.listen({ port, host: '0.0.0.0' });
+    await fastify.listen({ port, host });
     apiServerInstance = fastify;
     isApiRunning = true;
-    logger.info(`🚀 API server listening on http://0.0.0.0:${port}`);
+    logger.info(`🚀 API server listening on http://${host}:${port}`);
   } catch (error) {
     logger.error('Failed to start API server:', error);
   }
