@@ -350,6 +350,121 @@ describe('API Server', () => {
 
       expect(getAllPaginated).toHaveBeenCalledWith(50, 100, undefined);
     });
+
+    it('passes minCapacity filter to repository', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?minCapacity=10',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ minCapacity: 10 })
+      );
+    });
+
+    it('passes maxCapacity filter to repository', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?maxCapacity=40',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ maxCapacity: 40 })
+      );
+    });
+
+    it('combines capacity range with tag, quality, and search filters', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?minCapacity=10&maxCapacity=40&quality=good&tag=horror&search=spooky',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({
+          minCapacity: 10,
+          maxCapacity: 40,
+          quality: ['good'],
+          tags: ['horror'],
+          search: 'spooky'
+        })
+      );
+    });
+
+    it('returns 400 when minCapacity is greater than maxCapacity', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/worlds?minCapacity=50&maxCapacity=20',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'minCapacity must be less than or equal to maxCapacity'
+      });
+    });
+
+    it('returns 400 when minCapacity is below 1', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/worlds?minCapacity=0',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'minCapacity must be at least 1'
+      });
+    });
+
+    it('returns 400 when maxCapacity is above 80', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/worlds?maxCapacity=81',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'maxCapacity must be at most 80'
+      });
+    });
+
+    it('returns 400 for non-integer capacity values', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/worlds?minCapacity=abc',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'minCapacity must be an integer'
+      });
+    });
   });
 
   describe('GET /api/worlds/:worldId', () => {
@@ -404,8 +519,36 @@ describe('API Server', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.tags).toEqual([
-        { tag: 'horror', count: 312 },
-        { tag: 'game', count: 145 }
+        { tag: 'game', count: 145 },
+        { tag: 'horror', count: 312 }
+      ]);
+    });
+
+    it('returns tags sorted alphabetically case-insensitively', async () => {
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({
+          getUniqueTags: jest.fn(() => [
+            { tag: 'zen', count: 10 },
+            { tag: 'Action', count: 5 },
+            { tag: 'midway', count: 7 },
+            { tag: 'adventure', count: 3 }
+          ])
+        })
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/tags',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.tags.map((t: { tag: string }) => t.tag)).toEqual([
+        'Action',
+        'adventure',
+        'midway',
+        'zen'
       ]);
     });
   });

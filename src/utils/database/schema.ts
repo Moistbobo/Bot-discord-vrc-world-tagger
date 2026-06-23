@@ -75,6 +75,14 @@ const MIGRATIONS: Migration[] = [
         );
       }
     }
+  },
+  {
+    name: '004_add_capacity_index',
+    run: (db) => {
+      db.exec(
+        `CREATE INDEX IF NOT EXISTS idx_worlds_capacity ON world_records(capacity)`
+      );
+    }
   }
 ];
 
