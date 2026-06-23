@@ -45,9 +45,30 @@ function parseTagQuery(raw: unknown): string[] | undefined {
   });
 }
 
+function parseIntegerParam(
+  raw: unknown,
+  options: { min?: number; max?: number; name: string }
+): number | undefined {
+  if (raw === undefined || raw === null || raw === '') return undefined;
+
+  const value = Number(raw);
+  if (!Number.isInteger(value)) {
+    throw new Error(`${options.name} must be an integer`);
+  }
+
+  if (options.min !== undefined && value < options.min) {
+    throw new Error(`${options.name} must be at least ${options.min}`);
+  }
+  if (options.max !== undefined && value > options.max) {
+    throw new Error(`${options.name} must be at most ${options.max}`);
+  }
+
+  return value;
+}
+
 const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // GET /api/worlds
-  fastify.get('/api/worlds', async (request) => {
+  fastify.get('/api/worlds', async (request, reply) => {
     const query = request.query as Record<string, unknown>;
 
     const limit = Math.min(Number(query.limit ?? 50), 500);
@@ -63,13 +84,47 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         ? [String(query.quality) as 'good' | 'bad']
         : undefined;
 
+    let minCapacity: number | undefined;
+    let maxCapacity: number | undefined;
+    try {
+      minCapacity = parseIntegerParam(query.minCapacity, {
+        name: 'minCapacity',
+        min: 1,
+        max: 80
+      });
+      maxCapacity = parseIntegerParam(query.maxCapacity, {
+        name: 'maxCapacity',
+        min: 1,
+        max: 80
+      });
+    } catch (error) {
+      return reply.code(400).send({
+        error:
+          error instanceof Error ? error.message : 'Invalid capacity filter'
+      });
+    }
+
+    if (
+      minCapacity !== undefined &&
+      maxCapacity !== undefined &&
+      minCapacity > maxCapacity
+    ) {
+      return reply.code(400).send({
+        error: 'minCapacity must be less than or equal to maxCapacity'
+      });
+    }
+
     const filters: {
       tags?: string[];
       quality?: ('good' | 'bad')[];
       search?: string;
+      minCapacity?: number;
+      maxCapacity?: number;
     } = {};
     if (tags) filters.tags = tags;
     if (quality) filters.quality = quality;
+    if (minCapacity !== undefined) filters.minCapacity = minCapacity;
+    if (maxCapacity !== undefined) filters.maxCapacity = maxCapacity;
 
     const search =
       typeof query.search === 'string' ? query.search.trim() : undefined;

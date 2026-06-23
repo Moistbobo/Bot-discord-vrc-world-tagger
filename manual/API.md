@@ -73,12 +73,15 @@ Returns a paginated, filterable list of world records.
 
 **Query parameters**
 
-| Parameter | Type             | Default | Max | Description                                        |
-|-----------|------------------|---------|-----|----------------------------------------------------|
-| `limit`   | number           | `50`    | 500 | Number of records to return.                       |
-| `offset`  | number           | `0`     | —   | Number of records to skip (for pagination).        |
-| `tag`     | string / string[] | —      | —   | Filter by tag(s). Comma-separated or repeated. Multiple values use AND logic. |
-| `quality` | string / string[] | —      | —   | Filter by quality. Values: `good`, `bad`.         |
+| Parameter     | Type              | Default | Max | Description                                        |
+|---------------|-------------------|---------|-----|----------------------------------------------------|
+| `limit`       | number            | `50`    | 500 | Number of records to return.                       |
+| `offset`      | number            | `0`     | —   | Number of records to skip (for pagination).        |
+| `tag`         | string / string[] | —       | —   | Filter by tag(s). Comma-separated or repeated. Multiple values use AND logic. |
+| `quality`     | string / string[] | —       | —   | Filter by quality. Values: `good`, `bad`.         |
+| `search`      | string            | —       | —   | Search across name, author, source content, world id, and tags. |
+| `minCapacity` | integer           | —       | —   | Minimum world capacity (inclusive). Must be ≥ 1 and ≤ 80. |
+| `maxCapacity` | integer           | —       | —   | Maximum world capacity (inclusive). Must be ≥ 1 and ≤ 80. |
 
 **Response**
 
@@ -124,12 +127,30 @@ GET /api/worlds?quality=bad
 GET /api/worlds?quality=good&quality=bad
 ```
 
-**Combining filters**
+**Filtering by capacity**
 
-Tag and quality filters work together with AND logic:
+Filter worlds by maximum player capacity using an inclusive range. VRChat worlds currently support 1–80 players. Worlds with an unknown (`null`) capacity are excluded whenever a capacity filter is active.
 
 ```
-GET /api/worlds?tag=horror&quality=good
+GET /api/worlds?minCapacity=10
+GET /api/worlds?maxCapacity=40
+GET /api/worlds?minCapacity=10&maxCapacity=40
+```
+
+Validation rules:
+
+- `minCapacity` and `maxCapacity` must be integers.
+- `minCapacity` must be at least `1`.
+- `maxCapacity` must be at most `80`.
+- `minCapacity` must be less than or equal to `maxCapacity` when both are provided.
+- Invalid values result in a **400 Bad Request**.
+
+**Combining filters**
+
+Tag, quality, search, and capacity filters work together with AND logic:
+
+```
+GET /api/worlds?minCapacity=10&maxCapacity=40&quality=good&tag=horror
 ```
 
 **Pagination**
@@ -235,10 +256,11 @@ Each world object returned by the API has the following fields:
 
 ## Error Responses
 
-| Status Code | Meaning              | Body                              |
-|-------------|----------------------|-----------------------------------|
-| `401`       | Missing / invalid token | `{ "error": "Unauthorized" }`  |
-| `404`       | World not found        | `{ "error": "World not found" }` |
+| Status Code | Meaning                | Body                                           |
+|-------------|------------------------|------------------------------------------------|
+| `400`       | Invalid query params   | `{ "error": "minCapacity must be an integer" }` |
+| `401`       | Missing / invalid token | `{ "error": "Unauthorized" }`                  |
+| `404`       | World not found        | `{ "error": "World not found" }`               |
 
 ---
 
@@ -255,6 +277,10 @@ curl -H "Authorization: Bearer my-token" \
 # List worlds tagged both "horror" and "game", marked as "good"
 curl -H "Authorization: Bearer my-token" \
   "http://localhost:3000/api/worlds?tag=horror,game&quality=good"
+
+# List worlds with capacity between 10 and 40, marked as good
+curl -H "Authorization: Bearer my-token" \
+  "http://localhost:3000/api/worlds?minCapacity=10&maxCapacity=40&quality=good"
 
 # Get a specific world
 curl -H "Authorization: Bearer my-token" \
