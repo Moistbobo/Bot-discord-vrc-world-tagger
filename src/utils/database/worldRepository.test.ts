@@ -505,6 +505,123 @@ describe('WorldRepository', () => {
     });
   });
 
+  describe('capacity filtering', () => {
+    beforeEach(() => {
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_small',
+          guildId: 'guild-1',
+          capacity: 8
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_medium',
+          guildId: 'guild-1',
+          capacity: 32
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_large',
+          guildId: 'guild-1',
+          capacity: 80
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_unknown',
+          guildId: 'guild-1',
+          capacity: null
+        })
+      );
+    });
+
+    it('filters by minCapacity only', () => {
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        minCapacity: 20
+      });
+      expect(total).toBe(2);
+      expect(rows.map((r) => r.worldId).sort()).toEqual([
+        'wrld_large',
+        'wrld_medium'
+      ]);
+    });
+
+    it('filters by maxCapacity only', () => {
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        maxCapacity: 20
+      });
+      expect(total).toBe(1);
+      expect(rows[0].worldId).toBe('wrld_small');
+    });
+
+    it('filters by capacity range', () => {
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        minCapacity: 10,
+        maxCapacity: 40
+      });
+      expect(total).toBe(1);
+      expect(rows[0].worldId).toBe('wrld_medium');
+    });
+
+    it('excludes records with null capacity when capacity filter is active', () => {
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        maxCapacity: 80
+      });
+      expect(total).toBe(3);
+      expect(rows.map((r) => r.worldId).sort()).toEqual([
+        'wrld_large',
+        'wrld_medium',
+        'wrld_small'
+      ]);
+    });
+
+    it('does not apply a capacity filter when neither param is provided', () => {
+      const { total } = repo.getAllPaginated(10, 0);
+      expect(total).toBe(4);
+    });
+
+    it('combines capacity filter with tag and quality filters', () => {
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_match',
+          guildId: 'guild-1',
+          capacity: 32,
+          tags: ['horror']
+        })
+      );
+      repo.updateQuality('wrld_match', 'guild-1', 'good');
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_wrong_quality',
+          guildId: 'guild-1',
+          capacity: 32,
+          tags: ['horror']
+        })
+      );
+      repo.updateQuality('wrld_wrong_quality', 'guild-1', 'bad');
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_wrong_capacity',
+          guildId: 'guild-1',
+          capacity: 4,
+          tags: ['horror']
+        })
+      );
+      repo.updateQuality('wrld_wrong_capacity', 'guild-1', 'good');
+
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        minCapacity: 10,
+        maxCapacity: 40,
+        tags: ['horror'],
+        quality: ['good']
+      });
+      expect(total).toBe(1);
+      expect(rows[0].worldId).toBe('wrld_match');
+    });
+  });
+
   describe('getUniqueTags', () => {
     it('returns empty array when no records', () => {
       expect(repo.getUniqueTags()).toEqual([]);

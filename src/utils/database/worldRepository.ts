@@ -267,6 +267,8 @@ export class WorldRepository {
       guildId?: string;
       quality?: ('good' | 'bad')[];
       search?: string;
+      minCapacity?: number;
+      maxCapacity?: number;
     }
   ): { rows: WorldRecord[]; total: number } {
     const whereParts: string[] = [];
@@ -301,6 +303,23 @@ export class WorldRepository {
         );
         params.push(pattern, pattern, pattern, pattern, pattern);
       }
+    }
+
+    if (
+      filters?.minCapacity !== undefined ||
+      filters?.maxCapacity !== undefined
+    ) {
+      whereParts.push('capacity IS NOT NULL');
+    }
+
+    if (filters?.minCapacity !== undefined) {
+      whereParts.push('capacity >= ?');
+      params.push(filters.minCapacity);
+    }
+
+    if (filters?.maxCapacity !== undefined) {
+      whereParts.push('capacity <= ?');
+      params.push(filters.maxCapacity);
     }
 
     const whereClause =
