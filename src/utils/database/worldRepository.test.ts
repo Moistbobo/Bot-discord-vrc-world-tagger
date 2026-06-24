@@ -622,6 +622,105 @@ describe('WorldRepository', () => {
     });
   });
 
+  describe('platform filtering', () => {
+    beforeEach(() => {
+      db.prepare('DELETE FROM world_records').run();
+
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_pc_only',
+          guildId: 'guild-1',
+          platforms: ['standalonewindows']
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_pc_and_android',
+          guildId: 'guild-1',
+          platforms: ['standalonewindows', 'android']
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_all_three',
+          guildId: 'guild-1',
+          platforms: ['standalonewindows', 'android', 'ios']
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_ios_only',
+          guildId: 'guild-1',
+          platforms: ['ios']
+        })
+      );
+    });
+
+    it('filters by a single platform', () => {
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        platforms: ['standalonewindows']
+      });
+      expect(total).toBe(3);
+      expect(rows.map((r) => r.worldId).sort()).toEqual([
+        'wrld_all_three',
+        'wrld_pc_and_android',
+        'wrld_pc_only'
+      ]);
+    });
+
+    it('filters by multiple platforms with AND logic', () => {
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        platforms: ['standalonewindows', 'android']
+      });
+      expect(total).toBe(2);
+      expect(rows.map((r) => r.worldId).sort()).toEqual([
+        'wrld_all_three',
+        'wrld_pc_and_android'
+      ]);
+    });
+
+    it('returns no results when platform does not match', () => {
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        platforms: ['unknown_platform']
+      });
+      expect(total).toBe(0);
+      expect(rows).toEqual([]);
+    });
+
+    it('combines platform filter with other filters', () => {
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_match',
+          guildId: 'guild-1',
+          platforms: ['standalonewindows', 'android'],
+          tags: ['horror'],
+          capacity: 32
+        })
+      );
+      repo.updateQuality('wrld_match', 'guild-1', 'good');
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_wrong_platform',
+          guildId: 'guild-1',
+          platforms: ['standalonewindows'],
+          tags: ['horror'],
+          capacity: 32
+        })
+      );
+      repo.updateQuality('wrld_wrong_platform', 'guild-1', 'good');
+
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        platforms: ['android'],
+        tags: ['horror'],
+        quality: ['good'],
+        minCapacity: 10,
+        maxCapacity: 40
+      });
+      expect(total).toBe(1);
+      expect(rows[0].worldId).toBe('wrld_match');
+    });
+  });
+
   describe('getUniqueTags', () => {
     it('returns empty array when no records', () => {
       expect(repo.getUniqueTags()).toEqual([]);
