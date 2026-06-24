@@ -9,9 +9,8 @@ import {
   extractAllWorldIdsFromMessage,
   extractWorldIdFromMessage
 } from './watchForVRCWorldLinks/worldExtraction';
-import { buildTagSource } from './watchForVRCWorldLinks';
+import { buildTagSource, processWorldId } from './watchForVRCWorldLinks';
 import { extractWorldId } from '../../utils/regex';
-import { checkAndHandleDuplicate } from './watchForVRCWorldLinks/duplicateHandler';
 import { emojiMap } from '../../assets/media';
 import { getWorldRepository } from '../../utils/database/worldRepository';
 import { extractTags } from '../../utils/tagExtractor';
@@ -32,6 +31,16 @@ interface ParsedCrawlCommand {
 
 // Helper function to delay execution
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Convert a Discord message's created timestamp to Unix seconds.
+ * This is the value stored in internal_add_date.
+ */
+const getMessageInternalAddDate = (msg: Message): number => {
+  return typeof msg.createdTimestamp === 'number'
+    ? Math.floor(msg.createdTimestamp / 1000)
+    : Math.floor(Date.now() / 1000);
+};
 
 /**
  * Parse .crawlHistory command into mode and options.
@@ -475,7 +484,12 @@ const crawlMessages = async (
 
         // ── DISCOVER MODE ──
         if (mode === 'discover') {
-          await handleDiscoverMode(msg, processedWorldsCache, crawlStatus);
+          await handleDiscoverMode(
+            msg,
+            processedWorldsCache,
+            crawlStatus,
+            repo
+          );
         }
 
         // ── TAGS MODE ──
@@ -579,17 +593,27 @@ const crawlMessages = async (
 
 /**
  * Handle a single message in discover mode.
+ * New worlds are fetched and inserted silently; existing worlds have their
+ * internal_add_date backfilled from the original Discord message timestamp.
  */
 async function handleDiscoverMode(
   msg: Message,
   processedWorldsCache: Set<string>,
-  crawlStatus: CrawlStatus
+  crawlStatus: CrawlStatus,
+  repo: ReturnType<typeof getWorldRepository>
 ): Promise<void> {
+  const internalAddDate = getMessageInternalAddDate(msg);
+
   // Quick cache check
   const potentialWorldId = extractWorldId(msg.content);
   if (potentialWorldId) {
     const cacheKey = `${potentialWorldId}-${msg.guildId}`;
     if (processedWorldsCache.has(cacheKey)) {
+      repo.backfillInternalAddDate(
+        potentialWorldId,
+        msg.guildId!,
+        internalAddDate
+      );
       logger.debug(
         `Skipping message ${msg.id}: world ${potentialWorldId} already processed (cache hit)`
       );
@@ -605,17 +629,33 @@ async function handleDiscoverMode(
     return;
   }
 
-  // Use the existing duplicate detection system in silent mode
-  const isDuplicate = await checkAndHandleDuplicate(msg, worldId, true);
+  const cacheKey = `${worldId}-${msg.guildId}`;
 
-  if (!isDuplicate) {
-    crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
-    logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
-
-    const cacheKey = `${worldId}-${msg.guildId}`;
+  // Existing world: backfill internal_add_date and move on
+  if (repo.getByWorldAndGuild(worldId, msg.guildId!)) {
+    repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
     processedWorldsCache.add(cacheKey);
-  } else {
     logger.info(`World found in message ${msg.id}: ${worldId} (DUPLICATE)`);
+    await delay(RATE_LIMIT_DELAY);
+    return;
+  }
+
+  // New world: silently fetch and persist it so it has the correct timestamp
+  try {
+    await processWorldId(msg, worldId, msg.content, {
+      skipDuplicateCheck: true,
+      silent: true,
+      internalAddDate
+    });
+
+    crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
+    processedWorldsCache.add(cacheKey);
+    logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
+  } catch (error) {
+    logger.warn(
+      `Could not persist discovered world ${worldId} from message ${msg.id}:`,
+      error
+    );
   }
 
   await delay(RATE_LIMIT_DELAY);
@@ -655,6 +695,7 @@ async function handleTagsMode(
   );
   const tags = extractTags(tagSource);
 
+  const internalAddDate = getMessageInternalAddDate(msg);
   let updated = 0;
   let notFound = 0;
 
@@ -675,6 +716,8 @@ async function handleTagsMode(
       tags,
       sourceContent
     );
+
+    repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
 
     if (didUpdate) {
       logger.info(
@@ -716,6 +759,8 @@ async function handleQualityMode(
   }
 
   const didUpdate = repo.updateQuality(worldId, msg.guildId!, qualityValue);
+  const internalAddDate = getMessageInternalAddDate(msg);
+  repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
 
   if (didUpdate) {
     logger.info(

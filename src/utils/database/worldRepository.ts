@@ -18,6 +18,7 @@ export interface WorldRecord {
   quality?: 'good' | 'bad' | null;
   createdAt?: number;
   updatedAt?: number;
+  internalAddDate?: number | null;
 }
 
 function rowToRecord(row: Record<string, unknown>): WorldRecord {
@@ -36,7 +37,8 @@ function rowToRecord(row: Record<string, unknown>): WorldRecord {
     vrchatData: row.vrchat_data as string | null,
     quality: (row.quality as 'good' | 'bad' | null) ?? null,
     createdAt: row.created_at as number,
-    updatedAt: row.updated_at as number
+    updatedAt: row.updated_at as number,
+    internalAddDate: (row.internal_add_date as number | null) ?? null
   };
 }
 
@@ -57,16 +59,18 @@ export class WorldRepository {
   }
 
   /**
-   * Upsert a world record. Preserves created_at and id on update;
-   * updates all other fields and sets updated_at to now.
+   * Upsert a world record. Preserves created_at, id, and internal_add_date on
+   * update; updates all other fields and sets updated_at to now. When
+   * internal_add_date is missing on both insert and the existing row, the
+   * current time is used as a fallback.
    */
   upsert(record: WorldRecord): void {
     const sql = `
       INSERT INTO world_records
         (world_id, guild_id, message_id, name, author_name, capacity,
-         platforms, tags, image_url, source_content, vrchat_data, created_at, updated_at)
+         platforms, tags, image_url, source_content, vrchat_data, created_at, updated_at, internal_add_date)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, strftime('%s','now')), strftime('%s','now'))
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, strftime('%s','now')), strftime('%s','now'), COALESCE(?, strftime('%s','now')))
       ON CONFLICT(world_id, guild_id) DO UPDATE SET
         name = excluded.name,
         author_name = excluded.author_name,
@@ -76,7 +80,8 @@ export class WorldRepository {
         image_url = excluded.image_url,
         source_content = excluded.source_content,
         vrchat_data = excluded.vrchat_data,
-        updated_at = excluded.updated_at
+        updated_at = excluded.updated_at,
+        internal_add_date = COALESCE(world_records.internal_add_date, excluded.internal_add_date)
     `;
 
     const stmt = this.db.prepare(sql);
@@ -92,12 +97,44 @@ export class WorldRepository {
       record.imageUrl,
       record.sourceContent,
       record.vrchatData,
-      record.createdAt ?? null
+      record.createdAt ?? null,
+      record.internalAddDate ?? null
     );
 
     logger.debug(
       `Upserted world record ${record.worldId} in guild ${record.guildId}`
     );
+  }
+
+  /**
+   * Set internal_add_date on an existing record only when it is currently null.
+   * Used by crawlHistory and the v1 -> v2 migration to backfill the original
+   * Discord message timestamp without overwriting an already-known value.
+   */
+  backfillInternalAddDate(
+    worldId: string,
+    guildId: string,
+    internalAddDate: number
+  ): boolean {
+    const existing = this.getByWorldAndGuild(worldId, guildId);
+    if (!existing || existing.internalAddDate != null) {
+      return false;
+    }
+
+    const sql = `
+      UPDATE world_records
+      SET internal_add_date = ?
+      WHERE world_id = ? AND guild_id = ?
+    `;
+    const stmt = this.db.prepare(sql);
+    const result = stmt.run(internalAddDate, worldId, guildId);
+    const didUpdate = result.changes > 0;
+    if (didUpdate) {
+      logger.info(
+        `Backfilled internal_add_date for world ${worldId} in guild ${guildId}: ${internalAddDate}`
+      );
+    }
+    return didUpdate;
   }
 
   /**
@@ -134,8 +171,8 @@ export class WorldRepository {
   deleteByWorldAndGuild(worldId: string, guildId: string): boolean {
     const archiveSql = `
       INSERT INTO deleted_world_records
-        (world_id, guild_id, message_id, name, author_name, capacity, platforms, tags, image_url, source_content, vrchat_data, created_at, updated_at)
-      SELECT world_id, guild_id, message_id, name, author_name, capacity, platforms, tags, image_url, source_content, vrchat_data, created_at, updated_at
+        (world_id, guild_id, message_id, name, author_name, capacity, platforms, tags, image_url, source_content, vrchat_data, created_at, updated_at, internal_add_date)
+      SELECT world_id, guild_id, message_id, name, author_name, capacity, platforms, tags, image_url, source_content, vrchat_data, created_at, updated_at, internal_add_date
       FROM world_records
       WHERE world_id = ? AND guild_id = ?
     `;

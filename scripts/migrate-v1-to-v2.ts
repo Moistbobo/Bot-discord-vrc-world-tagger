@@ -8,7 +8,10 @@ import { getDatabase } from '../src/utils/database';
 import { WorldRepository } from '../src/utils/database/worldRepository';
 import { runMigrations } from '../src/utils/database/schema';
 import { fetchWorldData } from '../src/events/messageCreate/watchForVRCWorldLinks/worldData';
-import { getSupportedPlatforms } from '../src/utils/helpers';
+import {
+  getSupportedPlatforms,
+  getDiscordMessageTimestampSeconds
+} from '../src/utils/helpers';
 import logger from '../src/utils/logger';
 
 const safeJsonStringify = (value: unknown): string =>
@@ -114,6 +117,7 @@ async function main(): Promise<void> {
     }
 
     try {
+      const internalAddDate = getDiscordMessageTimestampSeconds(messageId);
       const worldData = await fetchWorldData(worldId);
 
       if (!worldData || !worldData.id) {
@@ -126,6 +130,7 @@ async function main(): Promise<void> {
         worldId,
         guildId,
         messageId,
+        internalAddDate,
         name: worldData.name ?? null,
         authorName: worldData.authorName ?? null,
         capacity: worldData.capacity ?? null,

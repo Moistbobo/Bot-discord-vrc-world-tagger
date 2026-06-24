@@ -19,6 +19,7 @@ function createTestRecord(overrides: Partial<WorldRecord> = {}): WorldRecord {
     imageUrl: 'https://example.com/image.png',
     sourceContent: 'A horror game world #horror #game',
     vrchatData: '{"id":"wrld_test"}',
+    internalAddDate: 1_700_000_000,
     ...overrides
   };
 }
@@ -50,24 +51,30 @@ describe('WorldRepository', () => {
       expect(found!.tags).toEqual(['horror', 'game']);
       expect(found!.platforms).toEqual(['standalonewindows', 'android']);
       expect(found!.createdAt).toBeDefined();
+      expect(found!.internalAddDate).toBe(1_700_000_000);
     });
 
-    it('updates an existing record without resetting created_at', () => {
+    it('updates an existing record without resetting created_at or internal_add_date', () => {
       const record = createTestRecord();
       repo.upsert(record);
 
       const first = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
       const originalCreatedAt = first.createdAt;
+      const originalInternalAddDate = first.internalAddDate;
       const originalId = first.id;
 
       // Small delay to ensure updated_at changes
-      const updated = createTestRecord({ name: 'Updated World' });
+      const updated = createTestRecord({
+        name: 'Updated World',
+        internalAddDate: 1_800_000_000
+      });
       repo.upsert(updated);
 
       const second = repo.getByWorldAndGuild(record.worldId, record.guildId)!;
       expect(second.id).toBe(originalId);
       expect(second.name).toBe('Updated World');
       expect(second.createdAt).toBe(originalCreatedAt);
+      expect(second.internalAddDate).toBe(originalInternalAddDate);
       expect(second.messageId).toBe(record.messageId); // original message_id preserved
       expect(second.updatedAt).toBeGreaterThanOrEqual(originalCreatedAt!);
     });
@@ -83,6 +90,93 @@ describe('WorldRepository', () => {
       expect(all).toHaveLength(2);
       expect(all.map((r) => r.guildId)).toContain('guild-a');
       expect(all.map((r) => r.guildId)).toContain('guild-b');
+    });
+
+    it('fills internal_add_date on conflict when the existing value is null', () => {
+      // Simulate a legacy row that has no internal_add_date
+      db.prepare(
+        `INSERT INTO world_records
+          (world_id, guild_id, message_id, name, author_name, capacity,
+           platforms, tags, image_url, source_content, vrchat_data, created_at, updated_at, internal_add_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        createTestRecord().worldId,
+        createTestRecord().guildId,
+        createTestRecord().messageId,
+        createTestRecord().name,
+        createTestRecord().authorName,
+        createTestRecord().capacity,
+        JSON.stringify(createTestRecord().platforms),
+        JSON.stringify(createTestRecord().tags),
+        createTestRecord().imageUrl,
+        createTestRecord().sourceContent,
+        createTestRecord().vrchatData,
+        1_600_000_000,
+        1_600_000_000,
+        null
+      );
+
+      repo.upsert(createTestRecord({ internalAddDate: 1_800_000_000 }));
+      let found = repo.getByWorldAndGuild(
+        createTestRecord().worldId,
+        createTestRecord().guildId
+      )!;
+      expect(found.internalAddDate).toBe(1_800_000_000);
+
+      // Re-upserting with a different date must not overwrite
+      repo.upsert(createTestRecord({ internalAddDate: 1_900_000_000 }));
+      found = repo.getByWorldAndGuild(
+        createTestRecord().worldId,
+        createTestRecord().guildId
+      )!;
+      expect(found.internalAddDate).toBe(1_800_000_000);
+    });
+
+    it('uses provided internal_add_date on insert', () => {
+      repo.upsert(createTestRecord({ internalAddDate: 1_680_000_000 }));
+      const found = repo.getByWorldAndGuild(
+        createTestRecord().worldId,
+        createTestRecord().guildId
+      )!;
+      expect(found.internalAddDate).toBe(1_680_000_000);
+    });
+  });
+
+  describe('backfillInternalAddDate', () => {
+    it('returns false when record does not exist', () => {
+      expect(
+        repo.backfillInternalAddDate('missing', 'missing', 1_700_000_000)
+      ).toBe(false);
+    });
+
+    it('sets internal_add_date when null and preserves existing value', () => {
+      repo.upsert(createTestRecord({ internalAddDate: undefined }));
+      db.prepare(
+        'UPDATE world_records SET internal_add_date = NULL WHERE world_id = ? AND guild_id = ?'
+      ).run(createTestRecord().worldId, createTestRecord().guildId);
+
+      expect(
+        repo.backfillInternalAddDate(
+          createTestRecord().worldId,
+          createTestRecord().guildId,
+          1_650_000_000
+        )
+      ).toBe(true);
+
+      const found = repo.getByWorldAndGuild(
+        createTestRecord().worldId,
+        createTestRecord().guildId
+      )!;
+      expect(found.internalAddDate).toBe(1_650_000_000);
+
+      expect(
+        repo.backfillInternalAddDate(
+          createTestRecord().worldId,
+          createTestRecord().guildId,
+          1_800_000_000
+        )
+      ).toBe(false);
+      expect(found.internalAddDate).toBe(1_650_000_000);
     });
   });
 
@@ -137,6 +231,23 @@ describe('WorldRepository', () => {
       const remaining = repo.getByWorldId(createTestRecord().worldId);
       expect(remaining).toHaveLength(1);
       expect(remaining[0].guildId).toBe('guild-b');
+    });
+
+    it('archives internal_add_date into deleted_world_records', () => {
+      repo.upsert(
+        createTestRecord({ guildId: 'guild-a', internalAddDate: 1_700_000_000 })
+      );
+
+      repo.deleteByWorldAndGuild(createTestRecord().worldId, 'guild-a');
+
+      const archived = db
+        .prepare(
+          'SELECT internal_add_date FROM deleted_world_records WHERE world_id = ? AND guild_id = ?'
+        )
+        .get(createTestRecord().worldId, 'guild-a') as {
+        internal_add_date: number;
+      };
+      expect(archived.internal_add_date).toBe(1_700_000_000);
     });
   });
 

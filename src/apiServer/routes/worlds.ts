@@ -22,7 +22,8 @@ function sanitizeRecord(raw: WorldRecord) {
     imageUrl: raw.imageUrl,
     vrchatUrl: buildWorldUrl(raw.worldId),
     quality: raw.quality ?? null,
-    createdAt: toDateString(raw.createdAt)
+    createdAt: toDateString(raw.createdAt),
+    internalAddDate: toDateString(raw.internalAddDate ?? undefined)
   };
 }
 
