@@ -226,6 +226,63 @@ describe('API Server', () => {
       );
     });
 
+    it('passes platform filters to repository', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?platform=standalonewindows',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ platforms: ['standalonewindows'] })
+      );
+    });
+
+    it('accepts comma-separated platforms via ?platform=standalonewindows,android', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?platform=standalonewindows,android',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ platforms: ['standalonewindows', 'android'] })
+      );
+    });
+
+    it('accepts repeated platform params ?platform=standalonewindows&platform=android', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?platform=standalonewindows&platform=android',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ platforms: ['standalonewindows', 'android'] })
+      );
+    });
+
     it('passes quality filters to repository', async () => {
       const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
       asMock(getWorldRepository).mockReturnValue(
@@ -410,6 +467,29 @@ describe('API Server', () => {
           quality: ['good'],
           tags: ['horror'],
           search: 'spooky'
+        })
+      );
+    });
+
+    it('combines platform filter with other filters', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?platform=standalonewindows&platform=android&quality=good&tag=horror',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({
+          platforms: ['standalonewindows', 'android'],
+          quality: ['good'],
+          tags: ['horror']
         })
       );
     });

@@ -257,13 +257,14 @@ export class WorldRepository {
    * Paginated list of world records with optional filters.
    * @param limit   Max rows to return
    * @param offset  Rows to skip
-   * @param filters Optional filters (tag array = AND logic, guildId, quality)
+   * @param filters Optional filters (tag array = AND logic, platforms array = AND logic, guildId, quality)
    */
   getAllPaginated(
     limit: number,
     offset: number,
     filters?: {
       tags?: string[];
+      platforms?: string[];
       guildId?: string;
       quality?: ('good' | 'bad')[];
       search?: string;
@@ -291,6 +292,15 @@ export class WorldRepository {
           'EXISTS (SELECT 1 FROM json_each(tags) WHERE value = ?)'
         );
         params.push(tag);
+      }
+    }
+
+    if (filters?.platforms && filters.platforms.length > 0) {
+      for (const platform of filters.platforms) {
+        whereParts.push(
+          'EXISTS (SELECT 1 FROM json_each(platforms) WHERE value = ?)'
+        );
+        params.push(platform);
       }
     }
 
