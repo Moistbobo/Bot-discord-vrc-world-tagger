@@ -78,6 +78,7 @@ Returns a paginated, filterable list of world records.
 | `limit`       | number            | `50`    | 500 | Number of records to return.                       |
 | `offset`      | number            | `0`     | —   | Number of records to skip (for pagination).        |
 | `tag`         | string / string[] | —       | —   | Filter by tag(s). Comma-separated or repeated. Multiple values use AND logic. |
+| `platform`    | string / string[] | —       | —   | Filter by supported platform(s). Comma-separated or repeated. Multiple values use AND logic. |
 | `quality`     | string / string[] | —       | —   | Filter by quality. Values: `good`, `bad`.         |
 | `search`      | string            | —       | —   | Search across name, author, source content, world id, and tags. |
 | `minCapacity` | integer           | —       | —   | Minimum world capacity (inclusive). Must be ≥ 1 and ≤ 80. |
@@ -117,6 +118,17 @@ GET /api/worlds?tag=horror,game
 GET /api/worlds?tag=horror&tag=game
 ```
 
+**Filtering by platforms**
+
+To filter worlds that support **all** specified platforms, use comma-separated
+values or repeat the `platform` parameter:
+
+```
+GET /api/worlds?platform=standalonewindows,android
+GET /api/worlds?platform=standalonewindows&platform=android
+GET /api/worlds?platform=standalonewindows&platform=android&platform=ios
+```
+
 **Filtering by quality**
 
 To filter worlds by manual quality rating:
@@ -147,10 +159,10 @@ Validation rules:
 
 **Combining filters**
 
-Tag, quality, search, and capacity filters work together with AND logic:
+Tag, platform, quality, search, and capacity filters work together with AND logic:
 
 ```
-GET /api/worlds?minCapacity=10&maxCapacity=40&quality=good&tag=horror
+GET /api/worlds?minCapacity=10&maxCapacity=40&quality=good&tag=horror&platform=android
 ```
 
 **Pagination**
@@ -296,7 +308,7 @@ curl -H "Authorization: Bearer my-token" \
 ## Notes
 
 - The API is **read-only**. There are no endpoints to create, update, or delete records.
-- Filtering by multiple tags uses **AND** logic: only worlds with *all* specified tags
+- Filtering by multiple tags or platforms uses **AND** logic: only worlds with *all* specified values
   are returned.
 - The `quality` field is set via Discord reactions (`👍` / `👎`) and reflects a
   manual rating applied to the world record.

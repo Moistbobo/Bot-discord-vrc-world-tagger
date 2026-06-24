@@ -26,21 +26,21 @@ function sanitizeRecord(raw: WorldRecord) {
   };
 }
 
-function parseTagQuery(raw: unknown): string[] | undefined {
+function parseStringListQuery(raw: unknown): string[] | undefined {
   if (!raw) return undefined;
 
   const sources = Array.isArray(raw) ? raw.map(String) : [String(raw)];
 
-  const tags = sources
+  const values = sources
     .flatMap((s) => s.split(','))
     .map((s) => s.trim())
     .filter(Boolean);
 
   // Deduplicate while preserving first-appearance order
   const seen = new Set<string>();
-  return tags.filter((t) => {
-    if (seen.has(t)) return false;
-    seen.add(t);
+  return values.filter((v) => {
+    if (seen.has(v)) return false;
+    seen.add(v);
     return true;
   });
 }
@@ -74,7 +74,8 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const limit = Math.min(Number(query.limit ?? 50), 500);
     const offset = Number(query.offset ?? 0);
 
-    const tags = parseTagQuery(query.tag);
+    const tags = parseStringListQuery(query.tag);
+    const platforms = parseStringListQuery(query.platform);
 
     const quality = Array.isArray(query.quality)
       ? query.quality
@@ -115,6 +116,7 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     }
 
     const filters: {
+      platforms?: string[];
       tags?: string[];
       quality?: ('good' | 'bad')[];
       search?: string;
@@ -122,6 +124,7 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       maxCapacity?: number;
     } = {};
     if (tags) filters.tags = tags;
+    if (platforms) filters.platforms = platforms;
     if (quality) filters.quality = quality;
     if (minCapacity !== undefined) filters.minCapacity = minCapacity;
     if (maxCapacity !== undefined) filters.maxCapacity = maxCapacity;
