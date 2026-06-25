@@ -503,6 +503,69 @@ describe('WorldRepository', () => {
       expect(total).toBe(1);
       expect(rows[0].worldId).toBe('wrld_other');
     });
+
+    it('filters by worldIds', () => {
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_alpha',
+          guildId: 'guild-1',
+          name: 'Alpha World'
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_beta',
+          guildId: 'guild-1',
+          name: 'Beta World'
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_gamma',
+          guildId: 'guild-1',
+          name: 'Gamma World'
+        })
+      );
+
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        worldIds: ['wrld_alpha', 'wrld_gamma', 'wrld_missing']
+      });
+      expect(total).toBe(2);
+      expect(rows.map((r) => r.worldId).sort()).toEqual([
+        'wrld_alpha',
+        'wrld_gamma'
+      ]);
+    });
+
+    it('returns no results for empty worldIds list', () => {
+      const { rows, total } = repo.getAllPaginated(10, 0, { worldIds: [] });
+      expect(total).toBe(5);
+      expect(rows).toHaveLength(5);
+    });
+
+    it('combines worldIds filter with other filters', () => {
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_alpha',
+          guildId: 'guild-1',
+          tags: ['horror']
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_beta',
+          guildId: 'guild-1',
+          tags: ['game']
+        })
+      );
+
+      const { rows, total } = repo.getAllPaginated(10, 0, {
+        worldIds: ['wrld_alpha', 'wrld_beta'],
+        tags: ['horror']
+      });
+      expect(total).toBe(1);
+      expect(rows[0].worldId).toBe('wrld_alpha');
+    });
   });
 
   describe('capacity filtering', () => {
