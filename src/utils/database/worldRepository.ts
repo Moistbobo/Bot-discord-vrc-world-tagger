@@ -270,6 +270,7 @@ export class WorldRepository {
       search?: string;
       minCapacity?: number;
       maxCapacity?: number;
+      worldIds?: string[];
     }
   ): { rows: WorldRecord[]; total: number } {
     const whereParts: string[] = [];
@@ -278,6 +279,12 @@ export class WorldRepository {
     if (filters?.guildId) {
       whereParts.push('guild_id = ?');
       params.push(filters.guildId);
+    }
+
+    if (filters?.worldIds && filters.worldIds.length > 0) {
+      const placeholders = filters.worldIds.map(() => '?').join(', ');
+      whereParts.push(`world_id IN (${placeholders})`);
+      params.push(...filters.worldIds);
     }
 
     if (filters?.quality && filters.quality.length > 0) {
