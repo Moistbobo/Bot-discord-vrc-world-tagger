@@ -76,6 +76,7 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
     const tags = parseStringListQuery(query.tag);
     const platforms = parseStringListQuery(query.platform);
+    const worldIds = parseStringListQuery(query.worldId);
 
     const quality = Array.isArray(query.quality)
       ? query.quality
@@ -122,9 +123,11 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       search?: string;
       minCapacity?: number;
       maxCapacity?: number;
+      worldIds?: string[];
     } = {};
     if (tags) filters.tags = tags;
     if (platforms) filters.platforms = platforms;
+    if (worldIds) filters.worldIds = worldIds;
     if (quality) filters.quality = quality;
     if (minCapacity !== undefined) filters.minCapacity = minCapacity;
     if (maxCapacity !== undefined) filters.maxCapacity = maxCapacity;
