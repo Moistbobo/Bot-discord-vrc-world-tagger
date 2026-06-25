@@ -103,7 +103,7 @@ const findFirstWorldMatch = async (
  * Finds all world links in the message body, forwarded snapshots, and attachments.
  * When `scanAttachmentFilenames` is true, attachment file names are checked last.
  */
-const findAllWorldMatches = async (
+export const findAllWorldMatches = async (
   message: Message,
   scanAttachmentFilenames: boolean
 ): Promise<WorldMatch[]> => {
@@ -205,15 +205,18 @@ export function buildTagSource(
  * Processes a world ID: fetches data, extracts tags, upserts to repository,
  * creates embed, sends the bot reply, then forwards it.
  */
-const processWorldId = async (
+export const processWorldId = async (
   message: Message,
   worldId: string,
   sourceContent: string,
   options?: {
     skipDuplicateCheck?: boolean;
+    silent?: boolean;
+    internalAddDate?: number;
   }
 ): Promise<void> => {
   const skipDuplicateCheck = options?.skipDuplicateCheck ?? false;
+  const silent = options?.silent ?? false;
 
   if (!skipDuplicateCheck && !Config.DEV_MODE) {
     const isDuplicate = await checkAndHandleDuplicate(message, worldId);
@@ -240,13 +243,19 @@ const processWorldId = async (
     tags,
     imageUrl: worldData.imageUrl,
     sourceContent,
-    vrchatData: safeJsonStringify(worldData)
+    vrchatData: safeJsonStringify(worldData),
+    createdAt: options?.internalAddDate
   };
 
   getWorldRepository().upsert(record);
   logger.info(
     `Saved world ${worldId} to repository with tags: ${tags.join(', ') || 'none'}`
   );
+
+  if (silent) {
+    logger.info(`Silent processing complete for ${worldId}`);
+    return;
+  }
 
   const embed = createWorldEmbed(
     worldData,

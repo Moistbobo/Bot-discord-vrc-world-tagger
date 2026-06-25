@@ -6,12 +6,11 @@ import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
 import { set, get as getValue } from '../../utils/jsonAsDb/index';
 import { kvKeys, CrawlStatus } from '../../utils/jsonAsDb/types';
 import {
-  extractAllWorldIdsFromMessage,
-  extractWorldIdFromMessage
-} from './watchForVRCWorldLinks/worldExtraction';
-import { buildTagSource } from './watchForVRCWorldLinks';
+  buildTagSource,
+  findAllWorldMatches,
+  processWorldId
+} from './watchForVRCWorldLinks';
 import { extractWorldId } from '../../utils/regex';
-import { checkAndHandleDuplicate } from './watchForVRCWorldLinks/duplicateHandler';
 import { emojiMap } from '../../assets/media';
 import { getWorldRepository } from '../../utils/database/worldRepository';
 import { extractTags } from '../../utils/tagExtractor';
@@ -32,6 +31,16 @@ interface ParsedCrawlCommand {
 
 // Helper function to delay execution
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Convert a Discord message's created timestamp to Unix seconds.
+ * This is the value stored in internal_add_date.
+ */
+const getMessageInternalAddDate = (msg: Message): number => {
+  return typeof msg.createdTimestamp === 'number'
+    ? Math.floor(msg.createdTimestamp / 1000)
+    : Math.floor(Date.now() / 1000);
+};
 
 /**
  * Parse .crawlHistory command into mode and options.
@@ -475,7 +484,12 @@ const crawlMessages = async (
 
         // ── DISCOVER MODE ──
         if (mode === 'discover') {
-          await handleDiscoverMode(msg, processedWorldsCache, crawlStatus);
+          await handleDiscoverMode(
+            msg,
+            processedWorldsCache,
+            crawlStatus,
+            repo
+          );
         }
 
         // ── TAGS MODE ──
@@ -583,39 +597,55 @@ const crawlMessages = async (
 async function handleDiscoverMode(
   msg: Message,
   processedWorldsCache: Set<string>,
-  crawlStatus: CrawlStatus
+  crawlStatus: CrawlStatus,
+  repo: ReturnType<typeof getWorldRepository>
 ): Promise<void> {
-  // Quick cache check
-  const potentialWorldId = extractWorldId(msg.content);
-  if (potentialWorldId) {
-    const cacheKey = `${potentialWorldId}-${msg.guildId}`;
-    if (processedWorldsCache.has(cacheKey)) {
-      logger.debug(
-        `Skipping message ${msg.id}: world ${potentialWorldId} already processed (cache hit)`
-      );
-      return;
-    }
-  }
-
-  const worldId = await extractWorldIdFromMessage(msg.content);
-  if (!worldId) {
+  const matches = await findAllWorldMatches(msg, true);
+  if (matches.length === 0) {
     logger.debug(
       `No world found in message ${msg.id}: "${msg.content.substring(0, 100)}..."`
     );
+    await delay(RATE_LIMIT_DELAY);
     return;
   }
 
-  // Use the existing duplicate detection system in silent mode
-  const isDuplicate = await checkAndHandleDuplicate(msg, worldId, true);
+  const internalAddDate = getMessageInternalAddDate(msg);
 
-  if (!isDuplicate) {
-    crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
-    logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
-
+  for (const { worldId, sourceContent } of matches) {
     const cacheKey = `${worldId}-${msg.guildId}`;
-    processedWorldsCache.add(cacheKey);
-  } else {
-    logger.info(`World found in message ${msg.id}: ${worldId} (DUPLICATE)`);
+
+    // Already handled during this crawl
+    if (processedWorldsCache.has(cacheKey)) {
+      logger.debug(
+        `Skipping message ${msg.id}: world ${worldId} already processed (cache hit)`
+      );
+      continue;
+    }
+
+    // Existing world: just track it as already known
+    if (repo.getByWorldAndGuild(worldId, msg.guildId!)) {
+      processedWorldsCache.add(cacheKey);
+      logger.info(`World found in message ${msg.id}: ${worldId} (DUPLICATE)`);
+      continue;
+    }
+
+    // New world: silently fetch and persist it so it has the correct timestamp
+    try {
+      await processWorldId(msg, worldId, sourceContent, {
+        skipDuplicateCheck: true,
+        silent: true,
+        internalAddDate
+      });
+
+      crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
+      processedWorldsCache.add(cacheKey);
+      logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
+    } catch (error) {
+      logger.warn(
+        `Could not persist discovered world ${worldId} from message ${msg.id}:`,
+        error
+      );
+    }
   }
 
   await delay(RATE_LIMIT_DELAY);
@@ -630,18 +660,8 @@ async function handleTagsMode(
   processedWorldsCache: Set<string>,
   repo: ReturnType<typeof getWorldRepository>
 ): Promise<{ updated: number; notFound: number }> {
-  // Extract world ID + source content (resolves Twitter links)
-  let allResults = await extractAllWorldIdsFromMessage(msg.content);
-
-  // Fallback: check Discord native message snapshots (forwards)
-  if (allResults.length === 0 && msg.messageSnapshots) {
-    for (const snapshot of msg.messageSnapshots.values()) {
-      if (snapshot.content) {
-        allResults = await extractAllWorldIdsFromMessage(snapshot.content);
-        if (allResults.length > 0) break;
-      }
-    }
-  }
+  // Extract world ID + source content from body, snapshots, and attachments
+  const allResults = await findAllWorldMatches(msg, true);
 
   if (allResults.length === 0) {
     logger.debug(`No world found in message ${msg.id} for tag rebuild`);
