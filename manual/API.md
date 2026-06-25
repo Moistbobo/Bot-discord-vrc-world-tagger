@@ -83,6 +83,7 @@ Returns a paginated, filterable list of world records.
 | `search`      | string            | —       | —   | Search across name, author, source content, world id, and tags. |
 | `minCapacity` | integer           | —       | —   | Minimum world capacity (inclusive). Must be ≥ 1 and ≤ 80. |
 | `maxCapacity` | integer           | —       | —   | Maximum world capacity (inclusive). Must be ≥ 1 and ≤ 80. |
+| `worldId`     | string / string[] | —       | —   | Filter to specific world ID(s). Comma-separated or repeated. Exact match only. |
 
 **Response**
 
@@ -156,6 +157,21 @@ Validation rules:
 - `maxCapacity` must be at most `80`.
 - `minCapacity` must be less than or equal to `maxCapacity` when both are provided.
 - Invalid values result in a **400 Bad Request**.
+
+**Filtering by world ID**
+
+To fetch only specific worlds by their exact VRChat world ID, use comma-separated
+values or repeat the `worldId` parameter:
+
+```
+GET /api/worlds?worldId=wrld_abc123
+GET /api/worlds?worldId=wrld_abc123,wrld_def456
+GET /api/worlds?worldId=wrld_abc123&worldId=wrld_def456
+```
+
+This is useful for batch lookups when you already have a list of world IDs.
+
+---
 
 **Combining filters**
 
@@ -297,6 +313,10 @@ curl -H "Authorization: Bearer my-token" \
 # Get a specific world
 curl -H "Authorization: Bearer my-token" \
   "http://localhost:3000/api/worlds/wrld_abc123"
+
+# Fetch multiple worlds by ID in one request
+curl -H "Authorization: Bearer my-token" \
+  "http://localhost:3000/api/worlds?worldId=wrld_abc123,wrld_def456"
 
 # List all tags
 curl -H "Authorization: Bearer my-token" \

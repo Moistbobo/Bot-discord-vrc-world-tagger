@@ -378,6 +378,86 @@ describe('API Server', () => {
       );
     });
 
+    it('passes worldId filters to repository', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?worldId=wrld_abc123',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ worldIds: ['wrld_abc123'] })
+      );
+    });
+
+    it('accepts comma-separated worldIds via ?worldId=wrld_abc123,wrld_def456', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?worldId=wrld_abc123,wrld_def456',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ worldIds: ['wrld_abc123', 'wrld_def456'] })
+      );
+    });
+
+    it('accepts repeated worldId params ?worldId=wrld_abc123&worldId=wrld_def456', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?worldId=wrld_abc123&worldId=wrld_def456',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({ worldIds: ['wrld_abc123', 'wrld_def456'] })
+      );
+    });
+
+    it('combines worldId filter with other filters', async () => {
+      const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getAllPaginated })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/worlds?worldId=wrld_abc123,wrld_def456&tag=horror&quality=good',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getAllPaginated).toHaveBeenCalledWith(
+        50,
+        0,
+        expect.objectContaining({
+          worldIds: ['wrld_abc123', 'wrld_def456'],
+          tags: ['horror'],
+          quality: ['good']
+        })
+      );
+    });
+
     it('caps limit at 500', async () => {
       const getAllPaginated = jest.fn(() => ({ total: 0, rows: [] }));
       asMock(getWorldRepository).mockReturnValue(
