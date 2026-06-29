@@ -593,6 +593,8 @@ const crawlMessages = async (
 
 /**
  * Handle a single message in discover mode.
+ * New worlds are fetched and inserted silently; existing worlds have their
+ * internal_add_date backfilled from the original Discord message timestamp.
  */
 async function handleDiscoverMode(
   msg: Message,
@@ -600,6 +602,9 @@ async function handleDiscoverMode(
   crawlStatus: CrawlStatus,
   repo: ReturnType<typeof getWorldRepository>
 ): Promise<void> {
+  const internalAddDate = getMessageInternalAddDate(msg);
+
+  // Scan content, snapshots, and attachment filenames for world IDs
   const matches = await findAllWorldMatches(msg, true);
   if (matches.length === 0) {
     logger.debug(
@@ -609,21 +614,21 @@ async function handleDiscoverMode(
     return;
   }
 
-  const internalAddDate = getMessageInternalAddDate(msg);
-
   for (const { worldId, sourceContent } of matches) {
     const cacheKey = `${worldId}-${msg.guildId}`;
 
     // Already handled during this crawl
     if (processedWorldsCache.has(cacheKey)) {
+      repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
       logger.debug(
         `Skipping message ${msg.id}: world ${worldId} already processed (cache hit)`
       );
       continue;
     }
 
-    // Existing world: just track it as already known
+    // Existing world: backfill internal_add_date and move on
     if (repo.getByWorldAndGuild(worldId, msg.guildId!)) {
+      repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
       processedWorldsCache.add(cacheKey);
       logger.info(`World found in message ${msg.id}: ${worldId} (DUPLICATE)`);
       continue;
@@ -675,6 +680,7 @@ async function handleTagsMode(
   );
   const tags = extractTags(tagSource);
 
+  const internalAddDate = getMessageInternalAddDate(msg);
   let updated = 0;
   let notFound = 0;
 
@@ -695,6 +701,8 @@ async function handleTagsMode(
       tags,
       sourceContent
     );
+
+    repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
 
     if (didUpdate) {
       logger.info(
@@ -736,6 +744,8 @@ async function handleQualityMode(
   }
 
   const didUpdate = repo.updateQuality(worldId, msg.guildId!, qualityValue);
+  const internalAddDate = getMessageInternalAddDate(msg);
+  repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
 
   if (didUpdate) {
     logger.info(

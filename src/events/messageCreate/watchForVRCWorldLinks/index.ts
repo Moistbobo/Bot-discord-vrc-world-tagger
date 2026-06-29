@@ -204,6 +204,9 @@ export function buildTagSource(
 /**
  * Processes a world ID: fetches data, extracts tags, upserts to repository,
  * creates embed, sends the bot reply, then forwards it.
+ *
+ * When `silent` is true, no embeds/replies/forwards are sent. This is used by
+ * crawlHistory to backfill worlds from channel history without spamming chat.
  */
 export const processWorldId = async (
   message: Message,
@@ -227,10 +230,14 @@ export const processWorldId = async (
 
   const worldData = await fetchWorldData(worldId);
   const supportedPlatforms = getSupportedPlatforms(worldData.unityPackages);
-  const packageSizes = await calculatePackageSizes(worldData);
 
   const tagSource = buildTagSource(message, [sourceContent]);
   const tags = extractTags(tagSource);
+
+  const messageTimestamp =
+    typeof message.createdTimestamp === 'number'
+      ? Math.floor(message.createdTimestamp / 1000)
+      : Math.floor(Date.now() / 1000);
 
   const record: WorldRecord = {
     worldId,
@@ -244,7 +251,7 @@ export const processWorldId = async (
     imageUrl: worldData.imageUrl,
     sourceContent,
     vrchatData: safeJsonStringify(worldData),
-    createdAt: options?.internalAddDate
+    internalAddDate: options?.internalAddDate ?? messageTimestamp
   };
 
   getWorldRepository().upsert(record);
@@ -257,6 +264,7 @@ export const processWorldId = async (
     return;
   }
 
+  const packageSizes = await calculatePackageSizes(worldData);
   const embed = createWorldEmbed(
     worldData,
     worldId,
