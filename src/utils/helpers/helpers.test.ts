@@ -21,7 +21,8 @@ import {
   getMostRecentUnityPackageForPlatform,
   getRecentFileVersion,
   bytesToMegabytes,
-  getFileSizeForPlatform
+  getFileSizeForPlatform,
+  getDiscordMessageTimestampSeconds
 } from './index';
 
 import { vrchat } from '../externalApi/vrchat';
@@ -166,6 +167,22 @@ describe('utils/helpers', () => {
         path: { fileId: 'file_abcd-1234' }
       });
       expect(sizeMb).toBe(10);
+    });
+  });
+
+  describe('getDiscordMessageTimestampSeconds', () => {
+    it('derives a Unix timestamp from a Discord snowflake', () => {
+      const timestamp = getDiscordMessageTimestampSeconds(
+        '1234567890123456789'
+      );
+      expect(timestamp).toBeGreaterThan(1_600_000_000);
+      expect(Number.isFinite(timestamp)).toBe(true);
+    });
+
+    it('throws on invalid snowflakes', () => {
+      expect(() =>
+        getDiscordMessageTimestampSeconds('not-a-snowflake')
+      ).toThrow();
     });
   });
 });

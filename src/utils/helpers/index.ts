@@ -60,6 +60,19 @@ export const bytesToMegabytes = (bytes: number) => {
   return bytes / 1048576; // 1 MB = 1048576 bytes
 };
 
+const DISCORD_EPOCH_MS = 1420070400000;
+
+/**
+ * Derive the Unix timestamp (in seconds) from a Discord message/snowflake ID.
+ * This is used to recover the original message timestamp when only the ID
+ * is available (e.g., the v1 -> v2 migration data).
+ */
+export function getDiscordMessageTimestampSeconds(messageId: string): number {
+  const snowflake = BigInt(messageId);
+  const timestampMs = Number(snowflake >> BigInt(22)) + DISCORD_EPOCH_MS;
+  return Math.floor(timestampMs / 1000);
+}
+
 export const getFileSizeForPlatform = async (data: World, platform: string) => {
   const recentPackageForPlatform = getMostRecentUnityPackageForPlatform(
     data,
