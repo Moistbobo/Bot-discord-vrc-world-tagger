@@ -103,7 +103,7 @@ const findFirstWorldMatch = async (
  * Finds all world links in the message body, forwarded snapshots, and attachments.
  * When `scanAttachmentFilenames` is true, attachment file names are checked last.
  */
-const findAllWorldMatches = async (
+export const findAllWorldMatches = async (
   message: Message,
   scanAttachmentFilenames: boolean
 ): Promise<WorldMatch[]> => {
@@ -265,7 +265,6 @@ export const processWorldId = async (
   }
 
   const packageSizes = await calculatePackageSizes(worldData);
-
   const embed = createWorldEmbed(
     worldData,
     worldId,
