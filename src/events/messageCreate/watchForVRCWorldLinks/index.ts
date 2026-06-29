@@ -204,16 +204,22 @@ export function buildTagSource(
 /**
  * Processes a world ID: fetches data, extracts tags, upserts to repository,
  * creates embed, sends the bot reply, then forwards it.
+ *
+ * When `silent` is true, no embeds/replies/forwards are sent. This is used by
+ * crawlHistory to backfill worlds from channel history without spamming chat.
  */
-const processWorldId = async (
+export const processWorldId = async (
   message: Message,
   worldId: string,
   sourceContent: string,
   options?: {
     skipDuplicateCheck?: boolean;
+    silent?: boolean;
+    internalAddDate?: number;
   }
 ): Promise<void> => {
   const skipDuplicateCheck = options?.skipDuplicateCheck ?? false;
+  const silent = options?.silent ?? false;
 
   if (!skipDuplicateCheck && !Config.DEV_MODE) {
     const isDuplicate = await checkAndHandleDuplicate(message, worldId);
@@ -224,10 +230,14 @@ const processWorldId = async (
 
   const worldData = await fetchWorldData(worldId);
   const supportedPlatforms = getSupportedPlatforms(worldData.unityPackages);
-  const packageSizes = await calculatePackageSizes(worldData);
 
   const tagSource = buildTagSource(message, [sourceContent]);
   const tags = extractTags(tagSource);
+
+  const messageTimestamp =
+    typeof message.createdTimestamp === 'number'
+      ? Math.floor(message.createdTimestamp / 1000)
+      : Math.floor(Date.now() / 1000);
 
   const record: WorldRecord = {
     worldId,
@@ -240,13 +250,21 @@ const processWorldId = async (
     tags,
     imageUrl: worldData.imageUrl,
     sourceContent,
-    vrchatData: safeJsonStringify(worldData)
+    vrchatData: safeJsonStringify(worldData),
+    internalAddDate: options?.internalAddDate ?? messageTimestamp
   };
 
   getWorldRepository().upsert(record);
   logger.info(
     `Saved world ${worldId} to repository with tags: ${tags.join(', ') || 'none'}`
   );
+
+  if (silent) {
+    logger.info(`Silent processing complete for ${worldId}`);
+    return;
+  }
+
+  const packageSizes = await calculatePackageSizes(worldData);
 
   const embed = createWorldEmbed(
     worldData,

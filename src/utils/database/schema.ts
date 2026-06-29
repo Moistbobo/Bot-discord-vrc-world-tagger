@@ -83,6 +83,29 @@ const MIGRATIONS: Migration[] = [
         `CREATE INDEX IF NOT EXISTS idx_worlds_capacity ON world_records(capacity)`
       );
     }
+  },
+  {
+    name: '005_add_internal_add_date_column',
+    run: (db) => {
+      const needsColumn = (table: string) => {
+        const columns = db
+          .prepare(`PRAGMA table_info(${table})`)
+          .all() as Array<{ name: string }>;
+        return !columns.some((c) => c.name === 'internal_add_date');
+      };
+
+      if (needsColumn('world_records')) {
+        db.exec(
+          `ALTER TABLE world_records ADD COLUMN internal_add_date INTEGER`
+        );
+      }
+
+      if (needsColumn('deleted_world_records')) {
+        db.exec(
+          `ALTER TABLE deleted_world_records ADD COLUMN internal_add_date INTEGER`
+        );
+      }
+    }
   }
 ];
 

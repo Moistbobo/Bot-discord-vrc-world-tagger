@@ -51,6 +51,7 @@ npx jiti scripts/migrate-v1-to-v2.ts
 **What it does:**
 - Fetches VRChat API data for each world (200ms delay between calls)
 - Inserts/upserts rows into `worlds.db`
+- Sets `internal_add_date` on each row from the original Discord message ID timestamp
 - Prints per-world progress with world name and author
 - On full success, renames `db.json → db.json.v1-migrated`
 
@@ -78,6 +79,7 @@ Not found (404):  6
 **Notes:**
 - Worlds deleted or made private will show "⚠️ not found or inaccessible" — this is expected
 - The script is **idempotent** — re-running it just overwrites existing rows
+- `internal_add_date` is derived from each saved Discord message ID, so re-running will not overwrite an already-populated date
 - `db.json` is **copied** (not renamed) to `db.json.v1-migrated` so your active config stays intact
 - **Do not delete `db.json`** — it still holds all channel/watch/react configuration
 
@@ -104,6 +106,7 @@ For each watched channel that contains original world posts (with tweet text / t
 - Resolves Twitter links to fetch tweet content
 - Runs the tag extractor on the source text
 - Updates `tags` and `source_content` in SQLite
+- Backfills `internal_add_date` for existing worlds from each message's timestamp
 
 **Progress updates every 25 messages:**
 ```
@@ -116,7 +119,8 @@ For each watched channel that contains original world posts (with tweet text / t
 
 **Notes:**
 - "Not Found" means the world isn't in the database (e.g., posted after migration or deleted) — this is safe to ignore
-- Re-running is safe — it just re-extracts and overwrites
+- Re-running is safe — it just re-extracts and overwrites tags/source content
+- Any worlds that were migrated without an `internal_add_date` will have it filled from the original message timestamp
 - Channels must **not** be watched to run `--tags` mode (restriction removed for backfill)
 
 ---
@@ -151,6 +155,7 @@ For your **bad** channel:
   - Bot embed URLs/descriptions
   - **Discord native forwarded message snapshots** (the `messageSnapshots` API)
 - Calls `repo.updateQuality()` for each found world
+- Backfills `internal_add_date` for existing worlds from each message's timestamp
 
 **Progress updates:**
 ```
@@ -165,6 +170,7 @@ For your **bad** channel:
 - Only the **first** world ID per message is counted
 - Worlds not in the database are skipped with a logged warning
 - Re-running is idempotent — same quality will be re-applied
+- Existing worlds will have `internal_add_date` backfilled from the message timestamp
 
 ---
 
@@ -179,8 +185,10 @@ sqlite3 worlds.db "SELECT COUNT(*) FROM world_records;"
 ### 4.2 Check a sample row
 
 ```bash
-sqlite3 worlds.db "SELECT world_id, name, author_name, tags, quality FROM world_records LIMIT 5;"
+sqlite3 worlds.db "SELECT world_id, name, author_name, tags, quality, internal_add_date FROM world_records LIMIT 5;"
 ```
+
+`internal_add_date` should be a Unix timestamp matching when the world was originally posted on Discord.
 
 ### 4.3 Check tag distribution
 
@@ -298,6 +306,7 @@ Make sure the world IDs in the channel are already in `worlds.db`. If a world wa
 - [ ] Run `npx jiti scripts/migrate-v1-to-v2.ts --dry-run`
 - [ ] Run `npx jiti scripts/migrate-v1-to-v2.ts`
 - [ ] Verify `worlds.db` has expected row count
+- [ ] Verify `internal_add_date` is populated for migrated worlds
 - [ ] Run `.crawlHistory #channel --tags` for each watched channel with original posts
 - [ ] Run `.crawlHistory #good-channel --quality good`
 - [ ] Run `.crawlHistory #bad-channel --quality bad`
