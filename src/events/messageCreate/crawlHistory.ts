@@ -6,10 +6,10 @@ import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
 import { set, get as getValue } from '../../utils/jsonAsDb/index';
 import { kvKeys, CrawlStatus } from '../../utils/jsonAsDb/types';
 import {
-  extractAllWorldIdsFromMessage,
-  extractWorldIdFromMessage
-} from './watchForVRCWorldLinks/worldExtraction';
-import { buildTagSource, processWorldId } from './watchForVRCWorldLinks';
+  buildTagSource,
+  findAllWorldMatches,
+  processWorldId
+} from './watchForVRCWorldLinks';
 import { extractWorldId } from '../../utils/regex';
 import { emojiMap } from '../../assets/media';
 import { getWorldRepository } from '../../utils/database/worldRepository';
@@ -604,58 +604,53 @@ async function handleDiscoverMode(
 ): Promise<void> {
   const internalAddDate = getMessageInternalAddDate(msg);
 
-  // Quick cache check
-  const potentialWorldId = extractWorldId(msg.content);
-  if (potentialWorldId) {
-    const cacheKey = `${potentialWorldId}-${msg.guildId}`;
-    if (processedWorldsCache.has(cacheKey)) {
-      repo.backfillInternalAddDate(
-        potentialWorldId,
-        msg.guildId!,
-        internalAddDate
-      );
-      logger.debug(
-        `Skipping message ${msg.id}: world ${potentialWorldId} already processed (cache hit)`
-      );
-      return;
-    }
-  }
-
-  const worldId = await extractWorldIdFromMessage(msg.content);
-  if (!worldId) {
+  // Scan content, snapshots, and attachment filenames for world IDs
+  const matches = await findAllWorldMatches(msg, true);
+  if (matches.length === 0) {
     logger.debug(
       `No world found in message ${msg.id}: "${msg.content.substring(0, 100)}..."`
     );
-    return;
-  }
-
-  const cacheKey = `${worldId}-${msg.guildId}`;
-
-  // Existing world: backfill internal_add_date and move on
-  if (repo.getByWorldAndGuild(worldId, msg.guildId!)) {
-    repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
-    processedWorldsCache.add(cacheKey);
-    logger.info(`World found in message ${msg.id}: ${worldId} (DUPLICATE)`);
     await delay(RATE_LIMIT_DELAY);
     return;
   }
 
-  // New world: silently fetch and persist it so it has the correct timestamp
-  try {
-    await processWorldId(msg, worldId, msg.content, {
-      skipDuplicateCheck: true,
-      silent: true,
-      internalAddDate
-    });
+  for (const { worldId, sourceContent } of matches) {
+    const cacheKey = `${worldId}-${msg.guildId}`;
 
-    crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
-    processedWorldsCache.add(cacheKey);
-    logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
-  } catch (error) {
-    logger.warn(
-      `Could not persist discovered world ${worldId} from message ${msg.id}:`,
-      error
-    );
+    // Already handled during this crawl
+    if (processedWorldsCache.has(cacheKey)) {
+      repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
+      logger.debug(
+        `Skipping message ${msg.id}: world ${worldId} already processed (cache hit)`
+      );
+      continue;
+    }
+
+    // Existing world: backfill internal_add_date and move on
+    if (repo.getByWorldAndGuild(worldId, msg.guildId!)) {
+      repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
+      processedWorldsCache.add(cacheKey);
+      logger.info(`World found in message ${msg.id}: ${worldId} (DUPLICATE)`);
+      continue;
+    }
+
+    // New world: silently fetch and persist it so it has the correct timestamp
+    try {
+      await processWorldId(msg, worldId, sourceContent, {
+        skipDuplicateCheck: true,
+        silent: true,
+        internalAddDate
+      });
+
+      crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
+      processedWorldsCache.add(cacheKey);
+      logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
+    } catch (error) {
+      logger.warn(
+        `Could not persist discovered world ${worldId} from message ${msg.id}:`,
+        error
+      );
+    }
   }
 
   await delay(RATE_LIMIT_DELAY);
@@ -670,18 +665,8 @@ async function handleTagsMode(
   processedWorldsCache: Set<string>,
   repo: ReturnType<typeof getWorldRepository>
 ): Promise<{ updated: number; notFound: number }> {
-  // Extract world ID + source content (resolves Twitter links)
-  let allResults = await extractAllWorldIdsFromMessage(msg.content);
-
-  // Fallback: check Discord native message snapshots (forwards)
-  if (allResults.length === 0 && msg.messageSnapshots) {
-    for (const snapshot of msg.messageSnapshots.values()) {
-      if (snapshot.content) {
-        allResults = await extractAllWorldIdsFromMessage(snapshot.content);
-        if (allResults.length > 0) break;
-      }
-    }
-  }
+  // Extract world ID + source content from body, snapshots, and attachments
+  const allResults = await findAllWorldMatches(msg, true);
 
   if (allResults.length === 0) {
     logger.debug(`No world found in message ${msg.id} for tag rebuild`);
