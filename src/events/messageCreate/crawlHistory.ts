@@ -5,12 +5,9 @@ import { isUserOnIgnoreList } from '../../utils/ignoreList';
 import { getAll } from '../../utils/jsonAsDb/handlers/persistentList';
 import { set, get as getValue } from '../../utils/jsonAsDb/index';
 import { kvKeys, CrawlStatus } from '../../utils/jsonAsDb/types';
-import {
-  buildTagSource,
-  findAllWorldMatches,
-  processWorldId
-} from './watchForVRCWorldLinks';
-import { extractWorldId } from '../../utils/regex';
+import { buildTagSource, processWorldId } from './watchForVRCWorldLinks';
+import { extractAllWorldIdsFromMessage } from './watchForVRCWorldLinks/worldExtraction';
+import { extractAllWorldIds } from '../../utils/regex';
 import { emojiMap } from '../../assets/media';
 import { getWorldRepository } from '../../utils/database/worldRepository';
 import { extractTags } from '../../utils/tagExtractor';
@@ -76,46 +73,91 @@ function parseCrawlCommand(message: Message): ParsedCrawlCommand | null {
 }
 
 /**
- * Extract the first world ID from a message, checking raw content,
- * embed URLs/descriptions, and Discord native message snapshots (forwards).
+ * Extract every unique world ID from a message, checking raw content (with
+ * Twitter/X link resolution), embed URLs/descriptions, Discord native message
+ * snapshots (forwards), and attachment filenames.
+ *
+ * Mirrors the extraction used by the live message handler when
+ * scanAttachmentFilenames is enabled, but returns all matches instead of only
+ * the first one.
  */
-function extractWorldIdFromAnywhere(msg: Message): string | null {
-  // 1. Try raw message content
-  const fromContent = extractWorldId(msg.content);
-  if (fromContent) return fromContent;
+export async function findAllWorldMatchesUnified(
+  msg: Message
+): Promise<{ worldId: string; sourceContent: string }[]> {
+  const matches: { worldId: string; sourceContent: string }[] = [];
+  const seen = new Set<string>();
 
-  // 2. Try embed URLs and descriptions
-  for (const embed of msg.embeds) {
-    const fromUrl = embed.url ? extractWorldId(embed.url) : null;
-    if (fromUrl) return fromUrl;
+  const addMatch = (worldId: string, sourceContent: string) => {
+    if (!seen.has(worldId)) {
+      seen.add(worldId);
+      matches.push({ worldId, sourceContent });
+    }
+  };
 
-    const fromDesc = embed.description
-      ? extractWorldId(embed.description)
-      : null;
-    if (fromDesc) return fromDesc;
+  // 1. Raw message content (resolves Twitter/X links)
+  if (msg.content) {
+    const fromContent = await extractAllWorldIdsFromMessage(msg.content);
+    for (const { worldId, sourceContent } of fromContent) {
+      addMatch(worldId, sourceContent);
+    }
   }
 
-  // 3. Try Discord native message snapshots (forwarded messages)
+  // 2. Embed URLs and descriptions
+  for (const embed of msg.embeds) {
+    const embedText = [embed.url, embed.description].filter(Boolean).join('\n');
+    if (!embedText) continue;
+    const fromEmbed = extractAllWorldIds(embedText);
+    for (const worldId of fromEmbed) {
+      addMatch(worldId, embedText);
+    }
+  }
+
+  // 3. Forwarded message snapshots
   if (msg.messageSnapshots) {
     for (const snapshot of msg.messageSnapshots.values()) {
-      const fromSnapContent = snapshot.content
-        ? extractWorldId(snapshot.content)
-        : null;
-      if (fromSnapContent) return fromSnapContent;
+      if (snapshot.content) {
+        const fromSnapshot = await extractAllWorldIdsFromMessage(
+          snapshot.content
+        );
+        for (const { worldId, sourceContent } of fromSnapshot) {
+          addMatch(worldId, sourceContent);
+        }
+      }
 
       for (const embed of snapshot.embeds || []) {
-        const fromSnapUrl = embed.url ? extractWorldId(embed.url) : null;
-        if (fromSnapUrl) return fromSnapUrl;
-
-        const fromSnapDesc = embed.description
-          ? extractWorldId(embed.description)
-          : null;
-        if (fromSnapDesc) return fromSnapDesc;
+        const embedText = [embed.url, embed.description]
+          .filter(Boolean)
+          .join('\n');
+        if (!embedText) continue;
+        const fromEmbed = extractAllWorldIds(embedText);
+        for (const worldId of fromEmbed) {
+          addMatch(worldId, embedText);
+        }
       }
     }
   }
 
-  return null;
+  // 4. Attachment filenames
+  for (const attachment of msg.attachments?.values() ?? []) {
+    const fromAttachment = extractAllWorldIds(attachment.name ?? '');
+    for (const worldId of fromAttachment) {
+      addMatch(worldId, attachment.name ?? worldId);
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * Extract the first world ID from a message, checking raw content (with
+ * Twitter/X link resolution), embed URLs/descriptions, Discord native message
+ * snapshots (forwards), and attachment filenames.
+ */
+export async function extractWorldIdFromAnywhere(
+  msg: Message
+): Promise<string | null> {
+  const allMatches = await findAllWorldMatchesUnified(msg);
+  return allMatches[0]?.worldId ?? null;
 }
 
 /**
@@ -472,11 +514,20 @@ const crawlMessages = async (
           `Crawling message ${totalMessages}: ${msg.id} at ${msg.createdAt.toISOString()}`
         );
 
-        // Skip bot's own messages and ignored users
-        if (shouldIgnoreOwnBotMessage(msg.author.id, msg.client.user?.id)) {
+        // Skip bot's own messages in discover/tags mode.
+        // In quality mode we want to scan the bot's own forwarded embeds,
+        // since quality channels typically contain the bot's forwarded posts.
+        // Tags, however, should come from the original user message, not the
+        // bot's forwarded embed, so tags mode still skips bot messages.
+        if (
+          mode !== 'quality' &&
+          shouldIgnoreOwnBotMessage(msg.author.id, msg.client.user?.id)
+        ) {
           logger.debug(`Skipping message ${msg.id}: bot's own message`);
           continue;
         }
+
+        // Always skip messages from users on the ignore list
         if (await isUserOnIgnoreList(msg.author.id)) {
           logger.debug(`Skipping message ${msg.id}: author is on ignore list`);
           continue;
@@ -604,8 +655,8 @@ async function handleDiscoverMode(
 ): Promise<void> {
   const internalAddDate = getMessageInternalAddDate(msg);
 
-  // Scan content, snapshots, and attachment filenames for world IDs
-  const matches = await findAllWorldMatches(msg, true);
+  // Scan content, snapshots, embeds, and attachment filenames for world IDs
+  const matches = await findAllWorldMatchesUnified(msg);
   if (matches.length === 0) {
     logger.debug(
       `No world found in message ${msg.id}: "${msg.content.substring(0, 100)}..."`
@@ -665,8 +716,8 @@ async function handleTagsMode(
   processedWorldsCache: Set<string>,
   repo: ReturnType<typeof getWorldRepository>
 ): Promise<{ updated: number; notFound: number }> {
-  // Extract world ID + source content from body, snapshots, and attachments
-  const allResults = await findAllWorldMatches(msg, true);
+  // Extract world ID + source content from body, snapshots, embeds, and attachments
+  const allResults = await findAllWorldMatchesUnified(msg);
 
   if (allResults.length === 0) {
     logger.debug(`No world found in message ${msg.id} for tag rebuild`);
@@ -726,8 +777,8 @@ async function handleQualityMode(
   repo: ReturnType<typeof getWorldRepository>,
   qualityValue: 'good' | 'bad'
 ): Promise<{ updated: boolean; notFound: boolean }> {
-  // Extract world ID from anywhere (content or embeds)
-  const worldId = extractWorldIdFromAnywhere(msg);
+  // Extract world ID from anywhere (content, embeds, forwarded snapshots, attachments)
+  const worldId = await extractWorldIdFromAnywhere(msg);
 
   if (!worldId) {
     logger.debug(`No world found in message ${msg.id} for quality assignment`);
