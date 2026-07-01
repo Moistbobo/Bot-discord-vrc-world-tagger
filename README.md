@@ -60,6 +60,8 @@ cp .env.sample .env
 | `LOW_CAPACITY_THRESHOLD` | Max player capacity for low-capacity forwarding (default: 20) |
 | `API_PORT` | Port for the built-in REST API server (default: `3000`) |
 | `API_TOKEN` | Comma-separated Bearer tokens for API authentication. Falls back to `EXPORT_API_TOKEN` if not set. |
+| `API_ALLOWED_ORIGINS` | Comma-separated allowed `Origin` values for CORS and origin validation. Example: `https://sosd.googoogaagaa.club,https://testnet.googoogaagaa.club`. Leave empty to allow any origin. |
+| `API_ALLOWED_IPS` | Comma-separated allowed source IP addresses for `/api/*` endpoints. Useful for admin/scripted access. Example: `203.0.113.42,127.0.0.1`. Leave empty to disable. When set, the API trusts loopback reverse proxies to report the real client IP. |
 | `DATABASE_PATH` | Path to the SQLite database file (default: `./worlds.db`) |
 
 ## Usage

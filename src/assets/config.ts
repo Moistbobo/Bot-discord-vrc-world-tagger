@@ -26,7 +26,13 @@ const Config = {
     ? process.env.API_TOKEN.split(',')
     : process.env.EXPORT_API_TOKEN
       ? [process.env.EXPORT_API_TOKEN]
-      : []
+      : [],
+  API_ALLOWED_ORIGINS: process.env.API_ALLOWED_ORIGINS
+    ? process.env.API_ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+    : [],
+  API_ALLOWED_IPS: process.env.API_ALLOWED_IPS
+    ? process.env.API_ALLOWED_IPS.split(',').map((ip) => ip.trim())
+    : []
 };
 
 export default Config;
