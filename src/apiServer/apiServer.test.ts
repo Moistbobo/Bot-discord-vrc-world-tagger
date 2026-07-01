@@ -3,7 +3,9 @@ import { FastifyInstance } from 'fastify';
 // Mock config before importing anything that uses it
 jest.mock('../assets/config', () => ({
   API_PORT: 3000,
-  API_TOKEN: ['test-token']
+  API_TOKEN: ['test-token'],
+  API_ALLOWED_ORIGINS: [],
+  API_ALLOWED_IPS: []
 }));
 
 jest.mock('../utils/database/worldRepository', () => ({

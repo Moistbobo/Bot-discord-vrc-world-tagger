@@ -35,6 +35,42 @@ with `401 Unauthorized`.
 
 ---
 
+## Origin and IP Restrictions
+
+You can lock down the API so only specific browser origins and/or source IP
+addresses can reach it. Configure these via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `API_ALLOWED_ORIGINS` | Comma-separated list of allowed `Origin` values. Used for CORS preflight and origin header validation. Example: `https://sosd.googoogaagaa.club,https://testnet.googoogaagaa.club`. |
+| `API_ALLOWED_IPS` | Comma-separated list of allowed source IP addresses. Example: `203.0.113.42,127.0.0.1`. When set, the API trusts loopback reverse proxies (e.g. Caddy or Nginx on the same host) to provide the real client IP via `X-Forwarded-For`. |
+
+A request to any endpoint except `/api/health` must satisfy **at least one**
+configured restriction in addition to presenting a valid token:
+
+- Its `Origin` header matches one of the allowed origins, **or**
+- Its source IP matches one of the allowed IPs.
+
+If neither rule is configured, only Bearer token auth is enforced. The health
+endpoint remains publicly reachable for monitoring.
+
+### Recommended setup
+
+For browser consumers hosted on `https://sosd.googoogaagaa.club` and
+`https://testnet.googoogaagaa.club`, plus personal admin/scripted access from
+`203.0.113.42`:
+
+```dotenv
+API_ALLOWED_ORIGINS=https://sosd.googoogaagaa.club,https://testnet.googoogaagaa.club
+API_ALLOWED_IPS=203.0.113.42,127.0.0.1
+```
+
+Run the API bound to the loopback interface (`API_HOST=127.0.0.1`) and put a
+reverse proxy such as Caddy in front of it for TLS termination and additional
+IP filtering.
+
+---
+
 ## Endpoints
 
 ### 1. Health Check
