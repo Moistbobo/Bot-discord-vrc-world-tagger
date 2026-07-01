@@ -1,6 +1,6 @@
 {
   "name": "bot_vrc_world_tagger",
-  "version": "0.13.1",
+  "version": "1.0.0",
   "packageManager": "pnpm@9.15.0",
   "main": "index.js",
   "scripts": {
