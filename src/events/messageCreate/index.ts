@@ -18,16 +18,18 @@ import removeReact from './forwarding/removeReact';
 import clearForwardingChannels from './forwarding/clearForwardingChannels';
 import withProtection from './wrappers/withProtection';
 import die from './die';
-import { remove } from './remove';
 import { stats } from './stats';
-import { exportWorlds, exportWorldsFull } from './export';
 import { crawlChannelHistory, getCrawlStatus } from './crawlHistory';
 import lowCapacity from './forwarding/lowCapacity';
 import addDeleteReact from './addDeleteReact';
 import removeDeleteReact from './removeDeleteReact';
+import setQualityChannel from './setQualityChannel';
+import clearQualityChannel from './clearQualityChannel';
 import { isUserOnIgnoreList } from '../../utils/ignoreList';
 import { ignoreMe } from './ignoreMe';
 import { unignoreMe } from './unignoreMe';
+import apiStart from './apiStart';
+import apiStop from './apiStop';
 
 const messageCreate = async (message: Message) => {
   const trimmed = message.content.trim();
@@ -74,16 +76,18 @@ const messageCreate = async (message: Message) => {
     return withProtection(lowCapacity)(message);
   } else if (message.content.startsWith('.clearForwardingChannels')) {
     return withProtection(clearForwardingChannels)(message);
-  } else if (message.content.startsWith('.remove')) {
-    return withProtection(remove)(message);
+  } else if (message.content.startsWith('.setQualityChannel')) {
+    return withProtection(setQualityChannel)(message);
+  } else if (message.content.startsWith('.clearQualityChannel')) {
+    return withProtection(clearQualityChannel)(message);
+  } else if (message.content.startsWith('.apiStart')) {
+    return withProtection(apiStart)(message);
+  } else if (message.content.startsWith('.apiStop')) {
+    return withProtection(apiStop)(message);
   } else if (message.content.startsWith('.die')) {
     return withProtection(die)(message);
   } else if (message.content.startsWith('.stats')) {
     return stats(message);
-  } else if (message.content.startsWith('.exportFull')) {
-    return withProtection(exportWorldsFull)(message);
-  } else if (message.content.startsWith('.export')) {
-    return exportWorlds(message);
   } else if (message.content.startsWith('.crawlHistory')) {
     return withProtection(crawlChannelHistory)(message);
   } else if (message.content.startsWith('.crawlStatus')) {

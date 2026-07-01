@@ -1,13 +1,17 @@
 import { Message } from 'discord.js';
 import logger from '../../../utils/logger';
 import { getSupportedPlatforms } from '../../../utils/helpers';
-import { extractAllWorldIds } from '../../../utils/regex';
-import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
 import {
-  getValue,
-  setValue
-} from '../../../utils/jsonAsDb/handlers/persistentKvp';
+  extractAllWorldIds,
+  cleanContentForTagExtraction
+} from '../../../utils/regex';
+import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
+import { extractTags } from '../../../utils/tagExtractor';
+import {
+  getWorldRepository,
+  type WorldRecord
+} from '../../../utils/database/worldRepository';
 import {
   extractWorldIdFromMessage,
   extractAllWorldIdsFromMessage
@@ -32,6 +36,9 @@ type WorldMatch = {
 
 const eachAttachment = (message: Message) =>
   message.attachments?.values() ?? [][Symbol.iterator]();
+
+const safeJsonStringify = (value: unknown): string =>
+  JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? v.toString() : v));
 
 /**
  * Finds a world link in the message body first, then in forwarded snapshots.
@@ -96,7 +103,7 @@ const findFirstWorldMatch = async (
  * Finds all world links in the message body, forwarded snapshots, and attachments.
  * When `scanAttachmentFilenames` is true, attachment file names are checked last.
  */
-const findAllWorldMatches = async (
+export const findAllWorldMatches = async (
   message: Message,
   scanAttachmentFilenames: boolean
 ): Promise<WorldMatch[]> => {
@@ -172,17 +179,47 @@ const buildWorldProcessQueue = async (
 };
 
 /**
- * Processes a world ID: fetches data, creates embed, sends the bot reply, then forwards it.
+ * Build the combined text source for tag extraction from a Discord message
+ * and any resolved external content (e.g. tweet text). This mirrors the
+ * logic used in normal message processing so that crawlHistory extracts
+ * tags from the same sources.
  */
-const processWorldId = async (
+export function buildTagSource(
+  message: Message,
+  extraSources: (string | null | undefined)[]
+): string {
+  const tagParts = new Set<string>();
+  if (message.content) tagParts.add(message.content);
+  if (message.messageSnapshots) {
+    for (const [, snapshot] of message.messageSnapshots) {
+      if (snapshot.content) tagParts.add(snapshot.content);
+    }
+  }
+  for (const source of extraSources) {
+    if (source) tagParts.add(source);
+  }
+  return cleanContentForTagExtraction(Array.from(tagParts).join('\n'));
+}
+
+/**
+ * Processes a world ID: fetches data, extracts tags, upserts to repository,
+ * creates embed, sends the bot reply, then forwards it.
+ *
+ * When `silent` is true, no embeds/replies/forwards are sent. This is used by
+ * crawlHistory to backfill worlds from channel history without spamming chat.
+ */
+export const processWorldId = async (
   message: Message,
   worldId: string,
   sourceContent: string,
   options?: {
     skipDuplicateCheck?: boolean;
+    silent?: boolean;
+    internalAddDate?: number;
   }
 ): Promise<void> => {
   const skipDuplicateCheck = options?.skipDuplicateCheck ?? false;
+  const silent = options?.silent ?? false;
 
   if (!skipDuplicateCheck && !Config.DEV_MODE) {
     const isDuplicate = await checkAndHandleDuplicate(message, worldId);
@@ -193,8 +230,41 @@ const processWorldId = async (
 
   const worldData = await fetchWorldData(worldId);
   const supportedPlatforms = getSupportedPlatforms(worldData.unityPackages);
-  const packageSizes = await calculatePackageSizes(worldData);
 
+  const tagSource = buildTagSource(message, [sourceContent]);
+  const tags = extractTags(tagSource);
+
+  const messageTimestamp =
+    typeof message.createdTimestamp === 'number'
+      ? Math.floor(message.createdTimestamp / 1000)
+      : Math.floor(Date.now() / 1000);
+
+  const record: WorldRecord = {
+    worldId,
+    guildId: message.guildId ?? '',
+    messageId: message.id,
+    name: worldData.name,
+    authorName: worldData.authorName,
+    capacity: worldData.capacity,
+    platforms: supportedPlatforms,
+    tags,
+    imageUrl: worldData.imageUrl,
+    sourceContent,
+    vrchatData: safeJsonStringify(worldData),
+    internalAddDate: options?.internalAddDate ?? messageTimestamp
+  };
+
+  getWorldRepository().upsert(record);
+  logger.info(
+    `Saved world ${worldId} to repository with tags: ${tags.join(', ') || 'none'}`
+  );
+
+  if (silent) {
+    logger.info(`Silent processing complete for ${worldId}`);
+    return;
+  }
+
+  const packageSizes = await calculatePackageSizes(worldData);
   const embed = createWorldEmbed(
     worldData,
     worldId,
@@ -208,7 +278,7 @@ const processWorldId = async (
     supportedPlatforms
   );
 
-  const responseMsg = await sendResponse(message, embed, worldData.id);
+  const responseMsg = await sendResponse(message, embed);
 
   if (responseMsg) {
     for (const channel of forwardingChannels) {
@@ -245,25 +315,6 @@ export const forceRefetchWorldFromMessage = async (
   const match = await findFirstWorldMatch(message, true);
   if (!match) return false;
   const { worldId, sourceContent } = match;
-
-  const guildId = message.guildId;
-  if (guildId) {
-    const kvpKey = `${worldId}-${guildId}`;
-    const existingOriginal = await getValue(
-      kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
-      kvpKey
-    );
-    if (!existingOriginal) {
-      await setValue(
-        kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
-        kvpKey,
-        message.id
-      );
-      logger.info(
-        `Saving original message ID for world ${kvpKey} (force refetch): ${message.id}`
-      );
-    }
-  }
 
   await processWorldId(message, worldId, sourceContent, {
     skipDuplicateCheck: true

@@ -10,16 +10,22 @@ jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
   remove: jest.fn()
 }));
 
-jest.mock('../../utils/jsonAsDb/handlers/persistentKvp', () => ({
-  removeValue: jest.fn()
+jest.mock('../../utils/worldActions', () => ({
+  deleteWorldForGuild: jest.fn()
+}));
+
+jest.mock('../../utils/database/worldRepository', () => ({
+  getWorldRepository: jest.fn(() => ({
+    deleteByWorldAndGuild: jest.fn()
+  }))
 }));
 
 const { has, remove } = jest.requireMock(
   '../../utils/jsonAsDb/handlers/persistentList'
 ) as { has: jest.Mock; remove: jest.Mock };
-const { removeValue } = jest.requireMock(
-  '../../utils/jsonAsDb/handlers/persistentKvp'
-) as { removeValue: jest.Mock };
+const { deleteWorldForGuild } = jest.requireMock(
+  '../../utils/worldActions'
+) as { deleteWorldForGuild: jest.Mock };
 const { fetchWorldData } = jest.requireMock(
   '../messageCreate/watchForVRCWorldLinks/worldData'
 ) as { fetchWorldData: jest.Mock };
@@ -58,10 +64,10 @@ describe('onReactionUndoWorldTag', () => {
   beforeEach(() => {
     has.mockReset();
     remove.mockReset();
-    removeValue.mockReset();
+    deleteWorldForGuild.mockReset();
     fetchWorldData.mockReset();
     remove.mockResolvedValue({ success: true });
-    removeValue.mockResolvedValue(true);
+    deleteWorldForGuild.mockResolvedValue(true);
     fetchWorldData.mockResolvedValue({
       name: 'Test World',
       authorName: 'Author',
@@ -89,7 +95,7 @@ describe('onReactionUndoWorldTag', () => {
     const reaction = makeReaction();
     await onReactionUndoWorldTag(reaction, { bot: false } as any);
     expect(reaction.message.delete).not.toHaveBeenCalled();
-    expect(remove).not.toHaveBeenCalled();
+    expect(deleteWorldForGuild).not.toHaveBeenCalled();
   });
 
   it('ignores non-bot message authors', async () => {
@@ -99,7 +105,7 @@ describe('onReactionUndoWorldTag', () => {
     });
     await onReactionUndoWorldTag(reaction, { bot: false } as any);
     expect(reaction.message.delete).not.toHaveBeenCalled();
-    expect(remove).not.toHaveBeenCalled();
+    expect(deleteWorldForGuild).not.toHaveBeenCalled();
   });
 
   it('does nothing when no world id can be resolved', async () => {
@@ -108,22 +114,18 @@ describe('onReactionUndoWorldTag', () => {
       message: { embeds: [], content: 'no world here' }
     });
     await onReactionUndoWorldTag(reaction, { bot: false } as any);
-    expect(remove).not.toHaveBeenCalled();
+    expect(deleteWorldForGuild).not.toHaveBeenCalled();
     expect(reaction.message.delete).not.toHaveBeenCalled();
   });
 
-  it('removes db entries and deletes bot message', async () => {
+  it('deletes repository row and bot message and sends confirmation embed', async () => {
     has.mockImplementation((key: string) =>
       Promise.resolve(key === 'WATCHED_REACTION_CHANNELS')
     );
     const reaction = makeReaction();
     await onReactionUndoWorldTag(reaction, { bot: false } as any);
 
-    expect(remove).toHaveBeenCalledWith('PROCESSED_WORLDS', WORLD_ID);
-    expect(removeValue).toHaveBeenCalledWith(
-      'PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID',
-      `${WORLD_ID}-guild1`
-    );
+    expect(deleteWorldForGuild).toHaveBeenCalledWith(WORLD_ID, 'guild1');
     expect(remove).toHaveBeenCalledWith(
       'REACTION_FORWARDED_MESSAGE_IDS',
       'bot-reply-msg'

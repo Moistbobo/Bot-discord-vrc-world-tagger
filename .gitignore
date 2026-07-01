@@ -1,5 +1,6 @@
 # custom ignores
 dist
+.worktrees
 
 # Created by https://www.gitignore.io/api/node,macos
 
@@ -122,3 +123,5 @@ db.back.json
 # dev related
 db.json
 db.json.back
+worlds.db*
+

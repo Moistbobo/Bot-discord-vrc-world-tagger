@@ -1,5 +1,4 @@
 import { Attachment, Message } from 'discord.js';
-import { kvKeys } from '../../../utils/jsonAsDb/types';
 
 jest.mock('../../../utils/jsonAsDb/handlers/persistentKvp', () => ({
   getValue: jest.fn(),
@@ -56,10 +55,16 @@ jest.mock('../../../utils/logger', () => ({
   }
 }));
 
-import {
-  getValue,
-  setValue
-} from '../../../utils/jsonAsDb/handlers/persistentKvp';
+jest.mock('../../../utils/database/worldRepository', () => ({
+  getWorldRepository: jest.fn(() => ({
+    upsert: jest.fn()
+  }))
+}));
+
+jest.mock('../../../utils/tagExtractor', () => ({
+  extractTags: jest.fn(() => [])
+}));
+
 import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { extractWorldIdFromMessage } from './worldExtraction';
 import { fetchWorldData, calculatePackageSizes } from './worldData';
@@ -94,37 +99,25 @@ describe('forceRefetchWorldFromMessage', () => {
     (calculatePackageSizes as jest.Mock).mockResolvedValue([]);
   });
 
-  it('sets PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID when not yet tracked', async () => {
-    (getValue as jest.Mock).mockResolvedValue(undefined);
-    (setValue as jest.Mock).mockResolvedValue(true);
-
+  it('refetches and processes world when not yet tracked', async () => {
     const message = makeMessage();
     const result = await forceRefetchWorldFromMessage(message);
 
     expect(result).toBe(true);
-    expect(getValue).toHaveBeenCalledWith(
-      kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
-      `${WRLD}-guild-1`
-    );
-    expect(setValue).toHaveBeenCalledWith(
-      kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
-      `${WRLD}-guild-1`,
-      'msg-1'
-    );
+    expect(fetchWorldData).toHaveBeenCalledWith(WRLD);
   });
 
-  it('does not setValue when world is already tracked for guild', async () => {
-    (getValue as jest.Mock).mockResolvedValue('older-msg');
-
+  it('refetches even when world is already tracked (force refetch skips duplicate check)', async () => {
     await forceRefetchWorldFromMessage(makeMessage());
 
-    expect(getValue).toHaveBeenCalled();
-    expect(setValue).not.toHaveBeenCalled();
+    expect(fetchWorldData).toHaveBeenCalled();
   });
 
-  it('does not call getValue or setValue when guildId is missing', async () => {
-    const message = { ...makeMessage(), guildId: null } as Message;
-    await forceRefetchWorldFromMessage(message);
+  it('does not call getValue or setValue (legacy KVP removed)', async () => {
+    const { getValue, setValue } =
+      await import('../../../utils/jsonAsDb/handlers/persistentKvp');
+
+    await forceRefetchWorldFromMessage(makeMessage());
 
     expect(getValue).not.toHaveBeenCalled();
     expect(setValue).not.toHaveBeenCalled();
@@ -136,7 +129,6 @@ describe('forceRefetchWorldFromMessage', () => {
     const result = await forceRefetchWorldFromMessage(makeMessage());
 
     expect(result).toBe(false);
-    expect(getValue).not.toHaveBeenCalled();
   });
 
   it('returns false when channel is not watched (including attachment filenames)', async () => {
@@ -155,14 +147,10 @@ describe('forceRefetchWorldFromMessage', () => {
     const result = await forceRefetchWorldFromMessage(message);
 
     expect(result).toBe(false);
-    expect(has).toHaveBeenCalledWith(kvKeys.WATCHED_CHANNELS, 'chan-1');
-    expect(getValue).not.toHaveBeenCalled();
   });
 
   it('refetches world id from attachment filename when message text has none', async () => {
     (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(null);
-    (getValue as jest.Mock).mockResolvedValue(undefined);
-    (setValue as jest.Mock).mockResolvedValue(true);
 
     const att = { name: `capture-${WRLD}.png` } as Attachment;
     const message = {
@@ -176,9 +164,6 @@ describe('forceRefetchWorldFromMessage', () => {
     const result = await forceRefetchWorldFromMessage(message);
 
     expect(result).toBe(true);
-    expect(getValue).toHaveBeenCalledWith(
-      kvKeys.PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID,
-      `${WRLD}-guild-1`
-    );
+    expect(fetchWorldData).toHaveBeenCalledWith(WRLD);
   });
 });
