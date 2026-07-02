@@ -11,13 +11,33 @@ function normalizeOrigin(origin: string): string {
   return origin.trim().replace(/\/$/, '').toLowerCase();
 }
 
+function wildcardToRegex(pattern: string): RegExp {
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  const withWildcard = escaped.replace(/\*/g, '[^/]*');
+  return new RegExp(`^${withWildcard}$`, 'i');
+}
+
+function matchesAllowedOrigin(origin: string, allowed: string): boolean {
+  const normalizedOrigin = normalizeOrigin(origin);
+  const normalizedAllowed = normalizeOrigin(allowed);
+
+  if (normalizedAllowed.includes('*')) {
+    return wildcardToRegex(normalizedAllowed).test(normalizedOrigin);
+  }
+
+  return normalizedOrigin === normalizedAllowed;
+}
+
 function isAllowedOrigin(origin: string | undefined): boolean {
   if (Config.API_ALLOWED_ORIGINS.length === 0) return true;
   if (!origin) return false;
-  const normalized = normalizeOrigin(origin);
-  return Config.API_ALLOWED_ORIGINS.some(
-    (allowed) => normalizeOrigin(allowed) === normalized
+  return Config.API_ALLOWED_ORIGINS.some((allowed) =>
+    matchesAllowedOrigin(origin, allowed)
   );
+}
+
+function areApiRestrictionsDisabled(): boolean {
+  return Config.DISABLE_API_RESTRICTIONS === true;
 }
 
 function isAllowedIp(ip: string | undefined): boolean {
@@ -38,9 +58,19 @@ export function createApiServer() {
   registerErrorHandler(fastify);
 
   // CORS: allow configured origins, or fall back to wildcard for backwards compatibility.
-  const corsOptions =
-    Config.API_ALLOWED_ORIGINS.length > 0
-      ? { origin: Config.API_ALLOWED_ORIGINS }
+  // Patterns may contain '*' as a wildcard for one path/domain segment.
+  const restrictionsDisabled = areApiRestrictionsDisabled();
+  const corsOptions = restrictionsDisabled
+    ? { origin: '*' }
+    : Config.API_ALLOWED_ORIGINS.length > 0
+      ? {
+          origin: (
+            origin: string | undefined,
+            cb: (err: Error | null, allow: boolean) => void
+          ) => {
+            cb(null, isAllowedOrigin(origin));
+          }
+        }
       : { origin: '*' };
   void fastify.register(cors, corsOptions);
 
@@ -48,8 +78,11 @@ export function createApiServer() {
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.url === '/api/health') return;
 
-    const hasOriginRules = Config.API_ALLOWED_ORIGINS.length > 0;
-    const hasIpRules = Config.API_ALLOWED_IPS.length > 0;
+    const restrictionsDisabled = areApiRestrictionsDisabled();
+    const hasOriginRules =
+      !restrictionsDisabled && Config.API_ALLOWED_ORIGINS.length > 0;
+    const hasIpRules =
+      !restrictionsDisabled && Config.API_ALLOWED_IPS.length > 0;
 
     // Nothing configured; let auth handle access control.
     if (!hasOriginRules && !hasIpRules) return;
