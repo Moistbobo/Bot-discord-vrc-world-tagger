@@ -32,7 +32,10 @@ const Config = {
     : [],
   API_ALLOWED_IPS: process.env.API_ALLOWED_IPS
     ? process.env.API_ALLOWED_IPS.split(',').map((ip) => ip.trim())
-    : []
+    : [],
+  DISABLE_API_RESTRICTIONS:
+    process.env.DISABLE_API_RESTRICTIONS === 'true' ||
+    process.env.DEV === 'true'
 };
 
 export default Config;
