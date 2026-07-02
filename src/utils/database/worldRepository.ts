@@ -291,25 +291,20 @@ export class WorldRepository {
   }
 
   /**
-   * Paginated list of world records with optional filters.
-   * @param limit   Max rows to return
-   * @param offset  Rows to skip
-   * @param filters Optional filters (tag array = AND logic, platforms array = AND logic, guildId, quality)
+   * Build a WHERE clause and parameter list from the given filters.
+   * Used by getAllPaginated and getFilterCounts so facet counts use the
+   * exact same filtering rules as the paginated world list.
    */
-  getAllPaginated(
-    limit: number,
-    offset: number,
-    filters?: {
-      tags?: string[];
-      platforms?: string[];
-      guildId?: string;
-      quality?: ('good' | 'bad')[];
-      search?: string;
-      minCapacity?: number;
-      maxCapacity?: number;
-      worldIds?: string[];
-    }
-  ): { rows: WorldRecord[]; total: number } {
+  private buildWhereClause(filters?: {
+    tags?: string[];
+    platforms?: string[];
+    guildId?: string;
+    quality?: ('good' | 'bad')[];
+    search?: string;
+    minCapacity?: number;
+    maxCapacity?: number;
+    worldIds?: string[];
+  }): { whereClause: string; params: (string | number)[] } {
     const whereParts: string[] = [];
     const params: (string | number)[] = [];
 
@@ -379,6 +374,31 @@ export class WorldRepository {
     const whereClause =
       whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
 
+    return { whereClause, params };
+  }
+
+  /**
+   * Paginated list of world records with optional filters.
+   * @param limit   Max rows to return
+   * @param offset  Rows to skip
+   * @param filters Optional filters (tag array = AND logic, platforms array = AND logic, guildId, quality)
+   */
+  getAllPaginated(
+    limit: number,
+    offset: number,
+    filters?: {
+      tags?: string[];
+      platforms?: string[];
+      guildId?: string;
+      quality?: ('good' | 'bad')[];
+      search?: string;
+      minCapacity?: number;
+      maxCapacity?: number;
+      worldIds?: string[];
+    }
+  ): { rows: WorldRecord[]; total: number } {
+    const { whereClause, params } = this.buildWhereClause(filters);
+
     const countSql = `SELECT COUNT(*) as total FROM world_records ${whereClause}`;
     const countStmt = this.db.prepare(countSql);
     const countRow = countStmt.get(...params) as { total: number } | undefined;
@@ -394,6 +414,70 @@ export class WorldRepository {
     return {
       rows: rows.map(rowToRecord),
       total
+    };
+  }
+
+  /**
+   * Return facet counts for quality and platform options given the current
+   * filter context. Quality counts ignore the selected quality filter, and
+   * platform counts ignore the selected platform filter, matching standard
+   * faceted search behavior.
+   */
+  getFilterCounts(filters?: {
+    tags?: string[];
+    platforms?: string[];
+    guildId?: string;
+    quality?: ('good' | 'bad')[];
+    search?: string;
+    minCapacity?: number;
+    maxCapacity?: number;
+    worldIds?: string[];
+  }): {
+    qualityCounts: { quality: 'good' | 'bad'; count: number }[];
+    platformCounts: { platform: string; count: number }[];
+  } {
+    const qualityBase = { ...filters, quality: undefined };
+    const { whereClause: qualityWhere, params: qualityParams } =
+      this.buildWhereClause(qualityBase);
+
+    const qualityWhereWithQuality = qualityWhere
+      ? `${qualityWhere} AND quality IN ('good', 'bad')`
+      : "WHERE quality IN ('good', 'bad')";
+
+    const qualitySql = `
+      SELECT q.quality, COALESCE(c.count, 0) as count
+      FROM (SELECT 'good' as quality UNION ALL SELECT 'bad' as quality) q
+      LEFT JOIN (
+        SELECT quality, COUNT(*) as count
+        FROM world_records
+        ${qualityWhereWithQuality}
+        GROUP BY quality
+      ) c ON c.quality = q.quality
+    `;
+    const qualityStmt = this.db.prepare(qualitySql);
+    const qualityRows = qualityStmt.all(
+      ...qualityParams
+    ) as { quality: 'good' | 'bad'; count: number }[];
+
+    const platformBase = { ...filters, platforms: undefined };
+    const { whereClause: platformWhere, params: platformParams } =
+      this.buildWhereClause(platformBase);
+
+    const platformSql = `
+      SELECT value as platform, COUNT(*) as count
+      FROM world_records, json_each(platforms)
+      ${platformWhere}
+      GROUP BY value
+      ORDER BY count DESC, platform ASC
+    `;
+    const platformStmt = this.db.prepare(platformSql);
+    const platformRows = platformStmt.all(
+      ...platformParams
+    ) as { platform: string; count: number }[];
+
+    return {
+      qualityCounts: qualityRows,
+      platformCounts: platformRows
     };
   }
 
