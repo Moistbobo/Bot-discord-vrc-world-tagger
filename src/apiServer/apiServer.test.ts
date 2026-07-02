@@ -5,7 +5,8 @@ jest.mock('../assets/config', () => ({
   API_PORT: 3000,
   API_TOKEN: ['test-token'],
   API_ALLOWED_ORIGINS: [],
-  API_ALLOWED_IPS: []
+  API_ALLOWED_IPS: [],
+  DISABLE_API_RESTRICTIONS: false
 }));
 
 jest.mock('../utils/database/worldRepository', () => ({
