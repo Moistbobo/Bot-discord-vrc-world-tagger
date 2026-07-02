@@ -455,9 +455,10 @@ export class WorldRepository {
       ) c ON c.quality = q.quality
     `;
     const qualityStmt = this.db.prepare(qualitySql);
-    const qualityRows = qualityStmt.all(
-      ...qualityParams
-    ) as { quality: 'good' | 'bad'; count: number }[];
+    const qualityRows = qualityStmt.all(...qualityParams) as {
+      quality: 'good' | 'bad';
+      count: number;
+    }[];
 
     const platformBase = { ...filters, platforms: undefined };
     const { whereClause: platformWhere, params: platformParams } =
@@ -471,9 +472,10 @@ export class WorldRepository {
       ORDER BY count DESC, platform ASC
     `;
     const platformStmt = this.db.prepare(platformSql);
-    const platformRows = platformStmt.all(
-      ...platformParams
-    ) as { platform: string; count: number }[];
+    const platformRows = platformStmt.all(...platformParams) as {
+      platform: string;
+      count: number;
+    }[];
 
     return {
       qualityCounts: qualityRows,

@@ -1006,9 +1006,7 @@ describe('WorldRepository', () => {
         { quality: 'good', count: 1 },
         { quality: 'bad', count: 0 }
       ]);
-      expect(result.platformCounts).toEqual([
-        { platform: 'ios', count: 1 }
-      ]);
+      expect(result.platformCounts).toEqual([{ platform: 'ios', count: 1 }]);
     });
 
     it('applies capacity filters to both quality and platform counts', () => {
@@ -1030,9 +1028,9 @@ describe('WorldRepository', () => {
       expect(
         result.qualityCounts.find((q) => q.quality === 'good')?.count
       ).toBe(1);
-      expect(
-        result.qualityCounts.find((q) => q.quality === 'bad')?.count
-      ).toBe(1);
+      expect(result.qualityCounts.find((q) => q.quality === 'bad')?.count).toBe(
+        1
+      );
     });
 
     it('counts a multi-platform world once per platform', () => {

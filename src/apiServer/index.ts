@@ -5,6 +5,7 @@ import Config from '../assets/config';
 import healthRoute from './routes/health';
 import worldsRoute from './routes/worlds';
 import tagsRoute from './routes/tags';
+import filterCountsRoute from './routes/filterCounts';
 import registerErrorHandler from './plugins/errorHandler';
 
 function normalizeOrigin(origin: string): string {
@@ -82,6 +83,7 @@ export function createApiServer() {
   fastify.register(healthRoute);
   fastify.register(worldsRoute);
   fastify.register(tagsRoute);
+  fastify.register(filterCountsRoute);
 
   return fastify;
 }
