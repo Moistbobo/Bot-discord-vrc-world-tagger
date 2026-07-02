@@ -71,6 +71,17 @@ function createMockRepo(overrides: Record<string, unknown> = {}) {
       { tag: 'horror', count: 312 },
       { tag: 'game', count: 145 }
     ]),
+    getFilterCounts: jest.fn(() => ({
+      qualityCounts: [
+        { quality: 'good', count: 123 },
+        { quality: 'bad', count: 12 }
+      ],
+      platformCounts: [
+        { platform: 'standalonewindows', count: 80 },
+        { platform: 'android', count: 45 },
+        { platform: 'ios', count: 6 }
+      ]
+    })),
     ...overrides
   };
 }
@@ -685,6 +696,125 @@ describe('API Server', () => {
         { tag: 'horror', count: 312 },
         { tag: 'game', count: 145 }
       ]);
+    });
+  });
+
+  describe('GET /api/filter-counts', () => {
+    it('returns quality and platform counts', async () => {
+      asMock(getWorldRepository).mockReturnValue(createMockRepo());
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/filter-counts',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.qualityCounts).toEqual([
+        { quality: 'good', count: 123 },
+        { quality: 'bad', count: 12 }
+      ]);
+      expect(body.platformCounts).toEqual([
+        { platform: 'standalonewindows', count: 80 },
+        { platform: 'android', count: 45 },
+        { platform: 'ios', count: 6 }
+      ]);
+    });
+
+    it('passes all filter query params to repository', async () => {
+      const getFilterCounts = jest.fn(() => ({
+        qualityCounts: [],
+        platformCounts: []
+      }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getFilterCounts })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/filter-counts?search=test&minCapacity=10&maxCapacity=40&tag=chill&quality=good&platform=android',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getFilterCounts).toHaveBeenCalledWith(
+        expect.objectContaining({
+          search: 'test',
+          minCapacity: 10,
+          maxCapacity: 40,
+          tags: ['chill'],
+          quality: ['good'],
+          platforms: ['android']
+        })
+      );
+    });
+
+    it('accepts repeated tag, quality and platform params', async () => {
+      const getFilterCounts = jest.fn(() => ({
+        qualityCounts: [],
+        platformCounts: []
+      }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getFilterCounts })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/filter-counts?tag=horror&tag=game&quality=good&quality=bad&platform=android&platform=ios',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getFilterCounts).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tags: ['horror', 'game'],
+          quality: ['good', 'bad'],
+          platforms: ['android', 'ios']
+        })
+      );
+    });
+
+    it('ignores empty or whitespace-only search query', async () => {
+      const getFilterCounts = jest.fn(() => ({
+        qualityCounts: [],
+        platformCounts: []
+      }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getFilterCounts })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/filter-counts?search=%20%20',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getFilterCounts).toHaveBeenCalledWith(undefined);
+    });
+
+    it('returns 400 when minCapacity is greater than maxCapacity', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/filter-counts?minCapacity=50&maxCapacity=20',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'minCapacity must be less than or equal to maxCapacity'
+      });
+    });
+
+    it('returns 400 when capacity value is out of range', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/filter-counts?minCapacity=0',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body)).toEqual({
+        error: 'minCapacity must be at least 1'
+      });
     });
   });
 

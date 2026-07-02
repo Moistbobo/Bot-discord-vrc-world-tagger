@@ -895,6 +895,170 @@ describe('WorldRepository', () => {
     });
   });
 
+  describe('getFilterCounts', () => {
+    beforeEach(() => {
+      db.prepare('DELETE FROM world_records').run();
+
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_good_pc',
+          guildId: 'guild-1',
+          platforms: ['standalonewindows'],
+          tags: ['horror'],
+          capacity: 32
+        })
+      );
+      repo.updateQuality('wrld_good_pc', 'guild-1', 'good');
+
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_bad_android',
+          guildId: 'guild-1',
+          platforms: ['android'],
+          tags: ['horror'],
+          capacity: 16
+        })
+      );
+      repo.updateQuality('wrld_bad_android', 'guild-1', 'bad');
+
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_good_ios',
+          guildId: 'guild-1',
+          platforms: ['ios'],
+          tags: ['game'],
+          capacity: 8
+        })
+      );
+      repo.updateQuality('wrld_good_ios', 'guild-1', 'good');
+
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_unrated',
+          guildId: 'guild-1',
+          platforms: ['standalonewindows', 'android'],
+          tags: ['horror'],
+          capacity: 24
+        })
+      );
+    });
+
+    it('returns quality and platform counts for all records', () => {
+      const result = repo.getFilterCounts();
+
+      expect(result.qualityCounts).toEqual([
+        { quality: 'good', count: 2 },
+        { quality: 'bad', count: 1 }
+      ]);
+      expect(result.platformCounts).toEqual([
+        { platform: 'android', count: 2 },
+        { platform: 'standalonewindows', count: 2 },
+        { platform: 'ios', count: 1 }
+      ]);
+    });
+
+    it('returns zero quality counts when no records match', () => {
+      const result = repo.getFilterCounts({ tags: ['nonexistent'] });
+
+      expect(result.qualityCounts).toEqual([
+        { quality: 'good', count: 0 },
+        { quality: 'bad', count: 0 }
+      ]);
+      expect(result.platformCounts).toEqual([]);
+    });
+
+    it('ignores the selected quality filter when counting qualities', () => {
+      const result = repo.getFilterCounts({ quality: ['good'] });
+
+      expect(result.qualityCounts).toEqual([
+        { quality: 'good', count: 2 },
+        { quality: 'bad', count: 1 }
+      ]);
+    });
+
+    it('ignores the selected platform filter when counting platforms', () => {
+      const result = repo.getFilterCounts({ platforms: ['standalonewindows'] });
+
+      expect(result.platformCounts).toEqual([
+        { platform: 'android', count: 2 },
+        { platform: 'standalonewindows', count: 2 },
+        { platform: 'ios', count: 1 }
+      ]);
+    });
+
+    it('applies tag filters to both quality and platform counts', () => {
+      const result = repo.getFilterCounts({ tags: ['horror'] });
+
+      expect(result.qualityCounts).toEqual([
+        { quality: 'good', count: 1 },
+        { quality: 'bad', count: 1 }
+      ]);
+      expect(result.platformCounts).toEqual([
+        { platform: 'android', count: 2 },
+        { platform: 'standalonewindows', count: 2 }
+      ]);
+    });
+
+    it('applies search filters to both quality and platform counts', () => {
+      const result = repo.getFilterCounts({ search: 'ios' });
+
+      expect(result.qualityCounts).toEqual([
+        { quality: 'good', count: 1 },
+        { quality: 'bad', count: 0 }
+      ]);
+      expect(result.platformCounts).toEqual([{ platform: 'ios', count: 1 }]);
+    });
+
+    it('applies capacity filters to both quality and platform counts', () => {
+      const result = repo.getFilterCounts({ minCapacity: 10, maxCapacity: 30 });
+
+      expect(result.qualityCounts).toEqual([
+        { quality: 'good', count: 0 },
+        { quality: 'bad', count: 1 }
+      ]);
+      expect(result.platformCounts).toEqual([
+        { platform: 'android', count: 2 },
+        { platform: 'standalonewindows', count: 1 }
+      ]);
+    });
+
+    it('excludes worlds without a quality from quality counts', () => {
+      const result = repo.getFilterCounts({ tags: ['horror'] });
+
+      expect(
+        result.qualityCounts.find((q) => q.quality === 'good')?.count
+      ).toBe(1);
+      expect(result.qualityCounts.find((q) => q.quality === 'bad')?.count).toBe(
+        1
+      );
+    });
+
+    it('counts a multi-platform world once per platform', () => {
+      const result = repo.getFilterCounts({ worldIds: ['wrld_unrated'] });
+
+      expect(result.platformCounts).toEqual([
+        { platform: 'android', count: 1 },
+        { platform: 'standalonewindows', count: 1 }
+      ]);
+    });
+
+    it('combines quality and platform filters for the opposite facet', () => {
+      const result = repo.getFilterCounts({
+        quality: ['good'],
+        platforms: ['standalonewindows']
+      });
+
+      expect(result.qualityCounts).toEqual([
+        { quality: 'good', count: 1 },
+        { quality: 'bad', count: 0 }
+      ]);
+      expect(result.platformCounts).toEqual([
+        { platform: 'ios', count: 1 },
+        { platform: 'standalonewindows', count: 1 }
+      ]);
+    });
+  });
+
   describe('getUniqueTags', () => {
     it('returns empty array when no records', () => {
       expect(repo.getUniqueTags()).toEqual([]);
