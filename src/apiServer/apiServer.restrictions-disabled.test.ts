@@ -33,7 +33,14 @@ function createMockRepo() {
     count: jest.fn(() => 1428),
     getAllPaginated: jest.fn(() => ({ total: 0, rows: [] })),
     getByWorldId: jest.fn(() => []),
-    getUniqueTags: jest.fn(() => [])
+    getUniqueTags: jest.fn(() => []),
+    getMetadataCounts: jest.fn(() => ({
+      qualityGood: 0,
+      qualityBad: 0,
+      platformDesktop: 0,
+      platformAndroid: 0,
+      platformiOS: 0
+    }))
   };
 }
 
