@@ -331,6 +331,36 @@ Returns every unique tag across all world records, sorted by frequency (most com
 
 ---
 
+### 5. Metadata Counts
+
+```
+GET /api/meta
+```
+
+Returns high-level dataset counts for quality ratings and platform support across all world records.
+
+**Response**
+
+```json
+{
+  "qualityGood": 123,
+  "qualityBad": 12,
+  "platformDesktop": 80,
+  "platformAndroid": 45,
+  "platformiOS": 6
+}
+```
+
+| Field             | Type   | Description |
+|-------------------|--------|-------------|
+| `qualityGood`     | number | Number of world records rated `good`. |
+| `qualityBad`      | number | Number of world records rated `bad`. |
+| `platformDesktop` | number | Number of world records that support Desktop (`standalonewindows`). |
+| `platformAndroid` | number | Number of world records that support Android. |
+| `platformiOS`     | number | Number of world records that support iOS. |
+
+---
+
 ## World Record Schema
 
 Each world object returned by the API has the following fields:
@@ -392,6 +422,10 @@ curl -H "Authorization: Bearer my-token" \
 # List all tags
 curl -H "Authorization: Bearer my-token" \
   http://localhost:3000/api/tags
+
+# Get dataset metadata counts
+curl -H "Authorization: Bearer my-token" \
+  http://localhost:3000/api/meta
 ```
 
 ---

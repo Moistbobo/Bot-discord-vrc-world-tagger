@@ -292,8 +292,8 @@ export class WorldRepository {
 
   /**
    * Build a WHERE clause and parameter list from the given filters.
-   * Used by getAllPaginated and getFilterCounts so facet counts use the
-   * exact same filtering rules as the paginated world list.
+   * Used by getAllPaginated so facet counts use the exact same filtering
+   * rules as the paginated world list.
    */
   private buildWhereClause(filters?: {
     tags?: string[];
@@ -418,68 +418,49 @@ export class WorldRepository {
   }
 
   /**
-   * Return facet counts for quality and platform options given the current
-   * filter context. Quality counts ignore the selected quality filter, and
-   * platform counts ignore the selected platform filter, matching standard
-   * faceted search behavior.
+   * Return high-level dataset metadata counts: quality ratings and platform
+   * support across all world records. Desktop support is counted via the
+   * `standalonewindows` platform value that VRChat uses for PC/Desktop worlds.
    */
-  getFilterCounts(filters?: {
-    tags?: string[];
-    platforms?: string[];
-    guildId?: string;
-    quality?: ('good' | 'bad')[];
-    search?: string;
-    minCapacity?: number;
-    maxCapacity?: number;
-    worldIds?: string[];
-  }): {
-    qualityCounts: { quality: 'good' | 'bad'; count: number }[];
-    platformCounts: { platform: string; count: number }[];
+  getMetadataCounts(): {
+    qualityGood: number;
+    qualityBad: number;
+    platformDesktop: number;
+    platformAndroid: number;
+    platformiOS: number;
   } {
-    const qualityBase = { ...filters, quality: undefined };
-    const { whereClause: qualityWhere, params: qualityParams } =
-      this.buildWhereClause(qualityBase);
-
-    const qualityWhereWithQuality = qualityWhere
-      ? `${qualityWhere} AND quality IN ('good', 'bad')`
-      : "WHERE quality IN ('good', 'bad')";
-
     const qualitySql = `
-      SELECT q.quality, COALESCE(c.count, 0) as count
-      FROM (SELECT 'good' as quality UNION ALL SELECT 'bad' as quality) q
-      LEFT JOIN (
-        SELECT quality, COUNT(*) as count
-        FROM world_records
-        ${qualityWhereWithQuality}
-        GROUP BY quality
-      ) c ON c.quality = q.quality
+      SELECT
+        (SELECT COUNT(*) FROM world_records WHERE quality = 'good') AS qualityGood,
+        (SELECT COUNT(*) FROM world_records WHERE quality = 'bad') AS qualityBad
     `;
     const qualityStmt = this.db.prepare(qualitySql);
-    const qualityRows = qualityStmt.all(...qualityParams) as {
-      quality: 'good' | 'bad';
-      count: number;
-    }[];
-
-    const platformBase = { ...filters, platforms: undefined };
-    const { whereClause: platformWhere, params: platformParams } =
-      this.buildWhereClause(platformBase);
+    const qualityRow = qualityStmt.get() as
+      | { qualityGood: number; qualityBad: number }
+      | undefined;
 
     const platformSql = `
-      SELECT value as platform, COUNT(*) as count
+      SELECT value AS platform, COUNT(*) AS count
       FROM world_records, json_each(platforms)
-      ${platformWhere}
+      WHERE value IN ('standalonewindows', 'android', 'ios')
       GROUP BY value
-      ORDER BY count DESC, platform ASC
     `;
     const platformStmt = this.db.prepare(platformSql);
-    const platformRows = platformStmt.all(...platformParams) as {
+    const platformRows = platformStmt.all() as {
       platform: string;
       count: number;
     }[];
 
+    const platformCounts = new Map(
+      platformRows.map((r) => [r.platform, r.count])
+    );
+
     return {
-      qualityCounts: qualityRows,
-      platformCounts: platformRows
+      qualityGood: qualityRow?.qualityGood ?? 0,
+      qualityBad: qualityRow?.qualityBad ?? 0,
+      platformDesktop: platformCounts.get('standalonewindows') ?? 0,
+      platformAndroid: platformCounts.get('android') ?? 0,
+      platformiOS: platformCounts.get('ios') ?? 0
     };
   }
 
