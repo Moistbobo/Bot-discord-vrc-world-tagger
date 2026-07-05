@@ -291,25 +291,20 @@ export class WorldRepository {
   }
 
   /**
-   * Paginated list of world records with optional filters.
-   * @param limit   Max rows to return
-   * @param offset  Rows to skip
-   * @param filters Optional filters (tag array = AND logic, platforms array = AND logic, guildId, quality)
+   * Build a WHERE clause and parameter list from the given filters.
+   * Used by getAllPaginated so facet counts use the exact same filtering
+   * rules as the paginated world list.
    */
-  getAllPaginated(
-    limit: number,
-    offset: number,
-    filters?: {
-      tags?: string[];
-      platforms?: string[];
-      guildId?: string;
-      quality?: ('good' | 'bad')[];
-      search?: string;
-      minCapacity?: number;
-      maxCapacity?: number;
-      worldIds?: string[];
-    }
-  ): { rows: WorldRecord[]; total: number } {
+  private buildWhereClause(filters?: {
+    tags?: string[];
+    platforms?: string[];
+    guildId?: string;
+    quality?: ('good' | 'bad')[];
+    search?: string;
+    minCapacity?: number;
+    maxCapacity?: number;
+    worldIds?: string[];
+  }): { whereClause: string; params: (string | number)[] } {
     const whereParts: string[] = [];
     const params: (string | number)[] = [];
 
@@ -379,6 +374,31 @@ export class WorldRepository {
     const whereClause =
       whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
 
+    return { whereClause, params };
+  }
+
+  /**
+   * Paginated list of world records with optional filters.
+   * @param limit   Max rows to return
+   * @param offset  Rows to skip
+   * @param filters Optional filters (tag array = AND logic, platforms array = AND logic, guildId, quality)
+   */
+  getAllPaginated(
+    limit: number,
+    offset: number,
+    filters?: {
+      tags?: string[];
+      platforms?: string[];
+      guildId?: string;
+      quality?: ('good' | 'bad')[];
+      search?: string;
+      minCapacity?: number;
+      maxCapacity?: number;
+      worldIds?: string[];
+    }
+  ): { rows: WorldRecord[]; total: number } {
+    const { whereClause, params } = this.buildWhereClause(filters);
+
     const countSql = `SELECT COUNT(*) as total FROM world_records ${whereClause}`;
     const countStmt = this.db.prepare(countSql);
     const countRow = countStmt.get(...params) as { total: number } | undefined;
@@ -394,6 +414,53 @@ export class WorldRepository {
     return {
       rows: rows.map(rowToRecord),
       total
+    };
+  }
+
+  /**
+   * Return high-level dataset metadata counts: quality ratings and platform
+   * support across all world records. Desktop support is counted via the
+   * `standalonewindows` platform value that VRChat uses for PC/Desktop worlds.
+   */
+  getMetadataCounts(): {
+    qualityGood: number;
+    qualityBad: number;
+    platformDesktop: number;
+    platformAndroid: number;
+    platformiOS: number;
+  } {
+    const qualitySql = `
+      SELECT
+        (SELECT COUNT(*) FROM world_records WHERE quality = 'good') AS qualityGood,
+        (SELECT COUNT(*) FROM world_records WHERE quality = 'bad') AS qualityBad
+    `;
+    const qualityStmt = this.db.prepare(qualitySql);
+    const qualityRow = qualityStmt.get() as
+      | { qualityGood: number; qualityBad: number }
+      | undefined;
+
+    const platformSql = `
+      SELECT value AS platform, COUNT(*) AS count
+      FROM world_records, json_each(platforms)
+      WHERE value IN ('standalonewindows', 'android', 'ios')
+      GROUP BY value
+    `;
+    const platformStmt = this.db.prepare(platformSql);
+    const platformRows = platformStmt.all() as {
+      platform: string;
+      count: number;
+    }[];
+
+    const platformCounts = new Map(
+      platformRows.map((r) => [r.platform, r.count])
+    );
+
+    return {
+      qualityGood: qualityRow?.qualityGood ?? 0,
+      qualityBad: qualityRow?.qualityBad ?? 0,
+      platformDesktop: platformCounts.get('standalonewindows') ?? 0,
+      platformAndroid: platformCounts.get('android') ?? 0,
+      platformiOS: platformCounts.get('ios') ?? 0
     };
   }
 

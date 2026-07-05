@@ -895,6 +895,96 @@ describe('WorldRepository', () => {
     });
   });
 
+  describe('getMetadataCounts', () => {
+    beforeEach(() => {
+      db.prepare('DELETE FROM world_records').run();
+
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_good_pc',
+          guildId: 'guild-1',
+          platforms: ['standalonewindows'],
+          tags: ['horror'],
+          capacity: 32
+        })
+      );
+      repo.updateQuality('wrld_good_pc', 'guild-1', 'good');
+
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_bad_android',
+          guildId: 'guild-1',
+          platforms: ['android'],
+          tags: ['horror'],
+          capacity: 16
+        })
+      );
+      repo.updateQuality('wrld_bad_android', 'guild-1', 'bad');
+
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_good_ios',
+          guildId: 'guild-1',
+          platforms: ['ios'],
+          tags: ['game'],
+          capacity: 8
+        })
+      );
+      repo.updateQuality('wrld_good_ios', 'guild-1', 'good');
+
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_unrated',
+          guildId: 'guild-1',
+          platforms: ['standalonewindows', 'android'],
+          tags: ['horror'],
+          capacity: 24
+        })
+      );
+    });
+
+    it('returns quality and platform counts for all records', () => {
+      const result = repo.getMetadataCounts();
+
+      expect(result).toEqual({
+        qualityGood: 2,
+        qualityBad: 1,
+        platformDesktop: 2,
+        platformAndroid: 2,
+        platformiOS: 1
+      });
+    });
+
+    it('returns zero counts for an empty database', () => {
+      db.prepare('DELETE FROM world_records').run();
+
+      const result = repo.getMetadataCounts();
+
+      expect(result).toEqual({
+        qualityGood: 0,
+        qualityBad: 0,
+        platformDesktop: 0,
+        platformAndroid: 0,
+        platformiOS: 0
+      });
+    });
+
+    it('does not count unrated worlds toward quality totals', () => {
+      const result = repo.getMetadataCounts();
+
+      expect(result.qualityGood).toBe(2);
+      expect(result.qualityBad).toBe(1);
+    });
+
+    it('counts a multi-platform world once per supported platform', () => {
+      const result = repo.getMetadataCounts();
+
+      expect(result.platformDesktop).toBe(2);
+      expect(result.platformAndroid).toBe(2);
+      expect(result.platformiOS).toBe(1);
+    });
+  });
+
   describe('getUniqueTags', () => {
     it('returns empty array when no records', () => {
       expect(repo.getUniqueTags()).toEqual([]);

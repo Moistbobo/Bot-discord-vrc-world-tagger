@@ -3,7 +3,10 @@ import { FastifyInstance } from 'fastify';
 // Mock config before importing anything that uses it
 jest.mock('../assets/config', () => ({
   API_PORT: 3000,
-  API_TOKEN: ['test-token']
+  API_TOKEN: ['test-token'],
+  API_ALLOWED_ORIGINS: [],
+  API_ALLOWED_IPS: [],
+  DISABLE_API_RESTRICTIONS: false
 }));
 
 jest.mock('../utils/database/worldRepository', () => ({
@@ -68,6 +71,13 @@ function createMockRepo(overrides: Record<string, unknown> = {}) {
       { tag: 'horror', count: 312 },
       { tag: 'game', count: 145 }
     ]),
+    getMetadataCounts: jest.fn(() => ({
+      qualityGood: 123,
+      qualityBad: 12,
+      platformDesktop: 80,
+      platformAndroid: 45,
+      platformiOS: 6
+    })),
     ...overrides
   };
 }
@@ -682,6 +692,59 @@ describe('API Server', () => {
         { tag: 'horror', count: 312 },
         { tag: 'game', count: 145 }
       ]);
+    });
+  });
+
+  describe('GET /api/meta', () => {
+    it('returns quality and platform metadata counts', async () => {
+      asMock(getWorldRepository).mockReturnValue(createMockRepo());
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/meta',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body).toEqual({
+        qualityGood: 123,
+        qualityBad: 12,
+        platformDesktop: 80,
+        platformAndroid: 45,
+        platformiOS: 6
+      });
+    });
+
+    it('calls getMetadataCounts on the repository', async () => {
+      const getMetadataCounts = jest.fn(() => ({
+        qualityGood: 0,
+        qualityBad: 0,
+        platformDesktop: 0,
+        platformAndroid: 0,
+        platformiOS: 0
+      }));
+      asMock(getWorldRepository).mockReturnValue(
+        createMockRepo({ getMetadataCounts })
+      );
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/meta',
+        headers: { authorization: 'Bearer test-token' }
+      });
+
+      expect(getMetadataCounts).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns 401 without a valid token', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/meta'
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(JSON.parse(response.body)).toEqual({ error: 'Unauthorized' });
     });
   });
 
