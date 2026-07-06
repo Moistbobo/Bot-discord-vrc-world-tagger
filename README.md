@@ -295,7 +295,7 @@ The bot includes a built-in Fastify REST API server for querying world records. 
 | Endpoint | Description | Auth |
 |----------|-------------|------|
 | `GET /api/health` | Health check | No |
-| `GET /api/worlds` | Paginated world list with tag/quality filters | Bearer token |
+| `GET /api/worlds` | Paginated world list with tag/quality/capacity/dayRange filters | Bearer token |
 | `GET /api/worlds/:worldId` | Single world record | Bearer token |
 | `GET /api/tags` | All unique tags with occurrence counts | Bearer token |
 

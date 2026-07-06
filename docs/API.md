@@ -160,6 +160,7 @@ Returns a paginated, filterable list of world records.
 | `minCapacity` | integer           | —       | —   | Minimum world capacity (inclusive). Must be ≥ 1 and ≤ 80. |
 | `maxCapacity` | integer           | —       | —   | Maximum world capacity (inclusive). Must be ≥ 1 and ≤ 80. |
 | `worldId`     | string / string[] | —       | —   | Filter to specific world ID(s). Comma-separated or repeated. Exact match only. |
+| `dayRange`    | integer           | —       | 365 | Return only worlds tagged within the last N days. Values below `0` are treated as `0` (no filter); values above `365` are clamped to `365`. Tagged date uses `internal_add_date` when present, otherwise falls back to `created_at`. |
 
 **Response**
 
@@ -242,12 +243,28 @@ GET /api/worlds?worldId=wrld_abc123&worldId=wrld_def456
 
 This is useful for batch lookups when you already have a list of world IDs.
 
+**Filtering by date tagged**
+
+To show only worlds that were tagged in the system within the last N days, use the `dayRange` parameter:
+
+```
+GET /api/worlds?dayRange=7
+GET /api/worlds?dayRange=1
+GET /api/worlds?dayRange=365
+```
+
+- `dayRange` is clamped to `0–365` days.
+- A value of `0` (or missing/invalid values) disables the date filter.
+- The tagged date is `internal_add_date` when set; otherwise it falls back to `created_at`.
+- Boundaries are computed in UTC using Unix timestamps.
+
 **Combining filters**
 
-Tag, platform, quality, search, and capacity filters work together with AND logic:
+Tag, platform, quality, search, capacity, and date filters work together with AND logic:
 
 ```
 GET /api/worlds?minCapacity=10&maxCapacity=40&quality=good&tag=horror&platform=android
+GET /api/worlds?dayRange=7&tag=horror&quality=good
 ```
 
 **Pagination**
@@ -365,18 +382,19 @@ Returns high-level dataset counts for quality ratings and platform support acros
 
 Each world object returned by the API has the following fields:
 
-| Field         | Type                     | Description |
-|---------------|--------------------------|-------------|
-| `worldId`     | string                   | VRChat world ID (e.g. `wrld_abc123`). |
-| `name`        | string \| null           | Display name of the world. |
-| `authorName`  | string \| null           | Name of the author / creator. |
-| `capacity`    | number \| null           | Maximum player capacity. |
-| `platforms`   | string[]                 | Supported platforms (`android`, `standalonewindows`, etc.). |
-| `tags`        | string[]                 | Tags applied to this world record. |
-| `imageUrl`    | string \| null           | Thumbnail image URL from VRChat API. |
-| `vrchatUrl`   | string                   | Link to the world on the VRChat website. |
-| `quality`     | `"good"` \| `"bad"` \| null | Manual quality rating (if set). |
-| `createdAt`   | string \| undefined      | ISO 8601 timestamp of when the record was created. |
+| Field             | Type                     | Description |
+|-------------------|--------------------------|-------------|
+| `worldId`         | string                   | VRChat world ID (e.g. `wrld_abc123`). |
+| `name`            | string \| null           | Display name of the world. |
+| `authorName`      | string \| null           | Name of the author / creator. |
+| `capacity`        | number \| null           | Maximum player capacity. |
+| `platforms`       | string[]                 | Supported platforms (`android`, `standalonewindows`, etc.). |
+| `tags`            | string[]                 | Tags applied to this world record. |
+| `imageUrl`        | string \| null           | Thumbnail image URL from VRChat API. |
+| `vrchatUrl`       | string                   | Link to the world on the VRChat website. |
+| `quality`         | `"good"` \| `"bad"` \| null | Manual quality rating (if set). |
+| `createdAt`       | string \| undefined      | ISO 8601 timestamp of when the record was created. |
+| `internalAddDate` | string \| null           | ISO 8601 timestamp of when the world was originally tagged, if known. |
 
 Internal fields such as `guildId`, `messageId`, `sourceContent`, and `vrchatData` are intentionally stripped from API responses.
 
@@ -410,6 +428,10 @@ curl -H "Authorization: Bearer my-token" \
 # List worlds with capacity between 10 and 40, marked as good
 curl -H "Authorization: Bearer my-token" \
   "http://localhost:3000/api/worlds?minCapacity=10&maxCapacity=40&quality=good"
+
+# List worlds tagged in the last 7 days
+curl -H "Authorization: Bearer my-token" \
+  "http://localhost:3000/api/worlds?dayRange=7"
 
 # Get a specific world
 curl -H "Authorization: Bearer my-token" \
