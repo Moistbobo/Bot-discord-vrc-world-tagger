@@ -304,6 +304,7 @@ export class WorldRepository {
     minCapacity?: number;
     maxCapacity?: number;
     worldIds?: string[];
+    dayRange?: number;
   }): { whereClause: string; params: (string | number)[] } {
     const whereParts: string[] = [];
     const params: (string | number)[] = [];
@@ -371,6 +372,12 @@ export class WorldRepository {
       params.push(filters.maxCapacity);
     }
 
+    if (filters?.dayRange !== undefined && filters.dayRange > 0) {
+      whereParts.push(
+        `COALESCE(internal_add_date, created_at) >= CAST(strftime('%s', 'now', '-${filters.dayRange} days') AS INTEGER)`
+      );
+    }
+
     const whereClause =
       whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
 
@@ -395,6 +402,7 @@ export class WorldRepository {
       minCapacity?: number;
       maxCapacity?: number;
       worldIds?: string[];
+      dayRange?: number;
     }
   ): { rows: WorldRecord[]; total: number } {
     const { whereClause, params } = this.buildWhereClause(filters);

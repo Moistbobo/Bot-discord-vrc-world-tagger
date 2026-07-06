@@ -796,6 +796,113 @@ describe('WorldRepository', () => {
     });
   });
 
+  describe('dayRange filtering', () => {
+    beforeEach(() => {
+      db.prepare('DELETE FROM world_records').run();
+
+      const nowSeconds = Math.floor(Date.now() / 1000);
+
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_today',
+          guildId: 'guild-1',
+          internalAddDate: nowSeconds - 60 * 60 // 1 hour ago
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_recent',
+          guildId: 'guild-1',
+          internalAddDate: nowSeconds - 60 * 60 * 24 * 3 // 3 days ago
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_old',
+          guildId: 'guild-1',
+          internalAddDate: nowSeconds - 60 * 60 * 24 * 30 // 30 days ago
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_null_internal_add_date',
+          guildId: 'guild-1',
+          internalAddDate: null,
+          createdAt: nowSeconds - 60 * 60 * 24 * 2 // 2 days ago
+        })
+      );
+      // Force the null value because upsert backfills internal_add_date when null.
+      db.prepare(
+        'UPDATE world_records SET internal_add_date = NULL WHERE world_id = ? AND guild_id = ?'
+      ).run('wrld_null_internal_add_date', 'guild-1');
+    });
+
+    it('returns only worlds within the last N days', () => {
+      const { rows } = repo.getAllPaginated(10, 0, { dayRange: 7 });
+      const worldIds = rows.map((r) => r.worldId).sort();
+      expect(worldIds).toContain('wrld_today');
+      expect(worldIds).toContain('wrld_recent');
+      expect(worldIds).toContain('wrld_null_internal_add_date');
+      expect(worldIds).not.toContain('wrld_old');
+    });
+
+    it('returns only records within the last 24 hours when dayRange is 1', () => {
+      const { rows, total } = repo.getAllPaginated(10, 0, { dayRange: 1 });
+      expect(total).toBe(1);
+      expect(rows.map((r) => r.worldId)).toContain('wrld_today');
+    });
+
+    it('falls back to created_at when internal_add_date is null', () => {
+      const { rows } = repo.getAllPaginated(10, 0, { dayRange: 7 });
+      expect(
+        rows.some((r) => r.worldId === 'wrld_null_internal_add_date')
+      ).toBe(true);
+    });
+
+    it('does not apply a date filter when dayRange is 0', () => {
+      const { rows, total } = repo.getAllPaginated(10, 0, { dayRange: 0 });
+      expect(total).toBe(4);
+      expect(rows).toHaveLength(4);
+    });
+
+    it('combines dayRange with other filters', () => {
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_recent_match',
+          guildId: 'guild-1',
+          tags: ['horror'],
+          internalAddDate: Math.floor(Date.now() / 1000) - 60 * 60 * 24 * 2
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_recent_no_match',
+          guildId: 'guild-1',
+          tags: ['game'],
+          internalAddDate: Math.floor(Date.now() / 1000) - 60 * 60 * 24 * 2
+        })
+      );
+      repo.upsert(
+        createTestRecord({
+          worldId: 'wrld_old_match',
+          guildId: 'guild-1',
+          tags: ['horror'],
+          internalAddDate: Math.floor(Date.now() / 1000) - 60 * 60 * 24 * 30
+        })
+      );
+
+      const { rows } = repo.getAllPaginated(10, 0, {
+        dayRange: 7,
+        tags: ['horror']
+      });
+      const worldIds = rows.map((r) => r.worldId).sort();
+      expect(worldIds).toContain('wrld_recent_match');
+      expect(worldIds).toContain('wrld_today');
+      expect(worldIds).not.toContain('wrld_old_match');
+      expect(worldIds).not.toContain('wrld_recent_no_match');
+    });
+  });
+
   describe('platform filtering', () => {
     beforeEach(() => {
       db.prepare('DELETE FROM world_records').run();
