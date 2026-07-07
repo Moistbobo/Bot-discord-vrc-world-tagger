@@ -36,6 +36,11 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const limit = Math.min(Number(query.limit ?? 50), 500);
     const offset = Number(query.offset ?? 0);
 
+    const dayRange =
+      typeof query.dayRange === 'string'
+        ? Math.max(0, Math.min(parseInt(query.dayRange, 10) || 0, 365))
+        : 0;
+
     const tags = parseStringListQuery(query.tag);
     const platforms = parseStringListQuery(query.platform);
     const worldIds = parseStringListQuery(query.worldId);
@@ -86,6 +91,7 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       minCapacity?: number;
       maxCapacity?: number;
       worldIds?: string[];
+      dayRange?: number;
     } = {};
     if (tags) filters.tags = tags;
     if (platforms) filters.platforms = platforms;
@@ -93,6 +99,7 @@ const worldsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     if (quality) filters.quality = quality;
     if (minCapacity !== undefined) filters.minCapacity = minCapacity;
     if (maxCapacity !== undefined) filters.maxCapacity = maxCapacity;
+    if (dayRange > 0) filters.dayRange = dayRange;
 
     const search =
       typeof query.search === 'string' ? query.search.trim() : undefined;
