@@ -20,7 +20,8 @@ const ALL_TAGS = [
   'tech',
   'nature',
   'gamerip',
-  'portal'
+  'portal',
+  'liminal'
 ];
 
 const FAVORED_TAGS = new Set(['kino', 'chill', 'gamerip']);
