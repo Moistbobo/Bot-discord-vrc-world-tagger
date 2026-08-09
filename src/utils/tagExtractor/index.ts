@@ -18,7 +18,8 @@ const TAXONOMY = new Set<string>([
   'tech',
   'nature',
   'gamerip',
-  'portal'
+  'portal',
+  'liminal'
 ]);
 
 /**

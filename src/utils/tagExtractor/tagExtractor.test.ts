@@ -66,6 +66,17 @@ describe('tagExtractor', () => {
         'chill'
       ]);
     });
+
+    it('extracts liminal from "Tags:" lines', () => {
+      expect(extractTags('Tags: liminal')).toEqual(['liminal']);
+    });
+
+    it('extracts liminal alongside other tags', () => {
+      expect(extractTags('Tags: horror, liminal')).toEqual([
+        'horror',
+        'liminal'
+      ]);
+    });
   });
 
   describe('canonicalization', () => {
