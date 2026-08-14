@@ -9,7 +9,7 @@ import { buildTagSource, processWorldId } from './watchForVRCWorldLinks';
 import { extractAllWorldIdsFromMessage } from './watchForVRCWorldLinks/worldExtraction';
 import { extractAllWorldIds } from '../../utils/regex';
 import { emojiMap } from '../../assets/media';
-import { api } from '../../utils/apiClient';
+import { getWorldRepository } from '../../utils/database/worldRepository';
 import { extractTags } from '../../utils/tagExtractor';
 
 // Global state to prevent concurrent crawls on the same channel
@@ -458,12 +458,11 @@ const crawlMessages = async (
   let recordsUpdated = 0;
   let recordsNotFound = 0;
 
-  // Load all processed world pairs into memory for fast cache lookups
-  logger.info('Loading processed worlds cache from API...');
-  const pairs = await api.getWorldPairs();
-  const processedWorldsCache = new Set(
-    pairs.map((p) => `${p.worldId}-${p.guildId}`)
-  );
+  const repo = getWorldRepository();
+
+  // Load all processed worlds into memory for fast cache lookups
+  logger.info('Loading processed worlds cache from SQLite...');
+  const processedWorldsCache = repo.getAllWorldGuildPairs();
   logger.info(
     `Loaded ${processedWorldsCache.size} processed worlds into cache`
   );
@@ -536,12 +535,17 @@ const crawlMessages = async (
 
         // ── DISCOVER MODE ──
         if (mode === 'discover') {
-          await handleDiscoverMode(msg, processedWorldsCache, crawlStatus);
+          await handleDiscoverMode(
+            msg,
+            processedWorldsCache,
+            crawlStatus,
+            repo
+          );
         }
 
         // ── TAGS MODE ──
         else if (mode === 'tags') {
-          const result = await handleTagsMode(msg, processedWorldsCache);
+          const result = await handleTagsMode(msg, processedWorldsCache, repo);
           recordsUpdated += result.updated;
           recordsNotFound += result.notFound;
         }
@@ -551,6 +555,7 @@ const crawlMessages = async (
           const result = await handleQualityMode(
             msg,
             processedWorldsCache,
+            repo,
             qualityValue
           );
           if (result.updated) recordsUpdated++;
@@ -639,13 +644,14 @@ const crawlMessages = async (
 
 /**
  * Handle a single message in discover mode.
- * New worlds are posted to the API silently; existing worlds are skipped
- * (the API backfills internal_add_date from the message timestamp).
+ * New worlds are fetched and inserted silently; existing worlds have their
+ * internal_add_date backfilled from the original Discord message timestamp.
  */
 async function handleDiscoverMode(
   msg: Message,
   processedWorldsCache: Set<string>,
-  crawlStatus: CrawlStatus
+  crawlStatus: CrawlStatus,
+  repo: ReturnType<typeof getWorldRepository>
 ): Promise<void> {
   const internalAddDate = getMessageInternalAddDate(msg);
 
@@ -664,9 +670,18 @@ async function handleDiscoverMode(
 
     // Already handled during this crawl
     if (processedWorldsCache.has(cacheKey)) {
+      repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
       logger.debug(
         `Skipping message ${msg.id}: world ${worldId} already processed (cache hit)`
       );
+      continue;
+    }
+
+    // Existing world: backfill internal_add_date and move on
+    if (repo.getByWorldAndGuild(worldId, msg.guildId!)) {
+      repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
+      processedWorldsCache.add(cacheKey);
+      logger.info(`World found in message ${msg.id}: ${worldId} (DUPLICATE)`);
       continue;
     }
 
@@ -698,7 +713,8 @@ async function handleDiscoverMode(
  */
 async function handleTagsMode(
   msg: Message,
-  processedWorldsCache: Set<string>
+  processedWorldsCache: Set<string>,
+  repo: ReturnType<typeof getWorldRepository>
 ): Promise<{ updated: number; notFound: number }> {
   // Extract world ID + source content from body, snapshots, embeds, and attachments
   const allResults = await findAllWorldMatchesUnified(msg);
@@ -730,27 +746,20 @@ async function handleTagsMode(
       continue;
     }
 
-    try {
-      const { updated: didUpdate } = await api.setTags(
-        worldId,
-        msg.guildId!,
-        tags,
-        sourceContent,
-        internalAddDate
-      );
+    const didUpdate = repo.updateTags(
+      worldId,
+      msg.guildId!,
+      tags,
+      sourceContent
+    );
 
-      if (didUpdate) {
-        logger.info(
-          `Rebuilt tags for ${worldId}: [${tags.join(', ')}] from message ${msg.id}`
-        );
-        updated++;
-      }
-    } catch (error) {
-      logger.warn(
-        `Failed to rebuild tags for ${worldId} from message ${msg.id}:`,
-        error
+    repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
+
+    if (didUpdate) {
+      logger.info(
+        `Rebuilt tags for ${worldId}: [${tags.join(', ')}] from message ${msg.id}`
       );
-      notFound++;
+      updated++;
     }
   }
 
@@ -765,6 +774,7 @@ async function handleTagsMode(
 async function handleQualityMode(
   msg: Message,
   processedWorldsCache: Set<string>,
+  repo: ReturnType<typeof getWorldRepository>,
   qualityValue: 'good' | 'bad'
 ): Promise<{ updated: boolean; notFound: boolean }> {
   // Extract world ID from anywhere (content, embeds, forwarded snapshots, attachments)
@@ -784,30 +794,18 @@ async function handleQualityMode(
     return { updated: false, notFound: true };
   }
 
+  const didUpdate = repo.updateQuality(worldId, msg.guildId!, qualityValue);
   const internalAddDate = getMessageInternalAddDate(msg);
-  try {
-    const { updated: didUpdate } = await api.setQuality(
-      worldId,
-      msg.guildId!,
-      qualityValue,
-      internalAddDate
-    );
+  repo.backfillInternalAddDate(worldId, msg.guildId!, internalAddDate);
 
-    if (didUpdate) {
-      logger.info(
-        `Assigned ${qualityValue} to ${worldId} from message ${msg.id}`
-      );
-    }
-
-    await delay(RATE_LIMIT_DELAY);
-    return { updated: didUpdate, notFound: false };
-  } catch (error) {
-    logger.warn(
-      `Failed to assign ${qualityValue} to ${worldId} from message ${msg.id}:`,
-      error
+  if (didUpdate) {
+    logger.info(
+      `Assigned ${qualityValue} to ${worldId} from message ${msg.id}`
     );
-    return { updated: false, notFound: true };
   }
+
+  await delay(RATE_LIMIT_DELAY);
+  return { updated: didUpdate, notFound: false };
 }
 
 /**

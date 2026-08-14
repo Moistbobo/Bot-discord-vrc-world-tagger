@@ -1,6 +1,10 @@
 import { onReactionUndoWorldTag } from './onReactionUndoWorldTag';
 import { emojiMap } from '../../assets/media';
 
+jest.mock('../messageCreate/watchForVRCWorldLinks/worldData', () => ({
+  fetchWorldData: jest.fn()
+}));
+
 jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
   has: jest.fn(),
   remove: jest.fn()
@@ -10,10 +14,10 @@ jest.mock('../../utils/worldActions', () => ({
   deleteWorldForGuild: jest.fn()
 }));
 
-jest.mock('../../utils/apiClient', () => ({
-  api: {
-    getWorld: jest.fn()
-  }
+jest.mock('../../utils/database/worldRepository', () => ({
+  getWorldRepository: jest.fn(() => ({
+    deleteByWorldAndGuild: jest.fn()
+  }))
 }));
 
 const { has, remove } = jest.requireMock(
@@ -22,9 +26,9 @@ const { has, remove } = jest.requireMock(
 const { deleteWorldForGuild } = jest.requireMock(
   '../../utils/worldActions'
 ) as { deleteWorldForGuild: jest.Mock };
-const { api } = jest.requireMock('../../utils/apiClient') as {
-  api: { getWorld: jest.Mock };
-};
+const { fetchWorldData } = jest.requireMock(
+  '../messageCreate/watchForVRCWorldLinks/worldData'
+) as { fetchWorldData: jest.Mock };
 
 const BOT_ID = 'bot-user-1';
 const WORLD_ID = 'wrld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
@@ -61,10 +65,10 @@ describe('onReactionUndoWorldTag', () => {
     has.mockReset();
     remove.mockReset();
     deleteWorldForGuild.mockReset();
-    api.getWorld.mockReset();
+    fetchWorldData.mockReset();
     remove.mockResolvedValue({ success: true });
     deleteWorldForGuild.mockResolvedValue(true);
-    api.getWorld.mockResolvedValue({
+    fetchWorldData.mockResolvedValue({
       name: 'Test World',
       authorName: 'Author',
       imageUrl: 'https://img.example/world.png'
@@ -127,7 +131,7 @@ describe('onReactionUndoWorldTag', () => {
       'bot-reply-msg'
     );
     expect(reaction.message.delete).toHaveBeenCalled();
-    expect(api.getWorld).toHaveBeenCalledWith(WORLD_ID);
+    expect(fetchWorldData).toHaveBeenCalledWith(WORLD_ID);
     expect(reaction.message.channel.send).toHaveBeenCalledWith({
       embeds: expect.arrayContaining([
         expect.objectContaining({

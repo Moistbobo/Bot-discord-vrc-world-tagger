@@ -1,8 +1,8 @@
 import { EmbedBuilder, Message } from 'discord.js';
 import logger from '../../utils/logger';
 import { has } from '../../utils/jsonAsDb/handlers/persistentList';
+import { getWorldRepository } from '../../utils/database/worldRepository';
 import { kvKeys } from '../../utils/jsonAsDb/types';
-import { api } from '../../utils/apiClient';
 import packageJson from '../../../package.json';
 
 export const stats = async (message: Message) => {
@@ -13,9 +13,11 @@ export const stats = async (message: Message) => {
     );
     if (!isChannelWatched) return;
 
-    const { worldCount: totalWorlds, topTags: tagDistribution } =
-      await api.getStats();
-    const lastRecord = await api.getLastProcessedWorld();
+    const repo = getWorldRepository();
+
+    const totalWorlds = repo.count();
+    const lastRecord = repo.getLastProcessed();
+    const tagDistribution = repo.getUniqueTags();
 
     // Top 5 tags by count
     const topTags = tagDistribution

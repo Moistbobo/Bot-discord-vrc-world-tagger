@@ -7,7 +7,7 @@ import {
   getFirst
 } from '../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../utils/jsonAsDb/types';
-import { api } from '../../utils/apiClient';
+import { getWorldRepository } from '../../utils/database/worldRepository';
 import { extractWorldId } from '../../utils/regex';
 import {
   getEmojiKey,
@@ -127,7 +127,7 @@ export const onReactionForward = async (
     const quality = await resolveQualityForChannel(targetChannelId);
     if (quality) {
       try {
-        await api.setQuality(worldId, guildId, quality);
+        getWorldRepository().updateQuality(worldId, guildId, quality);
       } catch (err) {
         logger.error(
           `Failed to set quality for forwarded world ${worldId}:`,
