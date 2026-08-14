@@ -13,10 +13,6 @@ jest.mock('./worldExtraction', () => ({
   extractWorldIdFromMessage: jest.fn()
 }));
 
-jest.mock('./worldData', () => ({
-  calculatePackageSizes: jest.fn()
-}));
-
 jest.mock('./embedBuilder', () => ({
   createWorldEmbed: jest.fn(() => ({}))
 }));
@@ -65,7 +61,6 @@ jest.mock('../../../assets/media', () => ({
 
 import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { extractWorldIdFromMessage } from './worldExtraction';
-import { calculatePackageSizes } from './worldData';
 import { api } from '../../../utils/apiClient';
 import { forceRefetchWorldFromMessage } from './index';
 
@@ -89,7 +84,6 @@ describe('forceRefetchWorldFromMessage', () => {
     jest.clearAllMocks();
     (has as jest.Mock).mockResolvedValue(true);
     (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(WRLD);
-    (calculatePackageSizes as jest.Mock).mockResolvedValue([]);
     (api.addWorld as jest.Mock).mockResolvedValue({
       duplicate: false,
       world: {
@@ -102,6 +96,7 @@ describe('forceRefetchWorldFromMessage', () => {
         unityPackages: [],
         capacity: 8,
         platforms: [],
+        packageSizes: [],
         tags: [],
         vrchatData: JSON.stringify({
           id: WRLD,

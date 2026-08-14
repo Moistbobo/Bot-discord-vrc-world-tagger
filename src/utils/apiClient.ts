@@ -56,6 +56,7 @@ export interface WorldRecord {
   authorName: string | null;
   capacity: number | null;
   platforms: string[];
+  packageSizes: (number | null)[];
   tags: string[];
   imageUrl: string | null;
   sourceContent: string | null;

@@ -5,7 +5,6 @@ const VRCHAT_WORLD_ID_REGEX = /wrld_[a-f0-9-]{36}/;
 const GENERIC_LINK_REGEX = /https?:\/\/\S+/;
 const TWITTER_LINK_REGEX =
   /(?:https?:\/\/)?(?:x\.com|twitter\.com|fixupx\.com|vxtwitter\.com)\/([^?\s]+)/;
-const FILE_ID_REGEX = /file_([a-f0-9-]+)/;
 
 // Configurable terms for world name extraction
 const WORLD_TERMS = Config.WORLD_NAME_MATCHERS;
@@ -167,12 +166,6 @@ export function isTwitterLink(link: string): boolean {
 export function removeTwitterLink(link: string): string | null {
   if (!link) return null;
   const match = link.match(TWITTER_LINK_REGEX);
-  return match?.[1] ?? null;
-}
-
-export function getFileIdFromAssetUrl(assetUrl: string): string | null {
-  if (!assetUrl) return null;
-  const match = assetUrl.match(FILE_ID_REGEX);
   return match?.[1] ?? null;
 }
 

@@ -11,9 +11,13 @@ export const createWorldEmbed = (
   data: World,
   worldId: string,
   supportedPlatforms: string[],
-  packageSizes: number[],
+  packageSizes: (number | null)[],
   originalContent: string
 ): EmbedBuilder => {
+  const formatSize = (size: number | null | undefined): string => {
+    if (typeof size !== 'number' || !isFinite(size)) return 'Unknown';
+    return `${size.toFixed(2)}MB`;
+  };
   const embed = new EmbedBuilder()
     .setTitle(`${data.name} by ${data.authorName}`)
     .setURL(buildWorldUrl(worldId))
@@ -37,7 +41,7 @@ export const createWorldEmbed = (
         value: supportedPlatforms
           .map(
             (platform, idx) =>
-              `${emojiMap[platform]}: ${packageSizes[idx].toFixed(2)}MB`
+              `${emojiMap[platform]}: ${formatSize(packageSizes[idx])}`
           )
           .join('\n'),
         inline: true

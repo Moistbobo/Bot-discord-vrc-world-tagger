@@ -12,7 +12,6 @@ import {
   extractWorldIdFromMessage,
   extractAllWorldIdsFromMessage
 } from './worldExtraction';
-import { calculatePackageSizes } from './worldData';
 import { createWorldEmbed } from './embedBuilder';
 import {
   getForwardingChannels,
@@ -295,7 +294,7 @@ export const processWorldId = async (
     return;
   }
 
-  const packageSizes = await calculatePackageSizes(worldData);
+  const packageSizes = response.world.packageSizes ?? [];
   const embed = createWorldEmbed(
     worldData,
     worldId,
