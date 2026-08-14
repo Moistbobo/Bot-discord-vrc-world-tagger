@@ -19,23 +19,12 @@ const Config = {
   FORWARD_PLAYER_COUNT_THRESHOLD:
     Number(process.env.FORWARD_PLAYER_COUNT_THRESHOLD) || 40,
   LOW_CAPACITY_THRESHOLD: Number(process.env.LOW_CAPACITY_THRESHOLD) || 20,
-  DATABASE_PATH: process.env.DATABASE_PATH || './worlds.db',
-  API_PORT: Number(process.env.API_PORT) || 3000,
-  API_HOST: process.env.API_HOST || '0.0.0.0',
+  API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:3000',
   API_TOKEN: process.env.API_TOKEN
-    ? process.env.API_TOKEN.split(',')
+    ? process.env.API_TOKEN.split(',')[0]
     : process.env.EXPORT_API_TOKEN
-      ? [process.env.EXPORT_API_TOKEN]
-      : [],
-  API_ALLOWED_ORIGINS: process.env.API_ALLOWED_ORIGINS
-    ? process.env.API_ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-    : [],
-  API_ALLOWED_IPS: process.env.API_ALLOWED_IPS
-    ? process.env.API_ALLOWED_IPS.split(',').map((ip) => ip.trim())
-    : [],
-  DISABLE_API_RESTRICTIONS:
-    process.env.DISABLE_API_RESTRICTIONS === 'true' ||
-    process.env.DEV === 'true'
+      ? process.env.EXPORT_API_TOKEN
+      : ''
 };
 
 export default Config;

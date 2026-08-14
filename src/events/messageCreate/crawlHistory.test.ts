@@ -29,15 +29,12 @@ jest.mock('../../utils/jsonAsDb/handlers/persistentKvp', () => ({
   getValue: jest.fn()
 }));
 
-jest.mock('../../utils/database/worldRepository', () => ({
-  getWorldRepository: jest.fn(() => ({
-    updateQuality: jest.fn(),
-    backfillInternalAddDate: jest.fn(),
-    updateTags: jest.fn(),
-    getAllWorldGuildPairs: jest.fn(() => new Set()),
-    getByWorldAndGuild: jest.fn(),
-    upsert: jest.fn()
-  }))
+jest.mock('../../utils/apiClient', () => ({
+  api: {
+    getWorldPairs: jest.fn().mockResolvedValue([]),
+    setTags: jest.fn().mockResolvedValue({ updated: false }),
+    setQuality: jest.fn().mockResolvedValue({ updated: false })
+  }
 }));
 
 jest.mock('../../utils/tagExtractor', () => ({

@@ -28,8 +28,6 @@ import clearQualityChannel from './clearQualityChannel';
 import { isUserOnIgnoreList } from '../../utils/ignoreList';
 import { ignoreMe } from './ignoreMe';
 import { unignoreMe } from './unignoreMe';
-import apiStart from './apiStart';
-import apiStop from './apiStop';
 
 const messageCreate = async (message: Message) => {
   const trimmed = message.content.trim();
@@ -80,10 +78,6 @@ const messageCreate = async (message: Message) => {
     return withProtection(setQualityChannel)(message);
   } else if (message.content.startsWith('.clearQualityChannel')) {
     return withProtection(clearQualityChannel)(message);
-  } else if (message.content.startsWith('.apiStart')) {
-    return withProtection(apiStart)(message);
-  } else if (message.content.startsWith('.apiStop')) {
-    return withProtection(apiStop)(message);
   } else if (message.content.startsWith('.die')) {
     return withProtection(die)(message);
   } else if (message.content.startsWith('.stats')) {
