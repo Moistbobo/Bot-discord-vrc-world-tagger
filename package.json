@@ -1,6 +1,6 @@
 {
   "name": "bot_vrc_world_tagger",
-  "version": "1.0.3",
+  "version": "2.0.0",
   "packageManager": "pnpm@9.15.0",
   "main": "index.js",
   "scripts": {
@@ -23,7 +23,6 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@eslint/json": "^0.13.1",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^30.0.0",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.8",
@@ -39,16 +38,12 @@
     "typescript-eslint": "^8.38.0"
   },
   "dependencies": {
-    "@fastify/cors": "^11.2.0",
-    "better-sqlite3": "^12.10.0",
     "discord.js": "14.25.1",
     "dotenv": "^17.2.1",
     "fastest-levenshtein": "^1.0.16",
-    "fastify": "^5.8.5",
     "keyv-file": "^5.1.3",
     "rotating-file-stream": "^3.2.6",
     "tslog": "^4.9.3",
-    "typed-emitter": "^2.1.0",
     "vrchat": "2.21.7"
   }
 }

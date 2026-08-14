@@ -5,9 +5,9 @@ import { buildWorldUrl } from '../../utils/helpers';
 import { extractWorldId } from '../../utils/regex';
 import { has, remove } from '../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../utils/jsonAsDb/types';
-import { deleteWorldForGuild } from '../../utils/worldActions';
+import { api } from '../../utils/apiClient';
 import { getEmojiKey } from '../../utils/discord/reactionEmoji';
-import { fetchWorldData } from '../messageCreate/watchForVRCWorldLinks/worldData';
+import { deleteWorldForGuild } from '../../utils/worldActions';
 
 /** Discord-style red for destructive / removal feedback */
 const UNDO_CONFIRM_EMBED_COLOR = 0xed4245;
@@ -67,9 +67,9 @@ export const onReactionUndoWorldTag = async (
     return;
   }
 
-  let worldData: Awaited<ReturnType<typeof fetchWorldData>> | null = null;
+  let worldRecord = null;
   try {
-    worldData = await fetchWorldData(worldId);
+    worldRecord = await api.getWorld(worldId);
   } catch (error) {
     logger.warn(
       `Could not fetch world ${worldId} for undo confirmation embed:`,
@@ -77,7 +77,7 @@ export const onReactionUndoWorldTag = async (
     );
   }
 
-  // Delete the world from our SQLite repository (shared helper used by both
+  // Delete the world record via the API (shared flow used by both
   // reaction shortcut and text-based `.remove`).
   await deleteWorldForGuild(worldId, guildId);
 
@@ -100,8 +100,8 @@ export const onReactionUndoWorldTag = async (
     const embed = new EmbedBuilder()
       .setColor(UNDO_CONFIRM_EMBED_COLOR)
       .setTitle(
-        worldData
-          ? `${worldData.name} by ${worldData.authorName}`
+        worldRecord
+          ? `${worldRecord.name} by ${worldRecord.authorName}`
           : 'World removed from bot database'
       )
       .setURL(buildWorldUrl(worldId))
@@ -109,8 +109,8 @@ export const onReactionUndoWorldTag = async (
         'This world was removed from the bot database. The world info message was deleted.'
       )
       .setTimestamp();
-    if (worldData?.imageUrl) {
-      embed.setThumbnail(worldData.imageUrl);
+    if (worldRecord?.imageUrl) {
+      embed.setThumbnail(worldRecord.imageUrl);
     }
     try {
       await message.channel.send({ embeds: [embed] });
