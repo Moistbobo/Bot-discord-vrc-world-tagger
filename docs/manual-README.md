@@ -294,4 +294,5 @@ Messages that do **not** start with a known command prefix are handled as normal
 
 ## 4. Related
 
+- [API.md](API.md) — internal module documentation and source file references.
 - [README](../README.md) — installation, environment variables, and scripts.
