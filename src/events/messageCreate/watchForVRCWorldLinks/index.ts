@@ -7,24 +7,20 @@ import {
 } from '../../../utils/regex';
 import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../utils/jsonAsDb/types';
-import { extractTags } from '../../../utils/tagExtractor';
-import {
-  getWorldRepository,
-  type WorldRecord
-} from '../../../utils/database/worldRepository';
+import { api } from '../../../utils/apiClient';
 import {
   extractWorldIdFromMessage,
   extractAllWorldIdsFromMessage
 } from './worldExtraction';
-import { fetchWorldData, calculatePackageSizes } from './worldData';
 import { createWorldEmbed } from './embedBuilder';
 import {
   getForwardingChannels,
   forwardToChannel,
   sendResponse
 } from './forwarding';
-import { checkAndHandleDuplicate } from './duplicateHandler';
 import Config from '../../../assets/config';
+import { World } from '../../../utils/apiClient';
+import { emojiMap } from '../../../assets/media';
 
 type WorldMatchSource = 'body' | 'snapshot' | 'attachment';
 
@@ -37,8 +33,27 @@ type WorldMatch = {
 const eachAttachment = (message: Message) =>
   message.attachments?.values() ?? [][Symbol.iterator]();
 
-const safeJsonStringify = (value: unknown): string =>
-  JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? v.toString() : v));
+/**
+ * Parse the VRChat world data JSON the API stores on the record.
+ * Falls back to a minimal shape when the data is unavailable.
+ */
+function parseWorldData(vrchatData: string | null): World {
+  if (vrchatData) {
+    try {
+      return JSON.parse(vrchatData) as World;
+    } catch {
+      logger.warn('Failed to parse vrchatData from API record');
+    }
+  }
+  return {
+    id: '',
+    name: '',
+    authorName: '',
+    capacity: 0,
+    imageUrl: '',
+    unityPackages: []
+  } as World;
+}
 
 /**
  * Finds a world link in the message body first, then in forwarded snapshots.
@@ -202,8 +217,8 @@ export function buildTagSource(
 }
 
 /**
- * Processes a world ID: fetches data, extracts tags, upserts to repository,
- * creates embed, sends the bot reply, then forwards it.
+ * Processes a world ID: posts to the API (which fetches data, extracts tags,
+ * and detects duplicates), creates embed, sends the bot reply, then forwards it.
  *
  * When `silent` is true, no embeds/replies/forwards are sent. This is used by
  * crawlHistory to backfill worlds from channel history without spamming chat.
@@ -221,42 +236,57 @@ export const processWorldId = async (
   const skipDuplicateCheck = options?.skipDuplicateCheck ?? false;
   const silent = options?.silent ?? false;
 
-  if (!skipDuplicateCheck && !Config.DEV_MODE) {
-    const isDuplicate = await checkAndHandleDuplicate(message, worldId);
-    if (isDuplicate) {
-      return;
-    }
-  }
-
-  const worldData = await fetchWorldData(worldId);
-  const supportedPlatforms = getSupportedPlatforms(worldData.unityPackages);
-
-  const tagSource = buildTagSource(message, [sourceContent]);
-  const tags = extractTags(tagSource);
-
   const messageTimestamp =
     typeof message.createdTimestamp === 'number'
       ? Math.floor(message.createdTimestamp / 1000)
       : Math.floor(Date.now() / 1000);
 
-  const record: WorldRecord = {
+  const response = await api.addWorld({
     worldId,
     guildId: message.guildId ?? '',
     messageId: message.id,
-    name: worldData.name,
-    authorName: worldData.authorName,
-    capacity: worldData.capacity,
-    platforms: supportedPlatforms,
-    tags,
-    imageUrl: worldData.imageUrl,
-    sourceContent,
-    vrchatData: safeJsonStringify(worldData),
-    internalAddDate: options?.internalAddDate ?? messageTimestamp
-  };
+    content: buildTagSource(message, [sourceContent]),
+    messageTimestamp: options?.internalAddDate ?? messageTimestamp,
+    checkDuplicate: !skipDuplicateCheck && !Config.DEV_MODE
+  });
 
-  getWorldRepository().upsert(record);
+  if (response.duplicate) {
+    logger.info(
+      `World id ${worldId} has already been shared, retrieving original message id...`
+    );
+
+    if (silent) {
+      logger.debug(
+        `Silent duplicate detection: World ${worldId} is a duplicate of message ${response.existingMessageId}`
+      );
+      return;
+    }
+
+    const originalMessageLink = `https://discord.com/channels/${message.guildId}/${message.channelId}/${response.existingMessageId}`;
+    try {
+      await message.react(emojiMap.recycle);
+    } catch (err) {
+      logger.warn(`Failed to react with recycle emoji: ${err}`);
+    }
+    if (message.channel.isSendable()) {
+      await message.reply({
+        allowedMentions: { repliedUser: false },
+        content: `${emojiMap.actually} Uhm Ackhusally this is a duplicate of ${originalMessageLink}\n-# Press the ${emojiMap.recycle} reaction to fetch world information anyway.`
+      });
+    } else {
+      logger.warn(
+        `Message channel is not sendable, skipping original message link for world ${worldId}`
+      );
+    }
+    return;
+  }
+
+  const worldData = parseWorldData(response.world.vrchatData);
+  const supportedPlatforms = getSupportedPlatforms(
+    worldData?.unityPackages ?? []
+  );
   logger.info(
-    `Saved world ${worldId} to repository with tags: ${tags.join(', ') || 'none'}`
+    `Saved world ${worldId} with tags: ${response.world.tags.join(', ') || 'none'}`
   );
 
   if (silent) {
@@ -264,7 +294,7 @@ export const processWorldId = async (
     return;
   }
 
-  const packageSizes = await calculatePackageSizes(worldData);
+  const packageSizes = response.world.packageSizes ?? [];
   const embed = createWorldEmbed(
     worldData,
     worldId,

@@ -4,7 +4,7 @@ import {
   messageLink,
   OmitPartialGroupDMChannel
 } from 'discord.js';
-import { World } from 'vrchat';
+import { World } from '../../../../utils/apiClient';
 import logger from '../../../../utils/logger';
 import { getFirst } from '../../../../utils/jsonAsDb/handlers/persistentList';
 import { kvKeys } from '../../../../utils/jsonAsDb/types';

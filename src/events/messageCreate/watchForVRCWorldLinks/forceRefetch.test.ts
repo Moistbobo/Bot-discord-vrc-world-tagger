@@ -13,11 +13,6 @@ jest.mock('./worldExtraction', () => ({
   extractWorldIdFromMessage: jest.fn()
 }));
 
-jest.mock('./worldData', () => ({
-  fetchWorldData: jest.fn(),
-  calculatePackageSizes: jest.fn()
-}));
-
 jest.mock('./embedBuilder', () => ({
   createWorldEmbed: jest.fn(() => ({}))
 }));
@@ -28,8 +23,10 @@ jest.mock('./forwarding', () => ({
   sendResponse: jest.fn().mockResolvedValue(undefined)
 }));
 
-jest.mock('./duplicateHandler', () => ({
-  checkAndHandleDuplicate: jest.fn()
+jest.mock('../../../utils/apiClient', () => ({
+  api: {
+    addWorld: jest.fn()
+  }
 }));
 
 jest.mock('../../../utils/helpers', () => ({
@@ -55,19 +52,16 @@ jest.mock('../../../utils/logger', () => ({
   }
 }));
 
-jest.mock('../../../utils/database/worldRepository', () => ({
-  getWorldRepository: jest.fn(() => ({
-    upsert: jest.fn()
-  }))
-}));
-
-jest.mock('../../../utils/tagExtractor', () => ({
-  extractTags: jest.fn(() => [])
+jest.mock('../../../assets/media', () => ({
+  emojiMap: {
+    recycle: '♻',
+    actually: '<:actually:1>'
+  }
 }));
 
 import { has } from '../../../utils/jsonAsDb/handlers/persistentList';
 import { extractWorldIdFromMessage } from './worldExtraction';
-import { fetchWorldData, calculatePackageSizes } from './worldData';
+import { api } from '../../../utils/apiClient';
 import { forceRefetchWorldFromMessage } from './index';
 
 const WRLD = 'wrld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
@@ -81,6 +75,8 @@ describe('forceRefetchWorldFromMessage', () => {
       content: 'https://example.com/world',
       messageSnapshots: undefined,
       channel: { isSendable: () => true },
+      react: jest.fn(),
+      reply: jest.fn(),
       ...overrides
     }) as Message;
 
@@ -88,15 +84,30 @@ describe('forceRefetchWorldFromMessage', () => {
     jest.clearAllMocks();
     (has as jest.Mock).mockResolvedValue(true);
     (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(WRLD);
-    (fetchWorldData as jest.Mock).mockResolvedValue({
-      id: WRLD,
-      name: 'W',
-      authorName: 'A',
-      imageUrl: 'https://x',
-      unityPackages: [],
-      capacity: 8
+    (api.addWorld as jest.Mock).mockResolvedValue({
+      duplicate: false,
+      world: {
+        worldId: WRLD,
+        guildId: 'guild-1',
+        messageId: 'msg-1',
+        name: 'W',
+        authorName: 'A',
+        imageUrl: 'https://x',
+        unityPackages: [],
+        capacity: 8,
+        platforms: [],
+        packageSizes: [],
+        tags: [],
+        vrchatData: JSON.stringify({
+          id: WRLD,
+          name: 'W',
+          authorName: 'A',
+          imageUrl: 'https://x',
+          unityPackages: [],
+          capacity: 8
+        })
+      }
     });
-    (calculatePackageSizes as jest.Mock).mockResolvedValue([]);
   });
 
   it('refetches and processes world when not yet tracked', async () => {
@@ -104,13 +115,17 @@ describe('forceRefetchWorldFromMessage', () => {
     const result = await forceRefetchWorldFromMessage(message);
 
     expect(result).toBe(true);
-    expect(fetchWorldData).toHaveBeenCalledWith(WRLD);
+    expect(api.addWorld).toHaveBeenCalledWith(
+      expect.objectContaining({ worldId: WRLD, checkDuplicate: false })
+    );
   });
 
   it('refetches even when world is already tracked (force refetch skips duplicate check)', async () => {
     await forceRefetchWorldFromMessage(makeMessage());
 
-    expect(fetchWorldData).toHaveBeenCalled();
+    expect(api.addWorld).toHaveBeenCalledWith(
+      expect.objectContaining({ worldId: WRLD, checkDuplicate: false })
+    );
   });
 
   it('does not call getValue or setValue (legacy KVP removed)', async () => {
@@ -164,6 +179,8 @@ describe('forceRefetchWorldFromMessage', () => {
     const result = await forceRefetchWorldFromMessage(message);
 
     expect(result).toBe(true);
-    expect(fetchWorldData).toHaveBeenCalledWith(WRLD);
+    expect(api.addWorld).toHaveBeenCalledWith(
+      expect.objectContaining({ worldId: WRLD })
+    );
   });
 });
