@@ -1,7 +1,5 @@
-import { UnityPackage } from 'vrchat';
-
 export const getSupportedPlatforms = (
-  unityPackages: Array<UnityPackage>
+  unityPackages: Array<{ platform?: string }>
 ): string[] => {
   const platforms = new Set<string>(
     unityPackages.map((pkg) => pkg.platform || '')

@@ -19,7 +19,7 @@ import {
   sendResponse
 } from './forwarding';
 import Config from '../../../assets/config';
-import { World } from 'vrchat';
+import { World } from '../../../utils/apiClient';
 import { emojiMap } from '../../../assets/media';
 
 type WorldMatchSource = 'body' | 'snapshot' | 'attachment';

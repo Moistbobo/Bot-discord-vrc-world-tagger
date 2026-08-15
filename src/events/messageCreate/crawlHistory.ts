@@ -10,7 +10,6 @@ import { extractAllWorldIdsFromMessage } from './watchForVRCWorldLinks/worldExtr
 import { extractAllWorldIds } from '../../utils/regex';
 import { emojiMap } from '../../assets/media';
 import { api } from '../../utils/apiClient';
-import { extractTags } from '../../utils/tagExtractor';
 
 // Global state to prevent concurrent crawls on the same channel
 const activeCrawls = new Map<string, boolean>();
@@ -534,27 +533,33 @@ const crawlMessages = async (
           continue;
         }
 
-        // ── DISCOVER MODE ──
-        if (mode === 'discover') {
-          await handleDiscoverMode(msg, processedWorldsCache, crawlStatus);
-        }
+        try {
+          // ── DISCOVER MODE ──
+          if (mode === 'discover') {
+            await handleDiscoverMode(msg, processedWorldsCache, crawlStatus);
+          }
 
-        // ── TAGS MODE ──
-        else if (mode === 'tags') {
-          const result = await handleTagsMode(msg, processedWorldsCache);
-          recordsUpdated += result.updated;
-          recordsNotFound += result.notFound;
-        }
+          // ── TAGS MODE ──
+          else if (mode === 'tags') {
+            const result = await handleTagsMode(msg, processedWorldsCache);
+            recordsUpdated += result.updated;
+            recordsNotFound += result.notFound;
+          }
 
-        // ── QUALITY MODE ──
-        else if (mode === 'quality' && qualityValue) {
-          const result = await handleQualityMode(
-            msg,
-            processedWorldsCache,
-            qualityValue
-          );
-          if (result.updated) recordsUpdated++;
-          if (result.notFound) recordsNotFound++;
+          // ── QUALITY MODE ──
+          else if (mode === 'quality' && qualityValue) {
+            const result = await handleQualityMode(
+              msg,
+              processedWorldsCache,
+              qualityValue
+            );
+            if (result.updated) recordsUpdated++;
+            if (result.notFound) recordsNotFound++;
+          }
+        } catch (error) {
+          // One failing message (e.g. a transient API error) must not abort
+          // the whole crawl. Log and continue with the next message.
+          logger.warn(`Skipping message ${msg.id}:`, error);
         }
 
         // Update progress message every 25 messages
@@ -713,7 +718,6 @@ async function handleTagsMode(
     msg,
     allResults.map((r) => r.sourceContent)
   );
-  const tags = extractTags(tagSource);
 
   const internalAddDate = getMessageInternalAddDate(msg);
   let updated = 0;
@@ -731,11 +735,11 @@ async function handleTagsMode(
     }
 
     try {
-      const { updated: didUpdate } = await api.setTags(
+      const { updated: didUpdate, tags } = await api.setTags(
         worldId,
         msg.guildId!,
-        tags,
         sourceContent,
+        tagSource,
         internalAddDate
       );
 

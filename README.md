@@ -18,7 +18,7 @@ A Discord bot that monitors channels for VRChat world links and automatically en
 - **Force refetch** - React with ♻ on a bot embed to force re-fetch world data from the VRChat API
 - **Undo world tag** - React with ↩️ on a bot embed to remove the world from the database and delete the bot's message
 - **Duplicate detection** - Prevents re-processing the same world in a channel
-- **Twitter/X support** - Extracts world info from tweets, including when world name and author are in plain text (uses VRChat API search + fuzzy matching)
+- **Twitter/X support** - Extracts world info from tweets, including when world name and author are in plain text (uses VRChat API search + fuzzy matching, handled by the API service)
 - **Channel history crawling** - Backfill past messages in a channel for world links (supports `--tags` and `--quality` modes)
 - **Standalone REST API** - The bot reads and writes world data through the separate `sos-world-tagger-api` service (see [Architecture](#architecture))
 - **SQLite storage** - World metadata is stored by the standalone API in **better-sqlite3** with migrations, replacing the legacy file-based Keyv store
@@ -29,7 +29,6 @@ A Discord bot that monitors channels for VRChat world links and automatically en
 
 - Node.js
 - A Discord bot token
-- VRChat API credentials (username, password, and TOTP key for 2FA)
 
 ## Installation
 
@@ -48,14 +47,9 @@ cp .env.sample .env
 | Variable | Description |
 |----------|-------------|
 | `BOT_TOKEN` | Discord bot token |
-| `VRC_USERNAME` | VRChat account username |
-| `VRC_PASSWORD` | VRChat account password |
-| `VRC_TOTP_KEY` | TOTP secret for VRChat 2FA |
 | `ADMIN_ID` | Comma-separated Discord user IDs with admin privileges |
 | `EXPORT_RATE_LIMIT` | Delay (ms) between API calls during export (default: 1500) |
 | `DEV` | Set to `true` to disable duplicate checks |
-| `WORLD_NAME_MATCHERS` | Comma-separated strings to match world name labels in tweets |
-| `AUTHOR_NAME_MATCHERS` | Comma-separated strings to match author labels in tweets |
 | `FORWARD_PLAYER_COUNT_THRESHOLD` | Min player capacity for high-capacity forwarding (default: 40) |
 | `LOW_CAPACITY_THRESHOLD` | Max player capacity for low-capacity forwarding (default: 20) |
 | `API_BASE_URL` | Base URL of the standalone `sos-world-tagger-api` service (default: `http://localhost:3000`) |
@@ -278,9 +272,11 @@ The bot uses these endpoints internally:
 | Endpoint | Used for |
 |----------|----------|
 | `POST /api/worlds` | Tagging a world from a message; duplicate detection returns the original message ID |
+| `POST /api/worlds/extract` | Resolving world IDs from message content (direct links, Twitter/X links, plain-text world names) |
+| `GET /api/worlds/search` | Live VRChat world search by name (plain-text tweet resolution) |
 | `DELETE /api/worlds/:worldId` | Undo-tag / remove flows |
 | `PUT /api/worlds/:worldId/quality` | Quality reactions (good/bad) |
-| `PUT /api/worlds/:worldId/tags` | CrawlHistory tag rebuild |
+| `PUT /api/worlds/:worldId/tags` | CrawlHistory tag rebuild (tags computed server-side) |
 | `GET /api/worlds/pairs` | CrawlHistory processed-world cache |
 | `GET /api/health`, `GET /api/tags`, `GET /api/worlds` | `.stats` command |
 
@@ -312,11 +308,9 @@ pnpm tsx scripts/cleanup-db-json.ts
 
 - **TypeScript** — Main language
 - **Discord.js** (v14) — Discord API
-- **vrchat** — VRChat API client (embed package sizes)
-- **sos-world-tagger-api** — Standalone REST API owning the world database
+- **sos-world-tagger-api** — Standalone REST API owning the world database, VRChat data fetching, and all world/tweet extraction logic
 - **keyv-file** — File-based key-value storage (bot config)
 - **tslog** — Logging with rotating file output
-- **fastest-levenshtein** — Fuzzy string matching for world/author resolution from tweets
 
 ## License
 
