@@ -136,6 +136,28 @@ export const api = {
     );
   },
 
+  setHighPriority(
+    worldId: string,
+    guildId: string
+  ): Promise<{ added: boolean }> {
+    return request<{ added: boolean }>(
+      'PUT',
+      `/api/worlds/${worldId}/high-priority`,
+      { guildId }
+    );
+  },
+
+  removeHighPriority(
+    worldId: string,
+    guildId: string
+  ): Promise<{ removed: boolean }> {
+    return request<{ removed: boolean }>(
+      'DELETE',
+      `/api/worlds/${worldId}/high-priority`,
+      { guildId }
+    );
+  },
+
   setTags(
     worldId: string,
     guildId: string,

@@ -13,6 +13,7 @@ import { onReactionForward } from './events/messageReactionAdd/onReactionForward
 import { onReactionToDelete } from './events/messageReactionAdd/onReactionToDelete';
 import { onReactionForceRefetch } from './events/messageReactionAdd/onReactionForceRefetch';
 import { onReactionUndoWorldTag } from './events/messageReactionAdd/onReactionUndoWorldTag';
+import { onMessageDelete } from './events/messageDelete/onMessageDelete';
 import logger from './utils/logger';
 import { shouldIgnoreOwnBotMessage } from './botFilters';
 import { isUserOnIgnoreList } from './utils/ignoreList';
@@ -50,6 +51,14 @@ client.on(
     }
   }
 );
+
+client.on(Events.MessageDelete, async (message: Message) => {
+  try {
+    await onMessageDelete(message);
+  } catch (error) {
+    logger.error('Error in MessageDelete handler:', error);
+  }
+});
 
 client.once(Events.ClientReady, () => {
   logger.info('Client ready with config');

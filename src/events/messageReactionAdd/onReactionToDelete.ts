@@ -8,6 +8,7 @@ import {
   resolveForwardTargetChannelId,
   type ReactionForwardConfig
 } from '../../utils/discord/reactionEmoji';
+import { isHighPriorityChannel } from '../../utils/highPriorityChannel';
 
 function reactionMatchesDeleteEmoji(
   reaction: MessageReaction,
@@ -46,7 +47,7 @@ export const onReactionToDelete = async (
     kvKeys.WATCHED_REACTION_CHANNELS,
     channelId
   );
-  if (!isWatchedForReacts) return;
+  if (!isWatchedForReacts && !(await isHighPriorityChannel(channelId))) return;
 
   if (message.author?.id !== reaction.client.user?.id) return;
 

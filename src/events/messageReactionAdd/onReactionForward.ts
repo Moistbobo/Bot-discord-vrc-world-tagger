@@ -1,4 +1,4 @@
-import { messageLink, MessageReaction, User } from 'discord.js';
+import { messageLink, Message, MessageReaction, User } from 'discord.js';
 import logger from '../../utils/logger';
 import { get } from '../../utils/jsonAsDb';
 import {
@@ -14,6 +14,11 @@ import {
   resolveForwardTargetChannelId,
   type ReactionForwardConfig
 } from '../../utils/discord/reactionEmoji';
+import {
+  isHighPriorityChannel,
+  recordHighPriorityForward,
+  takeHighPriorityForward
+} from '../../utils/highPriorityChannel';
 
 function getWorldIdFromMessageContentOrEmbed(
   reaction: MessageReaction
@@ -96,15 +101,16 @@ export const onReactionForward = async (
     `Forwarding message ${message.id} from channel ${channelId} to ${targetChannelId} (triggered by emoji ${emojiKey})`
   );
 
+  let forwarded: Message | null = null;
   try {
-    await message.forward(targetChannelId);
+    forwarded = await message.forward(targetChannelId);
   } catch (error: unknown) {
     const err = error as { code?: number };
     if (err.code === 40005) {
       logger.warn(
         `Reaction forward to ${targetChannelId} hit upload limit, sending link fallback`
       );
-      await targetChannel.send({
+      forwarded = await targetChannel.send({
         content: `Original message omitted due to size. ${messageLink(message.channelId, message.id)}`
       });
     } else {
@@ -115,6 +121,7 @@ export const onReactionForward = async (
       return;
     }
   }
+  if (!forwarded) return;
 
   // ── Quality tracking ──────────────────────────────────────────────
   // If the target channel is configured as a "good" or "bad" quality
@@ -131,6 +138,33 @@ export const onReactionForward = async (
       } catch (err) {
         logger.error(
           `Failed to set quality for forwarded world ${worldId}:`,
+          err
+        );
+      }
+    }
+  }
+
+  // ── High priority tracking ──────────────────────────────────────
+  // Forwarding into the high-priority channel marks the world high priority;
+  // forwarding out of it removes the mark and cleans up the record map.
+  if (worldId && guildId) {
+    if (await isHighPriorityChannel(targetChannelId)) {
+      try {
+        await api.setHighPriority(worldId, guildId);
+        await recordHighPriorityForward(forwarded.id, { worldId, guildId });
+      } catch (err) {
+        logger.error(
+          `Failed to mark forwarded world ${worldId} as high priority:`,
+          err
+        );
+      }
+    } else if (await isHighPriorityChannel(channelId)) {
+      try {
+        await api.removeHighPriority(worldId, guildId);
+        await takeHighPriorityForward(message.id);
+      } catch (err) {
+        logger.error(
+          `Failed to remove high priority mark from world ${worldId}:`,
           err
         );
       }
