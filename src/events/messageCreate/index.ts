@@ -27,7 +27,6 @@ import setQualityChannel from './setQualityChannel';
 import clearQualityChannel from './clearQualityChannel';
 import setHighPriorityChannel from './setHighPriorityChannel';
 import clearHighPriorityChannel from './clearHighPriorityChannel';
-import crawlHighPriorityChannel from './crawlHighPriorityChannel';
 import { isUserOnIgnoreList } from '../../utils/ignoreList';
 import { ignoreMe } from './ignoreMe';
 import { unignoreMe } from './unignoreMe';
@@ -85,8 +84,6 @@ const messageCreate = async (message: Message) => {
     return withProtection(setHighPriorityChannel)(message);
   } else if (message.content.startsWith('.clearHighPriorityChannel')) {
     return withProtection(clearHighPriorityChannel)(message);
-  } else if (message.content.startsWith('.crawlHighPriorityChannel')) {
-    return withProtection(crawlHighPriorityChannel)(message);
   } else if (message.content.startsWith('.die')) {
     return withProtection(die)(message);
   } else if (message.content.startsWith('.stats')) {
