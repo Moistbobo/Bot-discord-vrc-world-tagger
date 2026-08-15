@@ -14,7 +14,6 @@ import { onReactionToDelete } from './events/messageReactionAdd/onReactionToDele
 import { onReactionForceRefetch } from './events/messageReactionAdd/onReactionForceRefetch';
 import { onReactionUndoWorldTag } from './events/messageReactionAdd/onReactionUndoWorldTag';
 import logger from './utils/logger';
-import { crawlHighPriorityChannel } from './utils/highPriorityCrawl';
 import { shouldIgnoreOwnBotMessage } from './botFilters';
 import { isUserOnIgnoreList } from './utils/ignoreList';
 
@@ -54,21 +53,6 @@ client.on(
 
 client.once(Events.ClientReady, () => {
   logger.info('Client ready with config');
-  crawlHighPriorityChannel(client)
-    .then((result) => {
-      if (result.ok) {
-        logger.info(
-          `High priority channel crawl: scanned ${result.scanned}, added ${result.added}, removed ${result.removed}${result.truncated ? ' (truncated)' : ''}`
-        );
-      } else {
-        logger.warn(
-          `High priority channel crawl skipped: ${result.reason ?? 'unknown'}`
-        );
-      }
-    })
-    .catch((error) =>
-      logger.error('High priority channel crawl failed:', error)
-    );
 });
 
 client
