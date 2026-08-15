@@ -14,7 +14,6 @@ import { onReactionToDelete } from './events/messageReactionAdd/onReactionToDele
 import { onReactionForceRefetch } from './events/messageReactionAdd/onReactionForceRefetch';
 import { onReactionUndoWorldTag } from './events/messageReactionAdd/onReactionUndoWorldTag';
 import logger from './utils/logger';
-import { isCurrentUser, vrchat } from './utils/externalApi/vrchat';
 import { shouldIgnoreOwnBotMessage } from './botFilters';
 import { isUserOnIgnoreList } from './utils/ignoreList';
 
@@ -52,19 +51,8 @@ client.on(
   }
 );
 
-client.once(Events.ClientReady, async () => {
+client.once(Events.ClientReady, () => {
   logger.info('Client ready with config');
-
-  try {
-    const { data } = await vrchat.getCurrentUser({ throwOnError: true });
-    if (!data || !isCurrentUser(data)) {
-      logger.error('VRC API returned RequiresTwoFactorAuth or no data');
-      return;
-    }
-    logger.info(`Authenticated with VRC API: ${data.displayName}`);
-  } catch (error) {
-    logger.error('Failed to authenticate with VRC API:', error);
-  }
 });
 
 client

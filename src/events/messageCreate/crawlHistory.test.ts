@@ -32,13 +32,9 @@ jest.mock('../../utils/jsonAsDb/handlers/persistentKvp', () => ({
 jest.mock('../../utils/apiClient', () => ({
   api: {
     getWorldPairs: jest.fn().mockResolvedValue([]),
-    setTags: jest.fn().mockResolvedValue({ updated: false }),
+    setTags: jest.fn().mockResolvedValue({ updated: false, tags: [] }),
     setQuality: jest.fn().mockResolvedValue({ updated: false })
   }
-}));
-
-jest.mock('../../utils/tagExtractor', () => ({
-  extractTags: jest.fn(() => [])
 }));
 
 jest.mock('../../assets/media', () => ({

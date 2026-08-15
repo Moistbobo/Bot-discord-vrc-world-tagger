@@ -12,7 +12,6 @@ import {
   extractWorldIdFromMessage,
   extractAllWorldIdsFromMessage
 } from './worldExtraction';
-import { calculatePackageSizes } from './worldData';
 import { createWorldEmbed } from './embedBuilder';
 import {
   getForwardingChannels,
@@ -20,7 +19,7 @@ import {
   sendResponse
 } from './forwarding';
 import Config from '../../../assets/config';
-import { World } from 'vrchat';
+import { World } from '../../../utils/apiClient';
 import { emojiMap } from '../../../assets/media';
 
 type WorldMatchSource = 'body' | 'snapshot' | 'attachment';
@@ -295,7 +294,7 @@ export const processWorldId = async (
     return;
   }
 
-  const packageSizes = await calculatePackageSizes(worldData);
+  const packageSizes = response.world.packageSizes ?? [];
   const embed = createWorldEmbed(
     worldData,
     worldId,
