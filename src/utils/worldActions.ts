@@ -1,8 +1,8 @@
-import { getWorldRepository } from './database/worldRepository';
+import { api, isApiError } from './apiClient';
 import logger from './logger';
 
 /**
- * Deletes a world record from the SQLite repository for the given guild.
+ * Deletes a world record via the API for the given guild.
  * This is the canonical way to remove a world from the database.
  * Exported for reuse by both text-based `.remove` and the 🔁 reaction shortcut.
  *
@@ -15,25 +15,19 @@ export async function deleteWorldForGuild(
   guildId: string
 ): Promise<boolean> {
   try {
-    const success = getWorldRepository().deleteByWorldAndGuild(
-      worldId,
-      guildId
-    );
-    if (success) {
-      logger.info(
-        `Deleted world ${worldId} from repository in guild ${guildId}`
+    await api.deleteWorld(worldId, guildId);
+    logger.info(`Deleted world ${worldId} in guild ${guildId}`);
+    return true;
+  } catch (err) {
+    if (isApiError(err) && err.status === 404) {
+      logger.warn(
+        `World ${worldId} not found in guild ${guildId} (delete noop)`
       );
     } else {
-      logger.warn(
-        `World ${worldId} not found in repository for guild ${guildId} (delete noop)`
+      logger.error(
+        `Failed to delete world ${worldId} for guild ${guildId}: ${err}`
       );
     }
-    return success;
-  } catch (err) {
-    logger.error(
-      `Failed to delete world ${worldId} for guild ${guildId}:
-      ${err}`
-    );
     return false;
   }
 }

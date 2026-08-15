@@ -1,13 +1,15 @@
-jest.mock('./src/utils/externalApi/vrchat', () => ({
-  VRChat: jest.fn(),
-  vrchat: {
-    client: {},
+jest.mock('./src/utils/apiClient', () => ({
+  api: {
+    addWorld: jest.fn(),
+    deleteWorld: jest.fn(),
+    setQuality: jest.fn(),
+    setTags: jest.fn(),
     getWorld: jest.fn(),
-    getFile: jest.fn(),
-    searchUsers: jest.fn(),
-    searchWorlds: jest.fn()
+    getWorldPairs: jest.fn(),
+    getLastProcessedWorld: jest.fn(),
+    getStats: jest.fn(),
+    extractWorlds: jest.fn()
   },
-  isCurrentUser: jest.fn(),
-  getUserIdByName: jest.fn(),
-  searchByWorldName: jest.fn()
+  isApiError: jest.fn(),
+  apiHealthCheck: jest.fn()
 }));

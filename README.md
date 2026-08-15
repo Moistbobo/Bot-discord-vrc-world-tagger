@@ -18,10 +18,10 @@ A Discord bot that monitors channels for VRChat world links and automatically en
 - **Force refetch** - React with ♻ on a bot embed to force re-fetch world data from the VRChat API
 - **Undo world tag** - React with ↩️ on a bot embed to remove the world from the database and delete the bot's message
 - **Duplicate detection** - Prevents re-processing the same world in a channel
-- **Twitter/X support** - Extracts world info from tweets, including when world name and author are in plain text (uses VRChat API search + fuzzy matching)
+- **Twitter/X support** - Extracts world info from tweets, including when world name and author are in plain text (uses VRChat API search + fuzzy matching, handled by the API service)
 - **Channel history crawling** - Backfill past messages in a channel for world links (supports `--tags` and `--quality` modes)
-- **REST API server** - Built-in Fastify API for querying world records, filtering by tags and quality, with Bearer token authentication
-- **SQLite storage** - World metadata stored in **better-sqlite3** with migrations, replacing the legacy file-based Keyv store
+- **Standalone REST API** - The bot reads and writes world data through the separate `sos-world-tagger-api` service (see [Architecture](#architecture))
+- **SQLite storage** - World metadata is stored by the standalone API in **better-sqlite3** with migrations, replacing the legacy file-based Keyv store
 - **Export** - Export world data as CSV
 - **User ignore list** - Users can opt out of bot processing with `.ignoreMe` / `.unignoreMe`
 
@@ -29,7 +29,6 @@ A Discord bot that monitors channels for VRChat world links and automatically en
 
 - Node.js
 - A Discord bot token
-- VRChat API credentials (username, password, and TOTP key for 2FA)
 
 ## Installation
 
@@ -48,21 +47,13 @@ cp .env.sample .env
 | Variable | Description |
 |----------|-------------|
 | `BOT_TOKEN` | Discord bot token |
-| `VRC_USERNAME` | VRChat account username |
-| `VRC_PASSWORD` | VRChat account password |
-| `VRC_TOTP_KEY` | TOTP secret for VRChat 2FA |
 | `ADMIN_ID` | Comma-separated Discord user IDs with admin privileges |
 | `EXPORT_RATE_LIMIT` | Delay (ms) between API calls during export (default: 1500) |
 | `DEV` | Set to `true` to disable duplicate checks |
-| `WORLD_NAME_MATCHERS` | Comma-separated strings to match world name labels in tweets |
-| `AUTHOR_NAME_MATCHERS` | Comma-separated strings to match author labels in tweets |
 | `FORWARD_PLAYER_COUNT_THRESHOLD` | Min player capacity for high-capacity forwarding (default: 40) |
 | `LOW_CAPACITY_THRESHOLD` | Max player capacity for low-capacity forwarding (default: 20) |
-| `API_PORT` | Port for the built-in REST API server (default: `3000`) |
-| `API_TOKEN` | Comma-separated Bearer tokens for API authentication. Falls back to `EXPORT_API_TOKEN` if not set. |
-| `API_ALLOWED_ORIGINS` | Comma-separated allowed `Origin` values for CORS and origin validation. Example: `https://sosd.googoogaagaa.club,https://testnet.googoogaagaa.club`. Leave empty to allow any origin. |
-| `API_ALLOWED_IPS` | Comma-separated allowed source IP addresses for `/api/*` endpoints. Useful for admin/scripted access. Example: `203.0.113.42,127.0.0.1`. Leave empty to disable. When set, the API trusts loopback reverse proxies to report the real client IP. |
-| `DATABASE_PATH` | Path to the SQLite database file (default: `./worlds.db`) |
+| `API_BASE_URL` | Base URL of the standalone `sos-world-tagger-api` service (default: `http://localhost:3000`) |
+| `API_TOKEN` | Bearer token the bot sends to the API. Falls back to `EXPORT_API_TOKEN` if not set. |
 
 ## Usage
 
@@ -76,7 +67,7 @@ pnpm start
 
 Most commands require your Discord user ID to appear in `ADMIN_ID`. You run commands in a normal text channel; when a command needs a specific channel, **mention that channel** with `#` (the bot uses the first channel mention in the message).
 
-For automatic world-link handling (embeds, duplicates, criteria-based forwards), see [manual/world-link-processing.md](manual/world-link-processing.md). For reaction-based forwarding and react-to-delete, see [manual/reaction-forwarding.md](manual/reaction-forwarding.md). For the REST API, see [manual/API.md](manual/API.md).
+For automatic world-link handling (embeds, duplicates, criteria-based forwards), see [manual/world-link-processing.md](manual/world-link-processing.md). For reaction-based forwarding and react-to-delete, see [manual/reaction-forwarding.md](manual/reaction-forwarding.md).
 
 #### Ignore list
 
@@ -202,22 +193,6 @@ See [manual/reaction-forwarding.md](manual/reaction-forwarding.md) for setup, em
 - **Admin:** Yes
 - **Example:** `.clearQualityChannel bad`
 
-#### API server
-
-**`.apiStart`**
-
-- **Description:** Start the built-in REST API server if it is not already running.
-- **Usage:** `.apiStart`
-- **Admin:** Yes
-- **Example:** `.apiStart`
-
-**`.apiStop`**
-
-- **Description:** Stop the REST API server.
-- **Usage:** `.apiStop`
-- **Admin:** Yes
-- **Example:** `.apiStop`
-
 #### World data and history
 
 **`.export`**
@@ -277,49 +252,42 @@ See [manual/reaction-forwarding.md](manual/reaction-forwarding.md) for setup, em
 
 ## Data Storage
 
-The bot stores its state and world metadata using **SQLite** (via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)). The database is created automatically at the path specified by `DATABASE_PATH` (default: `./worlds.db`).
+World metadata (records, tags, quality ratings) lives in the **standalone
+`sos-world-tagger-api`** service, which owns the SQLite database. The bot
+reads and writes through that API's endpoints (add, delete, quality, tags,
+stats). The database itself lives on the API host.
 
-Key tables:
-- **`world_records`** — World metadata with tags, quality ratings, platform info, and VRChat API data. Deduplicated by `(world_id, guild_id)`.
-- **`deleted_world_records`** — Archived copies of removed world records.
-- **`_migrations`** — Tracks applied schema migrations.
-
-Additional bot configuration (watched channels, forwarding channels, reaction mappings, user ignore list) continues to be stored in `db.json` (Keyv-file).
+Bot configuration (watched channels, forwarding channels, reaction mappings,
+user ignore list) continues to be stored in `db.json` (Keyv-file).
 
 ## REST API
 
-The bot includes a built-in Fastify REST API server for querying world records. See [manual/API.md](manual/API.md) for full documentation.
+The bot talks to the standalone API service (`sos-world-tagger-api`) at
+`API_BASE_URL`, authenticating with `API_TOKEN` (Bearer). The API owns the
+SQLite world database and exposes both read and mutation endpoints. See the
+API repo's documentation for the full endpoint reference.
 
-**Endpoints:**
+The bot uses these endpoints internally:
 
-| Endpoint | Description | Auth |
-|----------|-------------|------|
-| `GET /api/health` | Health check | No |
-| `GET /api/worlds` | Paginated world list with tag/quality/capacity/dayRange filters | Bearer token |
-| `GET /api/worlds/:worldId` | Single world record | Bearer token |
-| `GET /api/tags` | All unique tags with occurrence counts | Bearer token |
-
-The API server starts automatically on bot launch and listens on `0.0.0.0:<API_PORT>`. It can also be started/stopped via the `.apiStart` and `.apiStop` Discord commands.
+| Endpoint | Used for |
+|----------|----------|
+| `POST /api/worlds` | Tagging a world from a message; duplicate detection returns the original message ID |
+| `POST /api/worlds/extract` | Resolving world IDs from message content (direct links, Twitter/X links, plain-text world names) |
+| `GET /api/worlds/search` | Live VRChat world search by name (plain-text tweet resolution) |
+| `DELETE /api/worlds/:worldId` | Undo-tag / remove flows |
+| `PUT /api/worlds/:worldId/quality` | Quality reactions (good/bad) |
+| `PUT /api/worlds/:worldId/tags` | CrawlHistory tag rebuild (tags computed server-side) |
+| `GET /api/worlds/pairs` | CrawlHistory processed-world cache |
+| `GET /api/health`, `GET /api/tags`, `GET /api/worlds` | `.stats` command |
 
 ## Migration from v1
 
-If you are upgrading from the legacy Keyv-based file storage, a migration script is available:
+The one-time v1 → v2 migration (Keyv `db.json` world records → SQLite) was
+completed when the database moved to the standalone API. The migration and
+randomization scripts now live in the API repository, which owns the database.
 
-```bash
-pnpm tsx scripts/migrate-v1-to-v2.ts
-```
-
-This reads world records from `db.json` (`PROCESSED_WORLDS_WITH_ORIGINAL_MESSAGE_ID`), fetches live data from the VRChat API, and inserts them into the SQLite database.
-
-Use `--dry-run` to preview without writing:
-
-```bash
-pnpm tsx scripts/migrate-v1-to-v2.ts --dry-run
-```
-
-After migration, `db.json` is left in place (it still holds active config). The old processed-worlds keys can be manually removed once the migration is verified.
-
-A cleanup script for removing stale Keyv entries from `db.json` is also available:
+A cleanup script for removing stale Keyv entries from `db.json` is still
+available:
 
 ```bash
 pnpm tsx scripts/cleanup-db-json.ts
@@ -329,25 +297,20 @@ pnpm tsx scripts/cleanup-db-json.ts
 
 - **World link processing** - [manual/world-link-processing.md](manual/world-link-processing.md) - detection, duplicates, embed reply, and criteria-based forwarding (with diagrams).
 - **Reaction forwarding** - [manual/reaction-forwarding.md](manual/reaction-forwarding.md) - setup, react-to-delete, and reaction handler flows (with diagrams).
-- **REST API** - [manual/API.md](manual/API.md) - endpoints, authentication, filtering, pagination, and example requests.
 
 ## Scripts
 
 - **`scripts/backup-db.sh`** — Backs up `db.json` to a configurable directory. Edit `SOURCE` and `BACKUP_DIR` before use. Removes backups older than 7 days.
 - **`scripts/delete-stale-logs.sh`** — Deletes compressed log files older than 7 days. Edit `LOG_DIR` (or `BACKUP_DIR` if used for logs) before use.
-- **`scripts/migrate-v1-to-v2.ts`** — Migrates world records from legacy Keyv-file (`db.json`) to SQLite (`worlds.db`). See [Migration from v1](#migration-from-v1) above.
 - **`scripts/cleanup-db-json.ts`** — Removes stale/deprecated Keyv entries from `db.json` after migration.
 
 ## Tech Stack
 
 - **TypeScript** — Main language
 - **Discord.js** (v14) — Discord API
-- **vrchat** — VRChat API client
-- **better-sqlite3** — SQLite database for world metadata
-- **Fastify** — REST API server with CORS and Bearer token auth
+- **sos-world-tagger-api** — Standalone REST API owning the world database, VRChat data fetching, and all world/tweet extraction logic
 - **keyv-file** — File-based key-value storage (bot config)
 - **tslog** — Logging with rotating file output
-- **fastest-levenshtein** — Fuzzy string matching for world/author resolution from tweets
 
 ## License
 

@@ -68,4 +68,4 @@ LabeledAccount: {
 }
 ```
 
-When adding to `customMatchers`, replace the key with the actual Twitter username (or pattern) the user provides, and ensure the same extractors work for every example tweet they gave.
+When adding to `customMatchers` in `sos-world-tagger-api/src/extraction/regex.ts`, replace the key with the actual Twitter username (or pattern) the user provides, and ensure the same extractors work for every example tweet they gave.
