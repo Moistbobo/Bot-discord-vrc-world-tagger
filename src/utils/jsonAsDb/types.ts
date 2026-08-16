@@ -31,7 +31,11 @@ export enum kvKeys {
   /** Channel for forwarding "good" quality maps */
   QUALITY_GOOD_FORWARDING_CHANNEL = 'QUALITY_GOOD_FORWARDING_CHANNEL',
   /** Channel for forwarding "bad" quality maps */
-  QUALITY_BAD_FORWARDING_CHANNEL = 'QUALITY_BAD_FORWARDING_CHANNEL'
+  QUALITY_BAD_FORWARDING_CHANNEL = 'QUALITY_BAD_FORWARDING_CHANNEL',
+  /** Channel where reaction forwards are marked as high priority */
+  HIGH_PRIORITY_FORWARDING_CHANNEL = 'HIGH_PRIORITY_FORWARDING_CHANNEL',
+  /** Map of forwarded message IDs to world/guild pairs for high-priority removal */
+  HIGH_PRIORITY_FORWARDED_MESSAGES = 'HIGH_PRIORITY_FORWARDED_MESSAGES'
 }
 
 /**

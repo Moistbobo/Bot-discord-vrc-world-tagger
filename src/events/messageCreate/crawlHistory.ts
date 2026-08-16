@@ -10,6 +10,10 @@ import { extractAllWorldIdsFromMessage } from './watchForVRCWorldLinks/worldExtr
 import { extractAllWorldIds } from '../../utils/regex';
 import { emojiMap } from '../../assets/media';
 import { api } from '../../utils/apiClient';
+import {
+  crawlHighPriorityChannel,
+  type HighPriorityCrawlResult
+} from '../../utils/highPriorityCrawl';
 
 // Global state to prevent concurrent crawls on the same channel
 const activeCrawls = new Map<string, boolean>();
@@ -17,13 +21,15 @@ const activeCrawls = new Map<string, boolean>();
 const RATE_LIMIT_DELAY = 250;
 const BATCH_SIZE = 100;
 
-type CrawlMode = 'discover' | 'tags' | 'quality';
+type CrawlMode = 'discover' | 'tags' | 'quality' | 'highPriority';
 
-interface ParsedCrawlCommand {
-  channel: GuildTextBasedChannel;
-  mode: CrawlMode;
-  qualityValue?: 'good' | 'bad';
-}
+type ParsedCrawlCommand =
+  | { mode: 'highPriority'; channel?: undefined; qualityValue?: undefined }
+  | {
+      mode: 'discover' | 'tags' | 'quality';
+      channel: GuildTextBasedChannel;
+      qualityValue?: 'good' | 'bad';
+    };
 
 // Helper function to delay execution
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -40,9 +46,18 @@ const getMessageInternalAddDate = (msg: Message): number => {
 
 /**
  * Parse .crawlHistory command into mode and options.
- * Syntax: .crawlHistory #channel [--tags | --quality good|bad]
+ * Syntax: .crawlHistory #channel [--tags | --quality good|bad] | .crawlHistory --highPriority
  */
 function parseCrawlCommand(message: Message): ParsedCrawlCommand | null {
+  const content = message.content;
+
+  if (content.includes('--highPriority')) {
+    if (content.includes('--tags') || content.includes('--quality')) {
+      return null;
+    }
+    return { mode: 'highPriority' };
+  }
+
   const mentioned = message.mentions.channels.first();
 
   if (!mentioned || !mentioned.isTextBased()) {
@@ -51,7 +66,6 @@ function parseCrawlCommand(message: Message): ParsedCrawlCommand | null {
 
   const channel = mentioned as GuildTextBasedChannel;
 
-  const content = message.content;
   let mode: CrawlMode = 'discover';
   let qualityValue: 'good' | 'bad' | undefined;
 
@@ -172,13 +186,52 @@ export const crawlChannelHistory = async (message: Message) => {
           `**Usage:**\n` +
           `\`.crawlHistory #channel\` — discover new worlds (default)\n` +
           `\`.crawlHistory #channel --tags\` — rebuild tags & source_content\n` +
-          `\`.crawlHistory #channel --quality good|bad\` — assign quality`
+          `\`.crawlHistory #channel --quality good|bad\` — assign quality\n` +
+          `\`.crawlHistory --highPriority\` — reconcile the high-priority channel`
       );
     }
     return;
   }
 
   const { channel, mode, qualityValue } = parsed;
+
+  if (mode === 'highPriority') {
+    let result: HighPriorityCrawlResult;
+    try {
+      result = await crawlHighPriorityChannel(message.client);
+    } catch (error) {
+      logger.error('Failed to crawl the high priority channel:', error);
+      if (message.channel.isSendable()) {
+        await message.channel.send(
+          'Failed to crawl the high priority channel. Please try again.'
+        );
+      }
+      return;
+    }
+    if (message.channel.isSendable()) {
+      if (result.ok) {
+        await message.channel.send(
+          `Crawl complete: scanned ${result.scanned} messages, added ${result.added}, removed ${result.removed}.` +
+            (result.truncated
+              ? ' (capped at 5000 messages — run again or increase the cap)'
+              : '')
+        );
+      } else if (result.reason === 'not-configured') {
+        await message.channel.send(
+          'No high priority channel is configured. Use `.setHighPriorityChannel #channel` first.'
+        );
+      } else if (result.reason === 'not-found') {
+        await message.channel.send(
+          'The configured high priority channel could not be found.'
+        );
+      } else {
+        await message.channel.send(
+          'A high priority channel crawl is already in progress. Try again shortly.'
+        );
+      }
+    }
+    return;
+  }
 
   // Check if channel is already being crawled
   if (activeCrawls.get(channel.id)) {

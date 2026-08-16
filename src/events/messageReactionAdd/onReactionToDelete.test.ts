@@ -9,10 +9,17 @@ jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
   has: jest.fn()
 }));
 
+jest.mock('../../utils/highPriorityChannel', () => ({
+  isHighPriorityChannel: jest.fn()
+}));
+
 const { get } = jest.requireMock('../../utils/jsonAsDb') as { get: jest.Mock };
 const { getAll, has } = jest.requireMock(
   '../../utils/jsonAsDb/handlers/persistentList'
 ) as { getAll: jest.Mock; has: jest.Mock };
+const { isHighPriorityChannel } = jest.requireMock(
+  '../../utils/highPriorityChannel'
+) as { isHighPriorityChannel: jest.Mock };
 
 const BOT_ID = 'bot-user-1';
 
@@ -39,8 +46,10 @@ describe('onReactionToDelete', () => {
     get.mockReset();
     getAll.mockReset();
     has.mockReset();
+    isHighPriorityChannel.mockReset();
     get.mockResolvedValue({});
     getAll.mockResolvedValue(['🗑️']);
+    isHighPriorityChannel.mockResolvedValue(false);
   });
 
   it('ignores bot users', async () => {
@@ -66,6 +75,17 @@ describe('onReactionToDelete', () => {
     const reaction = makeReaction();
     await onReactionToDelete(reaction, { bot: false } as any);
     expect(reaction.message.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes bot message in the high-priority channel without watchReacts registration', async () => {
+    has.mockImplementation((key: string) =>
+      Promise.resolve(key === 'REACTION_FORWARDED_MESSAGE_IDS')
+    );
+    isHighPriorityChannel.mockResolvedValue(true);
+    const reaction = makeReaction();
+    await onReactionToDelete(reaction, { bot: false } as any);
+    expect(isHighPriorityChannel).toHaveBeenCalledWith('chan1');
+    expect(reaction.message.delete).toHaveBeenCalled();
   });
 
   it('ignores when emoji is not in delete list', async () => {

@@ -275,7 +275,7 @@ See [§2. Reaction Forwarding](#2-reaction-forwarding) for setup and behavior de
 |---------|-------|-------------|-------|
 | `.export` | No | Export a CSV of processed world IDs and URLs (no live VRChat API call per world). | `.export` |
 | `.exportFull` | Yes | Export a detailed CSV with live VRChat API data per world; rate-limited and heavier. | `.exportFull` |
-| `.crawlHistory` | Yes | Scan a channel's history for world links. Supports three modes: **discover** (default, finds new worlds with duplicate logic), **`--tags`** (rebuilds tags and `source_content` from history for already-discovered worlds), **`--quality good\|bad`** (assigns a quality rating to already-discovered worlds). Crawls are resumable and can be cancelled by reacting with ❌ on the progress message. | `.crawlHistory #channel [--tags \| --quality good\|bad]` |
+| `.crawlHistory` | Yes | Scan a channel's history for world links. Supports four modes: **discover** (default, finds new worlds with duplicate logic), **`--tags`** (rebuilds tags and `source_content` from history for already-discovered worlds), **`--quality good\|bad`** (assigns a quality rating to already-discovered worlds), **`--highPriority`** (reconciles the configured high-priority channel: marks worlds found in its history as high priority, and unmarks ones no longer present). Crawls are resumable and can be cancelled by reacting with ❌ on the progress message. | `.crawlHistory #channel [--tags \| --quality good\|bad] \| .crawlHistory --highPriority` |
 | `.crawlStatus` | No | Show crawl progress or completion for a channel. | `.crawlStatus #channel` |
 
 ### Maintenance

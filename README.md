@@ -211,12 +211,13 @@ See [manual/reaction-forwarding.md](manual/reaction-forwarding.md) for setup, em
 
 **`.crawlHistory`**
 
-- **Description:** Scan a channel's message history for world links. Supports three modes:
+- **Description:** Scan a channel's message history for world links. Supports four modes:
   - **Default (discover):** Finds new worlds and processes them with duplicate logic.
   - **`--tags`:** Rebuilds tags and `source_content` from message history for already-discovered worlds.
   - **`--quality good|bad`:** Assigns a quality rating to already-discovered worlds.
+  - **`--highPriority`:** Reconciles the configured high-priority channel: marks worlds found in its history as high priority, and unmarks ones no longer present.
   Crawls are resumable if interrupted, and can be cancelled by reacting with ❌ on the progress message.
-- **Usage:** `.crawlHistory #channel [--tags | --quality good|bad]`
+- **Usage:** `.crawlHistory #channel [--tags | --quality good|bad] | .crawlHistory --highPriority`
 - **Admin:** Yes
 - **Example:** `.crawlHistory #vrchat-worlds`
 
