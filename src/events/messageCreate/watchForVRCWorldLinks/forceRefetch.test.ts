@@ -1,39 +1,40 @@
 import { Attachment, Message } from 'discord.js';
+import type { Mock } from 'vitest';
 
-jest.mock('../../../utils/jsonAsDb/handlers/persistentKvp', () => ({
-  getValue: jest.fn(),
-  setValue: jest.fn()
+vi.mock('../../../utils/jsonAsDb/handlers/persistentKvp', () => ({
+  getValue: vi.fn(),
+  setValue: vi.fn()
 }));
 
-jest.mock('../../../utils/jsonAsDb/handlers/persistentList', () => ({
-  has: jest.fn()
+vi.mock('../../../utils/jsonAsDb/handlers/persistentList', () => ({
+  has: vi.fn()
 }));
 
-jest.mock('./worldExtraction', () => ({
-  extractWorldIdFromMessage: jest.fn()
+vi.mock('./worldExtraction', () => ({
+  extractWorldIdFromMessage: vi.fn()
 }));
 
-jest.mock('./embedBuilder', () => ({
-  createWorldEmbed: jest.fn(() => ({}))
+vi.mock('./embedBuilder', () => ({
+  createWorldEmbed: vi.fn(() => ({}))
 }));
 
-jest.mock('./forwarding', () => ({
-  getForwardingChannels: jest.fn().mockResolvedValue([]),
-  forwardToChannel: jest.fn(),
-  sendResponse: jest.fn().mockResolvedValue(undefined)
+vi.mock('./forwarding', () => ({
+  getForwardingChannels: vi.fn().mockResolvedValue([]),
+  forwardToChannel: vi.fn(),
+  sendResponse: vi.fn().mockResolvedValue(undefined)
 }));
 
-jest.mock('../../../utils/apiClient', () => ({
+vi.mock('../../../utils/apiClient', () => ({
   api: {
-    addWorld: jest.fn()
+    addWorld: vi.fn()
   }
 }));
 
-jest.mock('../../../utils/helpers', () => ({
-  getSupportedPlatforms: jest.fn(() => [])
+vi.mock('../../../utils/helpers', () => ({
+  getSupportedPlatforms: vi.fn(() => [])
 }));
 
-jest.mock('../../../assets/config', () => ({
+vi.mock('../../../assets/config', () => ({
   __esModule: true,
   default: {
     DEV_MODE: false,
@@ -42,17 +43,17 @@ jest.mock('../../../assets/config', () => ({
   }
 }));
 
-jest.mock('../../../utils/logger', () => ({
+vi.mock('../../../utils/logger', () => ({
   __esModule: true,
   default: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn()
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
   }
 }));
 
-jest.mock('../../../assets/media', () => ({
+vi.mock('../../../assets/media', () => ({
   emojiMap: {
     recycle: '♻',
     actually: '<:actually:1>'
@@ -75,16 +76,16 @@ describe('forceRefetchWorldFromMessage', () => {
       content: 'https://example.com/world',
       messageSnapshots: undefined,
       channel: { isSendable: () => true },
-      react: jest.fn(),
-      reply: jest.fn(),
+      react: vi.fn(),
+      reply: vi.fn(),
       ...overrides
     }) as Message;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (has as jest.Mock).mockResolvedValue(true);
-    (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(WRLD);
-    (api.addWorld as jest.Mock).mockResolvedValue({
+    vi.clearAllMocks();
+    (has as Mock).mockResolvedValue(true);
+    (extractWorldIdFromMessage as Mock).mockResolvedValue(WRLD);
+    (api.addWorld as Mock).mockResolvedValue({
       duplicate: false,
       world: {
         worldId: WRLD,
@@ -139,7 +140,7 @@ describe('forceRefetchWorldFromMessage', () => {
   });
 
   it('returns false when no world id in message', async () => {
-    (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(null);
+    (extractWorldIdFromMessage as Mock).mockResolvedValue(null);
 
     const result = await forceRefetchWorldFromMessage(makeMessage());
 
@@ -147,8 +148,8 @@ describe('forceRefetchWorldFromMessage', () => {
   });
 
   it('returns false when channel is not watched (including attachment filenames)', async () => {
-    (has as jest.Mock).mockResolvedValue(false);
-    (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(null);
+    (has as Mock).mockResolvedValue(false);
+    (extractWorldIdFromMessage as Mock).mockResolvedValue(null);
 
     const att = { name: `capture-${WRLD}.png` } as Attachment;
     const message = {
@@ -165,7 +166,7 @@ describe('forceRefetchWorldFromMessage', () => {
   });
 
   it('refetches world id from attachment filename when message text has none', async () => {
-    (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(null);
+    (extractWorldIdFromMessage as Mock).mockResolvedValue(null);
 
     const att = { name: `capture-${WRLD}.png` } as Attachment;
     const message = {

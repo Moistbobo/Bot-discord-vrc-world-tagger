@@ -1,14 +1,15 @@
 import clearHighPriorityChannel from './clearHighPriorityChannel';
+import type { MockedFunction } from 'vitest';
 import { clear } from '../../utils/jsonAsDb/handlers/persistentList';
 
-jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
-  clear: jest.fn()
+vi.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
+  clear: vi.fn()
 }));
 
-const mockedClear = clear as jest.MockedFunction<typeof clear>;
+const mockedClear = clear as MockedFunction<typeof clear>;
 
 const makeMessage = () => {
-  const send = jest.fn().mockResolvedValue(undefined);
+  const send = vi.fn().mockResolvedValue(undefined);
   return {
     author: { id: 'admin-1', tag: 'admin#1', bot: false },
     channel: { isSendable: () => true, send }

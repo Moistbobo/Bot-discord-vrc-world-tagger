@@ -1,25 +1,31 @@
 import { onReactionToDelete } from './onReactionToDelete';
+import type { Mock } from 'vitest';
 
-jest.mock('../../utils/jsonAsDb', () => ({
-  get: jest.fn()
+import * as jsonAsDb from '../../utils/jsonAsDb';
+import * as persistentList from '../../utils/jsonAsDb/handlers/persistentList';
+import * as highPriorityChannel from '../../utils/highPriorityChannel';
+
+vi.mock('../../utils/jsonAsDb', () => ({
+  get: vi.fn()
 }));
 
-jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
-  getAll: jest.fn(),
-  has: jest.fn()
+vi.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
+  getAll: vi.fn(),
+  has: vi.fn()
 }));
 
-jest.mock('../../utils/highPriorityChannel', () => ({
-  isHighPriorityChannel: jest.fn()
+vi.mock('../../utils/highPriorityChannel', () => ({
+  isHighPriorityChannel: vi.fn()
 }));
 
-const { get } = jest.requireMock('../../utils/jsonAsDb') as { get: jest.Mock };
-const { getAll, has } = jest.requireMock(
-  '../../utils/jsonAsDb/handlers/persistentList'
-) as { getAll: jest.Mock; has: jest.Mock };
-const { isHighPriorityChannel } = jest.requireMock(
-  '../../utils/highPriorityChannel'
-) as { isHighPriorityChannel: jest.Mock };
+const { get } = jsonAsDb as unknown as { get: Mock };
+const { getAll, has } = persistentList as unknown as {
+  getAll: Mock;
+  has: Mock;
+};
+const { isHighPriorityChannel } = highPriorityChannel as unknown as {
+  isHighPriorityChannel: Mock;
+};
 
 const BOT_ID = 'bot-user-1';
 
@@ -30,10 +36,10 @@ const makeReaction = (overrides: Partial<any> = {}) => {
     message: {
       id: 'msg123',
       partial: false,
-      fetch: jest.fn(),
+      fetch: vi.fn(),
       channelId: 'chan1',
       author: { id: BOT_ID, bot: true },
-      delete: jest.fn().mockResolvedValue(undefined),
+      delete: vi.fn().mockResolvedValue(undefined),
       ...messageOverride
     },
     client: { user: { id: BOT_ID } },

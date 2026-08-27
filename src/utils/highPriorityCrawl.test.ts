@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import {
   BATCH_SIZE,
   crawlHighPriorityChannel,
@@ -5,50 +6,51 @@ import {
   RATE_LIMIT_DELAY
 } from './highPriorityCrawl';
 
-jest.mock('./jsonAsDb', () => ({
-  get: jest.fn()
+import * as jsonAsDb from './jsonAsDb';
+import * as persistentList from './jsonAsDb/handlers/persistentList';
+import * as highPriorityChannel from './highPriorityChannel';
+import * as apiClient from './apiClient';
+import * as crawlHistory from '../events/messageCreate/crawlHistory';
+
+vi.mock('./jsonAsDb', () => ({
+  get: vi.fn()
 }));
 
-jest.mock('./jsonAsDb/handlers/persistentList', () => ({
-  getFirst: jest.fn()
+vi.mock('./jsonAsDb/handlers/persistentList', () => ({
+  getFirst: vi.fn()
 }));
 
-jest.mock('./highPriorityChannel', () => ({
-  recordHighPriorityForward: jest.fn(),
-  takeHighPriorityForward: jest.fn()
+vi.mock('./highPriorityChannel', () => ({
+  recordHighPriorityForward: vi.fn(),
+  takeHighPriorityForward: vi.fn()
 }));
 
-jest.mock('./apiClient', () => ({
+vi.mock('./apiClient', () => ({
   api: {
-    setHighPriority: jest.fn(),
-    removeHighPriority: jest.fn()
+    setHighPriority: vi.fn(),
+    removeHighPriority: vi.fn()
   },
-  isApiError: jest.fn()
+  isApiError: vi.fn()
 }));
 
-jest.mock('../events/messageCreate/crawlHistory', () => ({
-  extractWorldIdFromAnywhere: jest.fn()
+vi.mock('../events/messageCreate/crawlHistory', () => ({
+  extractWorldIdFromAnywhere: vi.fn()
 }));
 
-const { get } = jest.requireMock('./jsonAsDb') as { get: jest.Mock };
-const { getFirst } = jest.requireMock('./jsonAsDb/handlers/persistentList') as {
-  getFirst: jest.Mock;
+const { get } = jsonAsDb as unknown as { get: Mock };
+const { getFirst } = persistentList as unknown as { getFirst: Mock };
+const { recordHighPriorityForward, takeHighPriorityForward } =
+  highPriorityChannel as unknown as {
+    recordHighPriorityForward: Mock;
+    takeHighPriorityForward: Mock;
+  };
+const { api } = apiClient as unknown as {
+  api: { setHighPriority: Mock; removeHighPriority: Mock };
 };
-const { recordHighPriorityForward, takeHighPriorityForward } = jest.requireMock(
-  './highPriorityChannel'
-) as {
-  recordHighPriorityForward: jest.Mock;
-  takeHighPriorityForward: jest.Mock;
+const { isApiError } = apiClient as unknown as { isApiError: Mock };
+const { extractWorldIdFromAnywhere } = crawlHistory as unknown as {
+  extractWorldIdFromAnywhere: Mock;
 };
-const { api } = jest.requireMock('./apiClient') as {
-  api: { setHighPriority: jest.Mock; removeHighPriority: jest.Mock };
-};
-const { isApiError } = jest.requireMock('./apiClient') as {
-  isApiError: jest.Mock;
-};
-const { extractWorldIdFromAnywhere } = jest.requireMock(
-  '../events/messageCreate/crawlHistory'
-) as { extractWorldIdFromAnywhere: jest.Mock };
 
 const HP_CHANNEL = 'hp-chan';
 const GUILD_ID = 'guild1';
@@ -60,12 +62,12 @@ const makeMessage = (id: string, overrides: Partial<any> = {}) =>
 const makeChannel = (overrides: Partial<any> = {}) => ({
   isTextBased: () => true,
   guildId: GUILD_ID,
-  messages: { fetch: jest.fn() },
+  messages: { fetch: vi.fn() },
   ...overrides
 });
 
 const makeClient = (channel: any) => ({
-  channels: { fetch: jest.fn().mockResolvedValue(channel) }
+  channels: { fetch: vi.fn().mockResolvedValue(channel) }
 });
 
 const makeBatch = (prefix: string, count: number) => {
@@ -91,7 +93,7 @@ describe('crawlHighPriorityChannel', () => {
 
   it('returns not-configured when no high priority channel is set', async () => {
     getFirst.mockResolvedValue(undefined);
-    const client = { channels: { fetch: jest.fn() } };
+    const client = { channels: { fetch: vi.fn() } };
 
     const result = await crawlHighPriorityChannel(client as any);
 
@@ -110,7 +112,7 @@ describe('crawlHighPriorityChannel', () => {
 
   it('returns not-found when the configured channel is missing', async () => {
     getFirst.mockResolvedValue(HP_CHANNEL);
-    const client = { channels: { fetch: jest.fn().mockResolvedValue(null) } };
+    const client = { channels: { fetch: vi.fn().mockResolvedValue(null) } };
 
     const result = await crawlHighPriorityChannel(client as any);
 
@@ -279,7 +281,7 @@ describe('crawlHighPriorityChannel', () => {
   });
 
   it('skips the removal pass when the message cap is hit', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       getFirst.mockResolvedValue(HP_CHANNEL);
       const channel = makeChannel();
@@ -296,7 +298,7 @@ describe('crawlHighPriorityChannel', () => {
       extractWorldIdFromAnywhere.mockResolvedValue(null);
 
       const crawlPromise = crawlHighPriorityChannel(client as any);
-      await jest.advanceTimersByTimeAsync(RATE_LIMIT_DELAY * 60);
+      await vi.advanceTimersByTimeAsync(RATE_LIMIT_DELAY * 60);
       const result = await crawlPromise;
 
       expect(result).toEqual({
@@ -309,7 +311,7 @@ describe('crawlHighPriorityChannel', () => {
       expect(api.removeHighPriority).not.toHaveBeenCalled();
       expect(takeHighPriorityForward).not.toHaveBeenCalled();
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });

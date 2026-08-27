@@ -1,22 +1,23 @@
 import setHighPriorityChannel from './setHighPriorityChannel';
+import type { MockedFunction } from 'vitest';
 import { add, clear, has } from '../../utils/jsonAsDb/handlers/persistentList';
 
-jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
-  add: jest.fn(),
-  clear: jest.fn(),
-  has: jest.fn()
+vi.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
+  add: vi.fn(),
+  clear: vi.fn(),
+  has: vi.fn()
 }));
 
-const mockedHas = has as jest.MockedFunction<typeof has>;
-const mockedClear = clear as jest.MockedFunction<typeof clear>;
-const mockedAdd = add as jest.MockedFunction<typeof add>;
+const mockedHas = has as MockedFunction<typeof has>;
+const mockedClear = clear as MockedFunction<typeof clear>;
+const mockedAdd = add as MockedFunction<typeof add>;
 
 const makeMessage = (overrides: Partial<any> = {}) => {
-  const send = jest.fn().mockResolvedValue(undefined);
+  const send = vi.fn().mockResolvedValue(undefined);
   return {
     author: { id: 'admin-1', tag: 'admin#1', bot: false },
     mentions: {
-      channels: { first: jest.fn().mockReturnValue({ id: 'chan1' }) }
+      channels: { first: vi.fn().mockReturnValue({ id: 'chan1' }) }
     },
     channel: { isSendable: () => true, send },
     ...overrides
@@ -34,7 +35,7 @@ describe('setHighPriorityChannel', () => {
 
   it('asks for a channel mention when none given', async () => {
     const message = makeMessage({
-      mentions: { channels: { first: jest.fn().mockReturnValue(null) } }
+      mentions: { channels: { first: vi.fn().mockReturnValue(null) } }
     });
     await setHighPriorityChannel(message);
     expect(mockedAdd).not.toHaveBeenCalled();
