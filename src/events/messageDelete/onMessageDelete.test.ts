@@ -1,25 +1,28 @@
 import { onMessageDelete } from './onMessageDelete';
+import type { Mock } from 'vitest';
 
-jest.mock('../../utils/highPriorityChannel', () => ({
-  isHighPriorityChannel: jest.fn(),
-  takeHighPriorityForward: jest.fn()
+import * as highPriorityChannel from '../../utils/highPriorityChannel';
+import * as apiClient from '../../utils/apiClient';
+
+vi.mock('../../utils/highPriorityChannel', () => ({
+  isHighPriorityChannel: vi.fn(),
+  takeHighPriorityForward: vi.fn()
 }));
 
-jest.mock('../../utils/apiClient', () => ({
+vi.mock('../../utils/apiClient', () => ({
   api: {
-    removeHighPriority: jest.fn()
+    removeHighPriority: vi.fn()
   },
-  isApiError: jest.fn()
+  isApiError: vi.fn()
 }));
 
-const { isHighPriorityChannel, takeHighPriorityForward } = jest.requireMock(
-  '../../utils/highPriorityChannel'
-) as {
-  isHighPriorityChannel: jest.Mock;
-  takeHighPriorityForward: jest.Mock;
-};
-const { api } = jest.requireMock('../../utils/apiClient') as {
-  api: { removeHighPriority: jest.Mock };
+const { isHighPriorityChannel, takeHighPriorityForward } =
+  highPriorityChannel as unknown as {
+    isHighPriorityChannel: Mock;
+    takeHighPriorityForward: Mock;
+  };
+const { api } = apiClient as unknown as {
+  api: { removeHighPriority: Mock };
 };
 
 const WORLD_ID = 'wrld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';

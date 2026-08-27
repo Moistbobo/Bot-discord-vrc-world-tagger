@@ -1,58 +1,59 @@
 import { Message } from 'discord.js';
+import type { Mock } from 'vitest';
 
-jest.mock('./watchForVRCWorldLinks/worldExtraction', () => ({
-  extractWorldIdFromMessage: jest.fn(),
-  extractAllWorldIdsFromMessage: jest.fn()
+vi.mock('./watchForVRCWorldLinks/worldExtraction', () => ({
+  extractWorldIdFromMessage: vi.fn(),
+  extractAllWorldIdsFromMessage: vi.fn()
 }));
 
-jest.mock('./watchForVRCWorldLinks', () => ({
-  buildTagSource: jest.fn(() => ''),
-  findAllWorldMatches: jest.fn(() => Promise.resolve([])),
-  processWorldId: jest.fn()
+vi.mock('./watchForVRCWorldLinks', () => ({
+  buildTagSource: vi.fn(() => ''),
+  findAllWorldMatches: vi.fn(() => Promise.resolve([])),
+  processWorldId: vi.fn()
 }));
 
-jest.mock('../../utils/regex', () => ({
-  extractWorldId: jest.fn(),
-  extractAllWorldIds: jest.fn()
+vi.mock('../../utils/regex', () => ({
+  extractWorldId: vi.fn(),
+  extractAllWorldIds: vi.fn()
 }));
 
-jest.mock('../../utils/jsonAsDb/index', () => ({
-  set: jest.fn(),
-  get: jest.fn()
+vi.mock('../../utils/jsonAsDb/index', () => ({
+  set: vi.fn(),
+  get: vi.fn()
 }));
 
-jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
-  getAll: jest.fn()
+vi.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
+  getAll: vi.fn()
 }));
 
-jest.mock('../../utils/jsonAsDb/handlers/persistentKvp', () => ({
-  getValue: jest.fn()
+vi.mock('../../utils/jsonAsDb/handlers/persistentKvp', () => ({
+  getValue: vi.fn()
 }));
 
-jest.mock('../../utils/apiClient', () => ({
+vi.mock('../../utils/apiClient', () => ({
   api: {
-    getWorldPairs: jest.fn().mockResolvedValue([]),
-    setTags: jest.fn().mockResolvedValue({ updated: false, tags: [] }),
-    setQuality: jest.fn().mockResolvedValue({ updated: false })
+    getWorldPairs: vi.fn().mockResolvedValue([]),
+    setTags: vi.fn().mockResolvedValue({ updated: false, tags: [] }),
+    setQuality: vi.fn().mockResolvedValue({ updated: false })
   }
 }));
 
-jest.mock('../../assets/media', () => ({
+vi.mock('../../assets/media', () => ({
   emojiMap: { crossError: '❌' }
 }));
 
-jest.mock('../../utils/logger', () => ({
+vi.mock('../../utils/logger', () => ({
   __esModule: true,
   default: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn()
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
   }
 }));
 
-jest.mock('../../utils/highPriorityCrawl', () => ({
-  crawlHighPriorityChannel: jest.fn()
+vi.mock('../../utils/highPriorityCrawl', () => ({
+  crawlHighPriorityChannel: vi.fn()
 }));
 
 import {
@@ -62,15 +63,13 @@ import {
 import { extractAllWorldIds } from '../../utils/regex';
 
 // Re-export the private helper by importing the module under test.
-/* eslint-disable @typescript-eslint/no-require-imports */
-const {
-  crawlChannelHistory,
-  extractWorldIdFromAnywhere
-} = require('./crawlHistory');
-const {
-  crawlHighPriorityChannel: runCrawl
-} = require('../../utils/highPriorityCrawl');
-/* eslint-enable @typescript-eslint/no-require-imports */
+import * as crawlHistory from './crawlHistory';
+import * as highPriorityCrawl from '../../utils/highPriorityCrawl';
+
+const { crawlChannelHistory, extractWorldIdFromAnywhere } = crawlHistory;
+const { crawlHighPriorityChannel: runCrawl } = highPriorityCrawl as unknown as {
+  crawlHighPriorityChannel: Mock;
+};
 
 const WRLD = 'wrld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
@@ -89,14 +88,14 @@ function makeMessage(overrides: Record<string, unknown> = {}): Message {
 
 describe('extractWorldIdFromAnywhere', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    (extractWorldIdFromMessage as jest.Mock).mockResolvedValue(null);
-    (extractAllWorldIdsFromMessage as jest.Mock).mockResolvedValue([]);
-    (extractAllWorldIds as jest.Mock).mockReturnValue([]);
+    vi.clearAllMocks();
+    (extractWorldIdFromMessage as Mock).mockResolvedValue(null);
+    (extractAllWorldIdsFromMessage as Mock).mockResolvedValue([]);
+    (extractAllWorldIds as Mock).mockReturnValue([]);
   });
 
   it('resolves world ID from message content (including Twitter links)', async () => {
-    (extractAllWorldIdsFromMessage as jest.Mock).mockResolvedValue([
+    (extractAllWorldIdsFromMessage as Mock).mockResolvedValue([
       { worldId: WRLD, sourceContent: 'https://x.com/someuser/status/123' }
     ]);
 
@@ -111,7 +110,7 @@ describe('extractWorldIdFromAnywhere', () => {
   });
 
   it('falls back to embed URL when content has no world ID', async () => {
-    (extractAllWorldIds as jest.Mock).mockImplementation((text: string) =>
+    (extractAllWorldIds as Mock).mockImplementation((text: string) =>
       text.includes(WRLD) ? [WRLD] : []
     );
 
@@ -138,11 +137,10 @@ describe('extractWorldIdFromAnywhere', () => {
       } as never
     });
 
-    (extractAllWorldIdsFromMessage as jest.Mock).mockImplementation(
-      (content) =>
-        content && content.includes('x.com')
-          ? [{ worldId: WRLD, sourceContent: content }]
-          : []
+    (extractAllWorldIdsFromMessage as Mock).mockImplementation((content) =>
+      content && content.includes('x.com')
+        ? [{ worldId: WRLD, sourceContent: content }]
+        : []
     );
 
     const result = await extractWorldIdFromAnywhere(message);
@@ -154,7 +152,7 @@ describe('extractWorldIdFromAnywhere', () => {
   });
 
   it('extracts world ID from forwarded snapshot embed URL', async () => {
-    (extractAllWorldIds as jest.Mock).mockImplementation((text: string) =>
+    (extractAllWorldIds as Mock).mockImplementation((text: string) =>
       text.includes(WRLD) ? [WRLD] : []
     );
 
@@ -176,7 +174,7 @@ describe('extractWorldIdFromAnywhere', () => {
   });
 
   it('extracts world ID from attachment filename', async () => {
-    (extractAllWorldIds as jest.Mock).mockImplementation((text: string) =>
+    (extractAllWorldIds as Mock).mockImplementation((text: string) =>
       text.includes(WRLD) ? [WRLD] : []
     );
 
@@ -202,9 +200,9 @@ describe('extractWorldIdFromAnywhere', () => {
 
 function makeCommandMessage(content: string): {
   message: Message;
-  send: jest.Mock;
+  send: Mock;
 } {
-  const send = jest.fn().mockResolvedValue(undefined);
+  const send = vi.fn().mockResolvedValue(undefined);
   const message = {
     id: 'msg-1',
     guildId: 'guild-1',

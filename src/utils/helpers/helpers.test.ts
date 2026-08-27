@@ -7,7 +7,7 @@ import {
 
 describe('utils/helpers', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getSupportedPlatforms', () => {

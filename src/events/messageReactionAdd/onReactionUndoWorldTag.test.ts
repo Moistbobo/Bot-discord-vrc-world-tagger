@@ -1,29 +1,35 @@
 import { onReactionUndoWorldTag } from './onReactionUndoWorldTag';
+import type { Mock } from 'vitest';
 import { emojiMap } from '../../assets/media';
 
-jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
-  has: jest.fn(),
-  remove: jest.fn()
+import * as persistentList from '../../utils/jsonAsDb/handlers/persistentList';
+import * as worldActions from '../../utils/worldActions';
+import * as apiClient from '../../utils/apiClient';
+
+vi.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
+  has: vi.fn(),
+  remove: vi.fn()
 }));
 
-jest.mock('../../utils/worldActions', () => ({
-  deleteWorldForGuild: jest.fn()
+vi.mock('../../utils/worldActions', () => ({
+  deleteWorldForGuild: vi.fn()
 }));
 
-jest.mock('../../utils/apiClient', () => ({
+vi.mock('../../utils/apiClient', () => ({
   api: {
-    getWorld: jest.fn()
+    getWorld: vi.fn()
   }
 }));
 
-const { has, remove } = jest.requireMock(
-  '../../utils/jsonAsDb/handlers/persistentList'
-) as { has: jest.Mock; remove: jest.Mock };
-const { deleteWorldForGuild } = jest.requireMock(
-  '../../utils/worldActions'
-) as { deleteWorldForGuild: jest.Mock };
-const { api } = jest.requireMock('../../utils/apiClient') as {
-  api: { getWorld: jest.Mock };
+const { has, remove } = persistentList as unknown as {
+  has: Mock;
+  remove: Mock;
+};
+const { deleteWorldForGuild } = worldActions as unknown as {
+  deleteWorldForGuild: Mock;
+};
+const { api } = apiClient as unknown as {
+  api: { getWorld: Mock };
 };
 
 const BOT_ID = 'bot-user-1';
@@ -32,19 +38,19 @@ const WORLD_URL = `https://vrchat.com/home/world/${WORLD_ID}`;
 
 const makeReaction = (overrides: Partial<any> = {}) => {
   const { message: messageOverride, ...rest } = overrides;
-  const channelSend = jest.fn().mockResolvedValue(undefined);
+  const channelSend = vi.fn().mockResolvedValue(undefined);
   return {
     emoji: { name: emojiMap.undo, id: null, identifier: emojiMap.undo },
     message: {
       id: 'bot-reply-msg',
       partial: false,
-      fetch: jest.fn(),
+      fetch: vi.fn(),
       channelId: 'chan1',
       guildId: 'guild1',
       author: { id: BOT_ID, bot: true },
       embeds: [{ url: WORLD_URL }],
       content: '',
-      delete: jest.fn().mockResolvedValue(undefined),
+      delete: vi.fn().mockResolvedValue(undefined),
       channel: {
         isSendable: () => true,
         send: channelSend

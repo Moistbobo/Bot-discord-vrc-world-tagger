@@ -1,16 +1,17 @@
 import { unignoreMe } from './unignoreMe';
+import type { MockedFunction } from 'vitest';
 import { has, remove } from '../../utils/jsonAsDb/handlers/persistentList';
 
-jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
-  has: jest.fn(),
-  remove: jest.fn()
+vi.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
+  has: vi.fn(),
+  remove: vi.fn()
 }));
 
-const mockedHas = has as jest.MockedFunction<typeof has>;
-const mockedRemove = remove as jest.MockedFunction<typeof remove>;
+const mockedHas = has as MockedFunction<typeof has>;
+const mockedRemove = remove as MockedFunction<typeof remove>;
 
 const makeMessage = (authorId: string) => {
-  const send = jest.fn().mockResolvedValue(undefined);
+  const send = vi.fn().mockResolvedValue(undefined);
   return {
     author: { id: authorId, bot: false },
     channel: { isSendable: () => true, send }

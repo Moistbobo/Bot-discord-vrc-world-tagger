@@ -1,50 +1,58 @@
 import { onReactionForward } from './onReactionForward';
+import type { Mock } from 'vitest';
 
-jest.mock('../../utils/jsonAsDb', () => ({
-  get: jest.fn()
+import * as jsonAsDb from '../../utils/jsonAsDb';
+import * as persistentList from '../../utils/jsonAsDb/handlers/persistentList';
+import * as apiClient from '../../utils/apiClient';
+import * as highPriorityChannel from '../../utils/highPriorityChannel';
+
+vi.mock('../../utils/jsonAsDb', () => ({
+  get: vi.fn()
 }));
 
-jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
-  has: jest.fn(),
-  add: jest.fn(),
-  getFirst: jest.fn()
+vi.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
+  has: vi.fn(),
+  add: vi.fn(),
+  getFirst: vi.fn()
 }));
 
-jest.mock('../../utils/apiClient', () => ({
+vi.mock('../../utils/apiClient', () => ({
   api: {
-    setQuality: jest.fn(),
-    setHighPriority: jest.fn(),
-    removeHighPriority: jest.fn()
+    setQuality: vi.fn(),
+    setHighPriority: vi.fn(),
+    removeHighPriority: vi.fn()
   }
 }));
 
-jest.mock('../../utils/highPriorityChannel', () => ({
-  isHighPriorityChannel: jest.fn(),
-  recordHighPriorityForward: jest.fn(),
-  takeHighPriorityForward: jest.fn()
+vi.mock('../../utils/highPriorityChannel', () => ({
+  isHighPriorityChannel: vi.fn(),
+  recordHighPriorityForward: vi.fn(),
+  takeHighPriorityForward: vi.fn()
 }));
 
-const { get } = jest.requireMock('../../utils/jsonAsDb') as {
-  get: jest.Mock;
+const { get } = jsonAsDb as unknown as {
+  get: Mock;
 };
-const { has, add, getFirst } = jest.requireMock(
-  '../../utils/jsonAsDb/handlers/persistentList'
-) as { has: jest.Mock; add: jest.Mock; getFirst: jest.Mock };
-const { api } = jest.requireMock('../../utils/apiClient') as {
+const { has, add, getFirst } = persistentList as unknown as {
+  has: Mock;
+  add: Mock;
+  getFirst: Mock;
+};
+const { api } = apiClient as unknown as {
   api: {
-    setQuality: jest.Mock;
-    setHighPriority: jest.Mock;
-    removeHighPriority: jest.Mock;
+    setQuality: Mock;
+    setHighPriority: Mock;
+    removeHighPriority: Mock;
   };
 };
 const {
   isHighPriorityChannel,
   recordHighPriorityForward,
   takeHighPriorityForward
-} = jest.requireMock('../../utils/highPriorityChannel') as {
-  isHighPriorityChannel: jest.Mock;
-  recordHighPriorityForward: jest.Mock;
-  takeHighPriorityForward: jest.Mock;
+} = highPriorityChannel as unknown as {
+  isHighPriorityChannel: Mock;
+  recordHighPriorityForward: Mock;
+  takeHighPriorityForward: Mock;
 };
 
 const BOT_ID = 'bot-user-1';
@@ -61,18 +69,18 @@ const makeReaction = (overrides: Partial<any> = {}) => {
     message: {
       id: 'msg123',
       partial: false,
-      fetch: jest.fn(),
+      fetch: vi.fn(),
       channelId: 'source-chan',
       guildId: 'guild1',
       embeds: [{ url: WORLD_URL }],
       content: '',
-      forward: jest.fn().mockResolvedValue({ id: 'forwarded-msg-1' }),
+      forward: vi.fn().mockResolvedValue({ id: 'forwarded-msg-1' }),
       guild: {
         channels: {
           cache: {
-            get: jest.fn().mockReturnValue({
+            get: vi.fn().mockReturnValue({
               isSendable: () => true,
-              send: jest.fn().mockResolvedValue({ id: 'fallback-msg-9' })
+              send: vi.fn().mockResolvedValue({ id: 'fallback-msg-9' })
             })
           }
         }
@@ -162,7 +170,7 @@ describe('onReactionForward', () => {
     get.mockResolvedValue({ '📩': HP_CHANNEL });
     const reaction = makeReaction({
       message: {
-        forward: jest.fn().mockRejectedValue({ code: 40005 })
+        forward: vi.fn().mockRejectedValue({ code: 40005 })
       }
     });
     await onReactionForward(reaction, { bot: false } as any);
