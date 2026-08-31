@@ -1,15 +1,19 @@
 import { onReactionForceRefetch } from './onReactionForceRefetch';
+import type { Mock } from 'vitest';
 
-jest.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
-  has: jest.fn(),
-  add: jest.fn()
+import * as persistentList from '../../utils/jsonAsDb/handlers/persistentList';
+import * as watchForVRCWorldLinks from '../messageCreate/watchForVRCWorldLinks';
+
+vi.mock('../../utils/jsonAsDb/handlers/persistentList', () => ({
+  has: vi.fn(),
+  add: vi.fn()
 }));
 
-jest.mock('../messageCreate/watchForVRCWorldLinks', () => ({
-  forceRefetchWorldFromMessage: jest.fn()
+vi.mock('../messageCreate/watchForVRCWorldLinks', () => ({
+  forceRefetchWorldFromMessage: vi.fn()
 }));
 
-jest.mock('../../assets/media', () => ({
+vi.mock('../../assets/media', () => ({
   emojiMap: {
     recycle: '♻',
     checkmark: '✅',
@@ -23,17 +27,13 @@ jest.mock('../../assets/media', () => ({
 
 const OUR_BOT_ID = 'our-bot-id';
 
-const { has, add } = jest.requireMock(
-  '../../utils/jsonAsDb/handlers/persistentList'
-) as {
-  has: jest.Mock;
-  add: jest.Mock;
+const { has, add } = persistentList as unknown as {
+  has: Mock;
+  add: Mock;
 };
 
-const { forceRefetchWorldFromMessage } = jest.requireMock(
-  '../messageCreate/watchForVRCWorldLinks'
-) as {
-  forceRefetchWorldFromMessage: jest.Mock;
+const { forceRefetchWorldFromMessage } = watchForVRCWorldLinks as unknown as {
+  forceRefetchWorldFromMessage: Mock;
 };
 
 const makeReaction = (overrides: Partial<any> = {}) => {
@@ -52,10 +52,10 @@ const makeReaction = (overrides: Partial<any> = {}) => {
     message: {
       id: 'msg123',
       partial: false,
-      fetch: jest.fn(),
+      fetch: vi.fn(),
       channelId: 'chan1',
       author: { id: 'human-1', bot: false },
-      react: jest.fn(),
+      react: vi.fn(),
       ...messageOverride
     },
     ...rest

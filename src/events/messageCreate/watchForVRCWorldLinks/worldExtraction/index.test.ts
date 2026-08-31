@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import {
   extractAllWorldIdsFromMessage,
   extractWorldIdFromMessage
@@ -5,24 +6,24 @@ import {
 import { api } from '../../../../utils/apiClient';
 import { extractAllWorldIds } from '../../../../utils/regex';
 
-jest.mock('../../../../utils/apiClient', () => ({
+vi.mock('../../../../utils/apiClient', () => ({
   api: {
-    extractWorlds: jest.fn()
+    extractWorlds: vi.fn()
   }
 }));
 
-jest.mock('../../../../utils/regex', () => ({
-  extractAllWorldIds: jest.fn()
+vi.mock('../../../../utils/regex', () => ({
+  extractAllWorldIds: vi.fn()
 }));
 
-const extractWorldsMock = api.extractWorlds as jest.Mock;
-const extractAllWorldIdsMock = extractAllWorldIds as jest.Mock;
+const extractWorldsMock = api.extractWorlds as Mock;
+const extractAllWorldIdsMock = extractAllWorldIds as Mock;
 
 const WRLD = 'wrld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
 describe('extractAllWorldIdsFromMessage', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('extracts direct world IDs locally without calling the API', async () => {

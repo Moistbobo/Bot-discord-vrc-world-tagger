@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "tsc && node dist/index.js",
-    "test": "jest",
+    "test": "vitest run",
     "format": "prettier --write .",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix ",
@@ -23,19 +23,17 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@eslint/json": "^0.13.1",
-    "@types/jest": "^30.0.0",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.3",
     "globals": "^16.3.0",
     "husky": "^9.1.7",
-    "jest": "^30.0.5",
     "jiti": "^2.5.1",
     "lint-staged": "^16.1.4",
     "prettier": "^3.6.2",
-    "ts-jest": "^29.4.1",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.38.0"
+    "typescript-eslint": "^8.38.0",
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "discord.js": "14.25.1",

@@ -1,12 +1,13 @@
 import { isUserOnIgnoreList } from './ignoreList';
+import type { MockedFunction } from 'vitest';
 import { has } from './jsonAsDb/handlers/persistentList';
 import { kvKeys } from './jsonAsDb/types';
 
-jest.mock('./jsonAsDb/handlers/persistentList', () => ({
-  has: jest.fn()
+vi.mock('./jsonAsDb/handlers/persistentList', () => ({
+  has: vi.fn()
 }));
 
-const mockedHas = has as jest.MockedFunction<typeof has>;
+const mockedHas = has as MockedFunction<typeof has>;
 
 describe('isUserOnIgnoreList', () => {
   beforeEach(() => {
