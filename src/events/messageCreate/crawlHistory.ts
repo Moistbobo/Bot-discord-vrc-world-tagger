@@ -510,12 +510,11 @@ const crawlMessages = async (
   let recordsUpdated = 0;
   let recordsNotFound = 0;
 
-  // Load all processed world pairs into memory for fast cache lookups
+  // Load all known world IDs into memory for fast cache lookups.
+  // World records are one row per world now, so the cache is world-scoped.
   logger.info('Loading processed worlds cache from API...');
-  const pairs = await api.getWorldPairs();
-  const processedWorldsCache = new Set(
-    pairs.map((p) => `${p.worldId}-${p.guildId}`)
-  );
+  const worldIds = await api.getWorldIds();
+  const processedWorldsCache = new Set(worldIds);
   logger.info(
     `Loaded ${processedWorldsCache.size} processed worlds into cache`
   );
@@ -718,10 +717,8 @@ async function handleDiscoverMode(
   }
 
   for (const { worldId, sourceContent } of matches) {
-    const cacheKey = `${worldId}-${msg.guildId}`;
-
     // Already handled during this crawl
-    if (processedWorldsCache.has(cacheKey)) {
+    if (processedWorldsCache.has(worldId)) {
       logger.debug(
         `Skipping message ${msg.id}: world ${worldId} already processed (cache hit)`
       );
@@ -737,7 +734,7 @@ async function handleDiscoverMode(
       });
 
       crawlStatus.worldsDiscovered = crawlStatus.worldsDiscovered + 1;
-      processedWorldsCache.add(cacheKey);
+      processedWorldsCache.add(worldId);
       logger.info(`World found in message ${msg.id}: ${worldId} (NEW)`);
     } catch (error) {
       logger.warn(
@@ -777,9 +774,7 @@ async function handleTagsMode(
   let notFound = 0;
 
   for (const { worldId, sourceContent } of allResults) {
-    const cacheKey = `${worldId}-${msg.guildId}`;
-
-    if (!processedWorldsCache.has(cacheKey)) {
+    if (!processedWorldsCache.has(worldId)) {
       logger.warn(
         `Skipping message ${msg.id}: world ${worldId} not in database (tags mode)`
       );
@@ -832,9 +827,7 @@ async function handleQualityMode(
     return { updated: false, notFound: false };
   }
 
-  const cacheKey = `${worldId}-${msg.guildId}`;
-
-  if (!processedWorldsCache.has(cacheKey)) {
+  if (!processedWorldsCache.has(worldId)) {
     logger.warn(
       `Skipping message ${msg.id}: world ${worldId} not in database (quality mode)`
     );

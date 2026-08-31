@@ -197,11 +197,10 @@ export const api = {
     ).then((data) => data.worlds);
   },
 
-  getWorldPairs(): Promise<{ worldId: string; guildId: string }[]> {
-    return request<{ pairs: { worldId: string; guildId: string }[] }>(
-      'GET',
-      '/api/worlds/pairs'
-    ).then((data) => data.pairs);
+  getWorldIds(): Promise<string[]> {
+    return request<{ ids: string[] }>('GET', '/api/worlds/ids').then(
+      (data) => data.ids
+    );
   },
 
   getLastProcessedWorld(): Promise<SanitizedWorldRecord | null> {

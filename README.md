@@ -278,7 +278,7 @@ The bot uses these endpoints internally:
 | `DELETE /api/worlds/:worldId` | Undo-tag / remove flows |
 | `PUT /api/worlds/:worldId/quality` | Quality reactions (good/bad) |
 | `PUT /api/worlds/:worldId/tags` | CrawlHistory tag rebuild (tags computed server-side) |
-| `GET /api/worlds/pairs` | CrawlHistory processed-world cache |
+| `GET /api/worlds/ids` | CrawlHistory processed-world cache |
 | `GET /api/health`, `GET /api/tags`, `GET /api/worlds` | `.stats` command |
 
 ## Migration from v1
